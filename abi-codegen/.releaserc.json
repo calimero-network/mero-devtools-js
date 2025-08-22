@@ -7,7 +7,7 @@
     [
       "@semantic-release/exec",
       {
-        "prepareCmd": "pnpm publish --no-git-checks"
+        "prepareCmd": "pnpm publish --access public --no-git-checks"
       }
     ],
     "@semantic-release/github",
