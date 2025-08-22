@@ -78,4 +78,4 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           cd abi-codegen
-          npx semantic-release --dry-run 
+          npx semantic-release 
