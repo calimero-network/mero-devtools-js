@@ -4,7 +4,12 @@
     "@semantic-release/commit-analyzer",
     "@semantic-release/release-notes-generator",
     "@semantic-release/changelog",
-    "@semantic-release/npm",
+    [
+      "@semantic-release/exec",
+      {
+        "prepareCmd": "pnpm publish --no-git-checks"
+      }
+    ],
     "@semantic-release/github",
     "@semantic-release/git"
   ]

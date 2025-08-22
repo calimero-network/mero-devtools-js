@@ -60,6 +60,9 @@ jobs:
           cache: 'pnpm'
           registry-url: 'https://registry.npmjs.org'
       
+      - name: Use npm v9 for release step
+        run: npm i -g npm@9
+      
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
       
@@ -75,4 +78,4 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           cd abi-codegen
-          pnpm run release 
+          npx semantic-release --dry-run 
