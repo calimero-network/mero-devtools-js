@@ -45,13 +45,11 @@
   },
   "devDependencies": {
     "@semantic-release/changelog": "^6.0.0",
-    "@semantic-release/exec": "^7.1.0",
     "@semantic-release/git": "^10.0.0",
     "@semantic-release/github": "^8.0.0",
     "@semantic-release/npm": "^8.0.0",
     "@types/node": "^18.19.34",
     "semantic-release": "^21.0.0",
-    "semantic-release-pnpm": "^1.0.2",
     "typescript": "^4.9.5",
     "vitest": "^1.0.0"
   },
