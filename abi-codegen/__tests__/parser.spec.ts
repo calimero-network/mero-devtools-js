@@ -31,9 +31,9 @@ describe('WASM-ABI v1 Parser', () => {
       expect(manifest.types.ConformanceError).toBeDefined();
       expect(manifest.types.ConformanceError.kind).toBe('variant');
       expect(manifest.types.UserId32).toBeDefined();
-      expect(manifest.types.UserId32.kind).toBe('bytes');
+      expect(manifest.types.UserId32.kind).toBe('alias');
       expect(manifest.types.Hash64).toBeDefined();
-      expect(manifest.types.Hash64.kind).toBe('bytes');
+      expect(manifest.types.Hash64.kind).toBe('alias');
 
       // Check methods
       const methodNames = manifest.methods.map((m) => m.name);
