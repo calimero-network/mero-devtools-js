@@ -35,7 +35,9 @@
     "test": "vitest run --reporter=dot",
     "codegen:test": "vitest run --reporter=dot __tests__/codegen.spec.ts",
     "validate:abi": "node dist/cli.js --validate -i __fixtures__/abi_conformance.json",
-    "prepack": "tsc -p tsconfig.json"
+    "prepack": "tsc -p tsconfig.json",
+    "generate:example": "node dist/cli.js -i __fixtures__/abi_conformance.json -o ../codegen-example/src/generated/abi-conformance",
+    "release": "semantic-release"
   },
   "dependencies": {
     "ajv": "^8.12.0",
@@ -44,11 +46,17 @@
   "devDependencies": {
     "@types/node": "^18.19.34",
     "typescript": "^4.9.5",
-    "vitest": "^1.0.0"
+    "vitest": "^1.0.0",
+    "@semantic-release/changelog": "^6.0.0",
+    "@semantic-release/git": "^10.0.0",
+    "@semantic-release/github": "^8.0.0",
+    "@semantic-release/npm": "^8.0.0",
+    "semantic-release": "^21.0.0"
   },
   "files": [
     "dist",
     "README.md",
+    "CHANGELOG.md",
     "LICENSE"
   ],
   "keywords": [

@@ -12,7 +12,7 @@
     "test": "pnpm -r test",
     "lint": "pnpm -r lint",
     "format": "prettier --write .",
-    "regenerate:abi-conformance": "cd abi-codegen && npm run generate:abi-conformance"
+    "regenerate:abi-conformance": "cd abi-codegen && npm run generate:example"
   },
   "devDependencies": {
     "prettier": "^3.0.0",

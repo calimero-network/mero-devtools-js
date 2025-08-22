@@ -1,0 +1,3 @@
+packages:
+  - 'abi-codegen'
+  - 'codegen-example' 
