@@ -1,5 +1,5 @@
 {
-  "name": "@calimero-network/abi-codegen",
+  "name": "@calimero/abi-codegen",
   "version": "0.1.0",
   "description": "WASM-ABI v1 parser and code generator for Calimero",
   "type": "module",
