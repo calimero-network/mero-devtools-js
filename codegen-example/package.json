@@ -1,0 +1,24 @@
+{
+  "name": "codegen-example",
+  "version": "1.0.0",
+  "private": true,
+  "description": "An example demonstrating the Calimero SDK's generated client with React hooks.",
+  "scripts": {
+    "predev": "npm run regenerate:abi-conformance",
+    "dev": "vite",
+    "build": "tsc -p tsconfig.json --noEmit",
+    "regenerate:abi-conformance": "cd ../abi-codegen && npm run build && mkdir -p ../codegen-example/src/generated && node dist/cli.js -i __fixtures__/abi_conformance.json -o ../codegen-example/src/generated/abi-conformance"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "@calimero-network/calimero-client": "^1.14.2"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.66",
+    "@types/react-dom": "^18.2.22",
+    "@vitejs/plugin-react": "^4.2.1",
+    "typescript": "^5.2.2",
+    "vite": "^5.2.0"
+  }
+}

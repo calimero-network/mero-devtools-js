@@ -1,0 +1,37 @@
+{
+  "name": "@calimero/mero-devtools-js",
+  "version": "0.1.0",
+  "description": "Calimero development tools for JavaScript - ABI code generation and examples",
+  "private": true,
+  "workspaces": [
+    "abi-codegen",
+    "codegen-example"
+  ],
+  "scripts": {
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
+    "lint": "pnpm -r lint",
+    "format": "prettier --write .",
+    "regenerate:abi-conformance": "cd abi-codegen && npm run generate:abi-conformance"
+  },
+  "devDependencies": {
+    "prettier": "^3.0.0",
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/calimero-network/mero-devtools-js.git"
+  },
+  "keywords": [
+    "calimero",
+    "wasm",
+    "abi",
+    "codegen",
+    "typescript"
+  ],
+  "author": "Calimero Network",
+  "license": "MIT"
+}
