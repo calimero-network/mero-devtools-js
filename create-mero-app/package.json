@@ -1,0 +1,48 @@
+{
+  "name": "create-mero-app",
+  "version": "0.1.0",
+  "private": false,
+  "description": "Scaffold a new Mero app from a starter template",
+  "type": "module",
+  "bin": {
+    "create-mero-app": "dist/cli.mjs"
+  },
+  "files": [
+    "dist",
+    "template"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json && node scripts/postbuild.mjs",
+    "dev": "ts-node-esm src/index.ts",
+    "prepublishOnly": "pnpm build"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/calimero-network/mero-devtools-js.git",
+    "directory": "create-mero-app"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "calimero",
+    "kv-store",
+    "scaffold",
+    "create-app"
+  ],
+  "dependencies": {
+    "commander": "^11.1.0",
+    "kolorist": "^1.8.0",
+    "validate-npm-package-name": "^5.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.30",
+    "@types/validate-npm-package-name": "^4.0.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.0"
+  }
+}
+
