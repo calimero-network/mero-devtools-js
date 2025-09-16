@@ -16,6 +16,23 @@
     "dev": "ts-node-esm src/index.ts",
     "prepublishOnly": "pnpm build"
   },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/calimero-network/mero-devtools-js.git",
+    "directory": "create-mero-app"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "calimero",
+    "kv-store",
+    "scaffold",
+    "create-app"
+  ],
   "dependencies": {
     "commander": "^11.1.0",
     "kolorist": "^1.8.0",
