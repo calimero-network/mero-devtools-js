@@ -7,9 +7,19 @@ import { deepFreeze } from './utils/deepFreeze.js';
 import { formatAjvErrors } from './utils/ajvFormat.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-// Use the root schema that supports alias types
-const schemaPath = join(__dirname, '..', '..', 'wasm-abi-v1.schema.json');
-const schema = JSON.parse(readFileSync(schemaPath, 'utf-8'));
+// Try to load schema from source directory first (development), then dist (production)
+let schemaPath;
+let schema;
+try {
+    // First try source directory (for development)
+    schemaPath = join(__dirname, 'schema', 'wasm-abi-v1.schema.json');
+    schema = JSON.parse(readFileSync(schemaPath, 'utf-8'));
+}
+catch (error) {
+    // Fall back to dist directory (for production)
+    schemaPath = join(__dirname, '..', 'dist', 'schema', 'wasm-abi-v1.schema.json');
+    schema = JSON.parse(readFileSync(schemaPath, 'utf-8'));
+}
 // Initialize AJV with formats support
 const ajv = new Ajv({ allErrors: true, strict: false });
 addFormats(ajv);
