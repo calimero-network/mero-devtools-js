@@ -1,3 +1,16 @@
+# [0.2.0](https://github.com/calimero-network/mero-devtools-js/compare/v0.1.0...v0.2.0) (2025-09-17)
+
+
+### Bug Fixes
+
+* **abi-codegen:** include schema file in published package and fix path ([6823c52](https://github.com/calimero-network/mero-devtools-js/commit/6823c52ca872b77a83a1484a320282583c813281))
+
+
+### Features
+
+* added first simple version of create-mero-app which just clones the kv-store repo without the git files ([1a85c53](https://github.com/calimero-network/mero-devtools-js/commit/1a85c5388f3f661088a265de07b4fa1be1977b79))
+* **create-mero-app:** add CLI to scaffold from calimero-network/kv-store; exclude git files; publish config ([246342c](https://github.com/calimero-network/mero-devtools-js/commit/246342c4e604a1adcb72c12c8c6fac306747b7ea))
+
 # [0.1.0](https://github.com/calimero-network/mero-devtools-js/compare/v0.0.0...v0.1.0) (2025-08-22)
 
 
