@@ -3,7 +3,6 @@
 import fs from 'fs';
 import path from 'path';
 import { loadAbiManifestFromFile } from './parse.js';
-import { generateTypes } from './generate/types.js';
 import { generateClient } from './generate/client.js';
 import { deriveClientNameFromPath } from './generate/emit.js';
 
@@ -151,12 +150,7 @@ function main() {
         fs.mkdirSync(outputDir, { recursive: true });
       }
 
-      // Generate types.ts
-      const typesContent = generateTypes(manifest);
-      const typesPath = path.join(outputDir, 'types.ts');
-      fs.writeFileSync(typesPath, typesContent);
-
-      // Generate client.ts with derived filename
+      // Generate client.ts with derived filename (types are embedded)
       const importPath =
         args['import-path'] || '@calimero-network/calimero-client';
       const clientContent = generateClient(manifest, clientName, importPath);
@@ -171,7 +165,6 @@ function main() {
       console.log(`   Types: ${Object.keys(manifest.types).length}`);
       console.log(`   Client: ${clientName}`);
       console.log(`📁 Generated files:`);
-      console.log(`   ${typesPath}`);
       console.log(`   ${clientPath}`);
     } catch (error) {
       console.error(
