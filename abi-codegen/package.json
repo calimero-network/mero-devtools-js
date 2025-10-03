@@ -34,11 +34,11 @@
     "calimero-abi-codegen": "dist/cli.js"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && mkdir -p dist/schema && cp src/schema/wasm-abi-v1.schema.json dist/schema/",
     "test": "vitest run --reporter=dot",
     "codegen:test": "vitest run --reporter=dot __tests__/codegen.spec.ts",
     "validate:abi": "node dist/cli.js --validate -i __fixtures__/abi_conformance.json",
-    "prepack": "tsc -p tsconfig.json",
+    "prepack": "tsc -p tsconfig.json && mkdir -p dist/schema && cp src/schema/wasm-abi-v1.schema.json dist/schema/",
     "generate:example": "node dist/cli.js -i __fixtures__/abi_conformance.json -o ../codegen-example/src/generated/abi-conformance",
     "release": "semantic-release"
   },

@@ -1,35 +1,38 @@
 import Ajv from 'ajv';
 import addFormats from 'ajv-formats';
 import { readFileSync } from 'fs';
-import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 import { AbiManifest, AbiTypeRef } from './model.js';
 import { deepFreeze } from './utils/deepFreeze.js';
 import { formatAjvErrors } from './utils/ajvFormat.js';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-// Try to load schema from dist directory first (production), then source (development)
-let schemaPath: string;
-let schema: any;
-
-try {
-  // First try dist directory (for production)
-  schemaPath = join(__dirname, 'schema', 'wasm-abi-v1.schema.json');
-  schema = JSON.parse(readFileSync(schemaPath, 'utf-8'));
-} catch (error) {
-  // Fall back to source directory (for development)
-  schemaPath = join(__dirname, '..', 'src', 'schema', 'wasm-abi-v1.schema.json');
-  schema = JSON.parse(readFileSync(schemaPath, 'utf-8'));
-}
 
 // Initialize AJV with formats support
 const ajv = new Ajv({ allErrors: true, strict: false });
 addFormats(ajv);
 
+// Load schema from dist in production, fallback to src in development
+let loadedSchema: any;
+try {
+  const distSchemaPath = join(
+    dirname(fileURLToPath(import.meta.url)),
+    'schema',
+    'wasm-abi-v1.schema.json',
+  );
+  loadedSchema = JSON.parse(readFileSync(distSchemaPath, 'utf-8'));
+} catch (_err) {
+  const srcSchemaPath = join(
+    dirname(fileURLToPath(import.meta.url)),
+    '..',
+    'src',
+    'schema',
+    'wasm-abi-v1.schema.json',
+  );
+  loadedSchema = JSON.parse(readFileSync(srcSchemaPath, 'utf-8'));
+}
+
 // Compile the schema once
-const validateSchema = ajv.compile(schema);
+const validateSchema = ajv.compile(loadedSchema);
 
 /**
  * Parse and validate a WASM-ABI v1 manifest
