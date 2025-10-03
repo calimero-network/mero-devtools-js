@@ -1,3 +1,12 @@
+## [0.2.1](https://github.com/calimero-network/mero-devtools-js/compare/v0.2.0...v0.2.1) (2025-10-03)
+
+
+### Bug Fixes
+
+* bump version in package.json ([ac22a9b](https://github.com/calimero-network/mero-devtools-js/commit/ac22a9bdf4b8a4a95fbc274b609d42cdf607279a))
+* change release ([a1a41e7](https://github.com/calimero-network/mero-devtools-js/commit/a1a41e7d7017857cfe29671d27b873127bcf14ff))
+* remove duplicated types ([d5f3d57](https://github.com/calimero-network/mero-devtools-js/commit/d5f3d5728763d53f4a08d56f07e5c823eae6be34))
+
 # [0.2.0](https://github.com/calimero-network/mero-devtools-js/compare/v0.1.0...v0.2.0) (2025-09-17)
 
 
