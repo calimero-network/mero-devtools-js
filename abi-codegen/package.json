@@ -1,6 +1,6 @@
 {
   "name": "@calimero-is-near/abi-codegen",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "WASM-ABI v1 parser and code generator for Calimero",
   "type": "module",
   "main": "dist/index.js",
