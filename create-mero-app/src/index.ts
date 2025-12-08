@@ -126,8 +126,16 @@ async function main() {
       console.log(dim('Next steps:'));
       const rel = path.relative(cwd, targetDir);
       if (rel) console.log(`  cd ${rel}`);
+      console.log('');
+      console.log('  # Install dependencies:');
       console.log('  pnpm install');
-      console.log('  pnpm dev');
+      console.log('  pnpm run app:install');
+      console.log('');
+      console.log('  # Build the logic layer:');
+      console.log('  pnpm run logic:build');
+      console.log('');
+      console.log('  # Start development server:');
+      console.log('  pnpm run app:dev');
     });
 
   await program.parseAsync(process.argv);
