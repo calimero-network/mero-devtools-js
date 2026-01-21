@@ -43,31 +43,36 @@ jobs:
     permissions:
       contents: write # For creating GitHub releases and pushing tags
       id-token: write # For requesting OIDC token from GitHub
+      issues: write # For semantic-release to comment on issues
+      pull-requests: write # For semantic-release to comment on PRs
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: "pnpm"
           registry-url: "https://registry.npmjs.org"
+          scope: "@calimero-network"
+          token: false # Disable NPM_AUTH_TOKEN to allow OIDC trusted publishing
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
       - name: Build packages
         run: pnpm run build
+
       - name: Run tests
         run: pnpm run test
+
       - name: Release abi-codegen
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_CONFIG_PROVENANCE: true
         run: |
           cd abi-codegen
           npx semantic-release
@@ -75,7 +80,6 @@ jobs:
       - name: Release create-mero-app
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_CONFIG_PROVENANCE: true
         run: |
           cd create-mero-app
           npx semantic-release
