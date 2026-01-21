@@ -41,22 +41,24 @@ jobs:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     permissions:
-      contents: write # For creating GitHub releases and pushing tags
-      id-token: write # For requesting OIDC token from GitHub
-      issues: write # For semantic-release to comment on issues
-      pull-requests: write # For semantic-release to comment on PRs
+      contents: write
+      id-token: write
+      issues: write
+      pull-requests: write
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "24"
           registry-url: "https://registry.npmjs.org"
           scope: "@calimero-network"
-          token: false # Disable NPM_AUTH_TOKEN to allow OIDC trusted publishing
+          token: false
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -65,21 +67,23 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build packages
-        run: pnpm run build
+        run: pnpm build
 
       - name: Run tests
-        run: pnpm run test
+        run: pnpm test
 
-      - name: Release abi-codegen
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish @calimero-network/abi-codegen to npm
         run: |
           cd abi-codegen
           npx semantic-release
-
-      - name: Release create-mero-app
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_ENV: production
+
+      - name: Publish create-mero-app to npm
         run: |
           cd create-mero-app
           npx semantic-release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_ENV: production

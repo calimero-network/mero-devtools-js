@@ -2,14 +2,29 @@
   "branches": ["main"],
   "tagFormat": "abi-codegen-v${version}",
   "plugins": [
-    "@semantic-release/commit-analyzer",
-    "@semantic-release/release-notes-generator",
-    "@semantic-release/changelog",
+    [
+      "@semantic-release/commit-analyzer",
+      {
+        "preset": "conventionalcommits",
+        "releaseRules": [
+          { "type": "fix", "release": "patch" },
+          { "type": "feat", "release": "minor" },
+          { "type": "chore", "release": "patch" },
+          { "type": "docs", "release": "patch" }
+        ]
+      }
+    ],
+    [
+      "@semantic-release/release-notes-generator",
+      {
+        "preset": "conventionalcommits"
+      }
+    ],
     [
       "@semantic-release/exec",
       {
-        "prepareCmd": "npm pkg set version=\"${nextRelease.version}\"",
-        "publishCmd": "npm publish --access public"
+        "prepareCmd": "npm version ${nextRelease.version} --no-git-tag-version",
+        "publishCmd": "npm publish"
       }
     ],
     [
@@ -17,13 +32,6 @@
       {
         "successComment": false
       }
-    ],
-    [
-      "@semantic-release/git",
-      {
-        "assets": ["package.json", "CHANGELOG.md"],
-        "message": "chore(release): abi-codegen ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}"
-      }
     ]
   ]
-} 
+}
