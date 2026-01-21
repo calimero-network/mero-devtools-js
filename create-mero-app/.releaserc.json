@@ -1,6 +1,6 @@
 {
   "branches": ["main"],
-  "tagFormat": "abi-codegen-v${version}",
+  "tagFormat": "create-mero-app-v${version}",
   "plugins": [
     "@semantic-release/commit-analyzer",
     "@semantic-release/release-notes-generator",
@@ -17,8 +17,8 @@
       "@semantic-release/git",
       {
         "assets": ["package.json", "CHANGELOG.md"],
-        "message": "chore(release): abi-codegen ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}"
+        "message": "chore(release): create-mero-app ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}"
       }
     ]
   ]
-} 
+}
