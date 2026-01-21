@@ -4,11 +4,30 @@ import path from 'node:path';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import { execFile } from 'node:child_process';
-import { fileURLToPath } from 'node:url';
 import { green, red, cyan, dim } from 'kolorist';
 import validate from 'validate-npm-package-name';
+import prompts from 'prompts';
 
 const program = new Command();
+
+interface Template {
+  name: string;
+  display: string;
+  repoUrl: string;
+}
+
+const TEMPLATES: Template[] = [
+  {
+    name: 'rust',
+    display: 'Rust (kv-store)',
+    repoUrl: 'https://github.com/calimero-network/kv-store',
+  },
+  {
+    name: 'javascript',
+    display: 'JavaScript (kv-store-js)',
+    repoUrl: 'https://github.com/calimero-network/kv-store-js',
+  },
+];
 
 const EXCLUDED_NAMES = new Set<string>([
   '.git',
@@ -74,9 +93,10 @@ async function cloneToTemp(repoUrl: string): Promise<string> {
 async function main() {
   program
     .name('create-mero-app')
-    .description('Scaffold a new Mero app by cloning kv-store and copying files (excluding git)')
+    .description('Scaffold a new Mero app')
     .argument('[project-name]', 'Name of the project directory')
-    .action(async (projectName: string | undefined) => {
+    .option('-t, --template <name>', 'Template to use (rust, javascript)')
+    .action(async (projectName: string | undefined, options: { template?: string }) => {
       const cwd = process.cwd();
       const targetDir = projectName ? path.resolve(cwd, projectName) : cwd;
       const appName = path.basename(targetDir);
@@ -98,10 +118,50 @@ async function main() {
         await fs.mkdir(targetDir, { recursive: true });
       }
 
-      console.log(dim('Scaffolding project in ') + cyan(targetDir));
+      // Determine template
+      let template: Template | undefined;
 
-      const repoUrl = 'https://github.com/calimero-network/kv-store';
-      const tempRepo = await cloneToTemp(repoUrl);
+      if (options.template) {
+        template = TEMPLATES.find((t) => t.name === options.template);
+        if (!template) {
+          console.error(red(`Invalid template: ${options.template}`));
+          console.error(dim('Available templates: ' + TEMPLATES.map((t) => t.name).join(', ')));
+          process.exit(1);
+          return;
+        }
+      } else {
+        // Interactive selection
+        const response = await prompts(
+          {
+            type: 'select',
+            name: 'template',
+            message: 'Select backend template',
+            choices: TEMPLATES.map((t) => ({
+              title: t.display,
+              value: t.name,
+            })),
+            initial: 0,
+          },
+          {
+            onCancel: () => {
+              console.log(red('Operation cancelled.'));
+              process.exit(1);
+            },
+          }
+        );
+
+        template = TEMPLATES.find((t) => t.name === response.template);
+        if (!template) {
+          process.exit(1);
+          return;
+        }
+      }
+
+      console.log();
+      console.log(dim('Scaffolding project in ') + cyan(targetDir));
+      console.log(dim('Using template: ') + cyan(template.display));
+
+      const tempRepo = await cloneToTemp(template.repoUrl);
       try {
         const entries = await fs.readdir(tempRepo, { withFileTypes: true });
         for (const entry of entries) {

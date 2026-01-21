@@ -813,7 +813,11 @@ function App() {
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <CalimeroProvider {...calimeroConfig}>
+    <CalimeroProvider
+      clientApplicationId={calimeroConfig.clientApplicationId}
+      mode={calimeroConfig.mode}
+      applicationPath={calimeroConfig.applicationPath}
+    >
       <App />
     </CalimeroProvider>
   </React.StrictMode>,
