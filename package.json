@@ -5,7 +5,8 @@
   "private": true,
   "workspaces": [
     "abi-codegen",
-    "codegen-example"
+    "codegen-example",
+    "create-mero-app"
   ],
   "scripts": {
     "build": "pnpm -r build",
