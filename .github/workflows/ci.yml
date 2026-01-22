@@ -94,11 +94,11 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NODE_ENV: production
 
-      - name: Publish @calimero-network/create-mero-app to npm
+      - name: Publish create-mero-app to npm
         run: |
           cd create-mero-app
           VERSION=$(node -p "require('./package.json').version")
-          echo "📦 Package: @calimero-network/create-mero-app"
+          echo "📦 Package: create-mero-app"
           echo "📋 Version: ${VERSION}"
 
           # Check if tag exists (indicates already released)

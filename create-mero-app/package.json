@@ -1,5 +1,5 @@
 {
-  "name": "@calimero-network/create-mero-app",
+  "name": "create-mero-app",
   "version": "0.1.0",
   "private": false,
   "description": "Scaffold a new Mero app from a starter template",
