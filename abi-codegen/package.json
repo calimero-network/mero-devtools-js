@@ -8,6 +8,11 @@
   "publishConfig": {
     "access": "public"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/calimero-network/mero-devtools-js",
+    "directory": "abi-codegen"
+  },
   "exports": {
     ".": {
       "import": "./dist/index.js",
