@@ -75,7 +75,21 @@ jobs:
       - name: Publish @calimero-network/abi-codegen to npm
         run: |
           cd abi-codegen
-          npx semantic-release
+          VERSION=$(node -p "require('./package.json').version")
+          echo "📦 Package: @calimero-network/abi-codegen"
+          echo "📋 Version: ${VERSION}"
+
+          # Check if tag exists (indicates already released)
+          if git tag -l "abi-codegen-v${VERSION}" | grep -q .; then
+            echo "🔄 Tag exists, running semantic-release"
+            npx semantic-release
+          else
+            echo "🚀 Initial publish - publishing directly to npm"
+            npm publish --provenance --access public
+            echo "🏷️  Creating git tag: abi-codegen-v${VERSION}"
+            git tag "abi-codegen-v${VERSION}"
+            git push origin "abi-codegen-v${VERSION}"
+          fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NODE_ENV: production
@@ -83,7 +97,21 @@ jobs:
       - name: Publish create-mero-app to npm
         run: |
           cd create-mero-app
-          npx semantic-release
+          VERSION=$(node -p "require('./package.json').version")
+          echo "📦 Package: create-mero-app"
+          echo "📋 Version: ${VERSION}"
+
+          # Check if tag exists (indicates already released)
+          if git tag -l "create-mero-app-v${VERSION}" | grep -q .; then
+            echo "🔄 Tag exists, running semantic-release"
+            npx semantic-release
+          else
+            echo "🚀 Initial publish - publishing directly to npm"
+            npm publish --provenance --access public
+            echo "🏷️  Creating git tag: create-mero-app-v${VERSION}"
+            git tag "create-mero-app-v${VERSION}"
+            git push origin "create-mero-app-v${VERSION}"
+          fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NODE_ENV: production

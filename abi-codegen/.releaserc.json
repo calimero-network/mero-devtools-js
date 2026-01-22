@@ -26,6 +26,12 @@
         "prepareCmd": "npm version ${nextRelease.version} --no-git-tag-version",
         "publishCmd": "npm publish"
       }
+    ],
+    [
+      "@semantic-release/github",
+      {
+        "successComment": false
+      }
     ]
   ]
 }
