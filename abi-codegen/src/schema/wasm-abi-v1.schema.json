@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "WASM ABI v1 Schema",
-  "description": "Schema for Calimero WASM ABI v1 format",
+  "description": "Schema for Calimero WASM ABI v1 format. CRDT fields (crdt_type, inner_type, state_root) are stripped before validation.",
   "type": "object",
   "additionalProperties": false,
   "required": ["schema_version", "types", "methods", "events"],

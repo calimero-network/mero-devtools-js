@@ -64,7 +64,7 @@ function showHelp() {
     '  --name-from <path>        Derive client name from file path (e.g., wasm file)',
   );
   console.log(
-    '  --import-path <path>      Custom import path for CalimeroApp and Context (default: @calimero-network/calimero-client)',
+    '  --import-path <path>      Custom import path for MeroJs (default: @calimero-network/mero-js)',
   );
   console.log(
     '  --validate                Validate ABI manifest only (no code generation)',
@@ -152,7 +152,7 @@ function main() {
 
       // Generate client.ts with derived filename (types are embedded)
       const importPath =
-        args['import-path'] || '@calimero-network/calimero-client';
+        args['import-path'] || '@calimero-network/mero-js';
       const clientContent = generateClient(manifest, clientName, importPath);
       const clientPath = path.join(outputDir, `${clientName}.ts`);
       fs.writeFileSync(clientPath, clientContent);
