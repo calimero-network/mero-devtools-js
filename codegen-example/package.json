@@ -12,7 +12,8 @@
   "dependencies": {
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "@calimero-network/calimero-client": "^1.14.2"
+    "@calimero-network/mero-js": "file:../../mero-js",
+    "@calimero-network/mero-react": "file:../../mero-react"
   },
   "devDependencies": {
     "@types/react": "^18.2.66",
