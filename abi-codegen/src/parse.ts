@@ -11,6 +11,38 @@ import { formatAjvErrors } from './utils/ajvFormat.js';
 const ajv = new Ajv({ allErrors: true, strict: false });
 addFormats(ajv);
 
+/**
+ * CRDT fields that are used by Calimero runtime but not needed for client codegen.
+ * These are stripped before schema validation.
+ */
+const CRDT_FIELDS = ['crdt_type', 'inner_type', 'state_root'] as const;
+
+/**
+ * Recursively strip CRDT-specific fields from an ABI manifest.
+ * CRDT fields are used for replication but don't affect client code generation.
+ *
+ * @param obj - The object to strip CRDT fields from
+ * @returns A new object with CRDT fields removed
+ */
+function stripCrdtFields<T>(obj: T): T {
+  if (obj === null || typeof obj !== 'object') {
+    return obj;
+  }
+
+  if (Array.isArray(obj)) {
+    return obj.map(stripCrdtFields) as T;
+  }
+
+  const result: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
+    if (CRDT_FIELDS.includes(key as (typeof CRDT_FIELDS)[number])) {
+      continue; // Skip CRDT fields
+    }
+    result[key] = stripCrdtFields(value);
+  }
+  return result as T;
+}
+
 // Load schema from dist in production, fallback to src in development
 let loadedSchema: any;
 try {
@@ -41,8 +73,11 @@ const validateSchema = ajv.compile(loadedSchema);
  * @throws Error if validation fails
  */
 export function parseAbiManifest(json: unknown): AbiManifest {
+  // Step 0: Strip CRDT-specific fields (they don't affect code generation)
+  const strippedJson = stripCrdtFields(json);
+
   // Step 1: Validate against the schema
-  const valid = validateSchema(json);
+  const valid = validateSchema(strippedJson);
   if (!valid) {
     throw new Error(
       'ABI schema validation failed:\n' +
@@ -50,7 +85,7 @@ export function parseAbiManifest(json: unknown): AbiManifest {
     );
   }
 
-  const manifest = json as unknown as AbiManifest;
+  const manifest = strippedJson as unknown as AbiManifest;
 
   // Step 2: Verify schema version
   if (manifest.schema_version !== 'wasm-abi/1') {

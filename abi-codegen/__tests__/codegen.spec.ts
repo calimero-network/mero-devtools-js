@@ -120,27 +120,24 @@ describe('Codegen', () => {
 
       // Assert key patterns
       expect(clientContent).toContain('export class TestClient {');
-      expect(clientContent).toContain('import {');
-      expect(clientContent).toContain('  CalimeroApp,');
-      expect(clientContent).toContain('  Context,');
-      // ExecutionResponse is no longer imported
       expect(clientContent).toContain(
-        "} from '@calimero-network/calimero-client';",
+        "import type { MeroJs } from '@calimero-network/mero-js';",
       );
+      expect(clientContent).toContain('export interface AppContext {');
       expect(clientContent).toContain(
-        'constructor(app: CalimeroApp, context: Context) {',
+        'constructor(mero: MeroJs, context: AppContext) {',
       );
       expect(clientContent).toContain(
         'async optU32(params: { x: number | null }): Promise<number | null> {',
       );
       expect(clientContent).toContain(
-        "const response = await this.app.execute(this.context, 'opt_u32', params);",
+        "method: 'opt_u32',",
       );
       expect(clientContent).toContain(
         'async makePerson(params: { p: Person }): Promise<Person> {',
       );
       expect(clientContent).toContain(
-        "const response = await this.app.execute(this.context, 'make_person', convertCalimeroBytesForWasm(params));",
+        "method: 'make_person',",
       );
       // Error documentation is now handled through standard error response pattern
     });
@@ -159,15 +156,14 @@ describe('Codegen', () => {
       expect(clientContent).toContain(
         'async roundtripId(params: { x: UserId32 }): Promise<UserId32> {',
       );
+      expect(clientContent).toContain("method: 'roundtrip_id',");
       expect(clientContent).toContain(
-        "const response = await this.app.execute(this.context, 'roundtrip_id', convertCalimeroBytesForWasm(params));",
+        'args: convertCalimeroBytesForWasm(params),',
       );
       expect(clientContent).toContain(
         'async optU32(params: { x: number | null }): Promise<number | null> {',
       );
-      expect(clientContent).toContain(
-        "const response = await this.app.execute(this.context, 'opt_u32', params);",
-      );
+      expect(clientContent).toContain("method: 'opt_u32',");
     });
 
     it('should handle multi-parameter methods correctly', () => {
@@ -177,9 +173,7 @@ describe('Codegen', () => {
       expect(clientContent).toContain(
         'async makePerson(params: { p: Person }): Promise<Person> {',
       );
-      expect(clientContent).toContain(
-        "const response = await this.app.execute(this.context, 'make_person', convertCalimeroBytesForWasm(params));",
-      );
+      expect(clientContent).toContain("method: 'make_person',");
     });
 
     it('should preserve ABI method names verbatim in execute calls', () => {
@@ -203,8 +197,7 @@ describe('Codegen', () => {
       expect(clientContent).toContain(
         'async mayFail(params: { flag: boolean }): Promise<number> {',
       );
-      // Error handling is now done through the standard error response pattern
-      expect(clientContent).toContain('throw new Error(response.error || \'Execution failed\');');
+      // mero-js throws JsonRpcError, no explicit error handling needed in generated code
     });
 
     it('should handle methods with nullable returns', () => {
@@ -223,7 +216,10 @@ describe('Codegen', () => {
         'async makePerson(params: { p: Person }): Promise<Person> {',
       );
       expect(clientContent).toContain(
-        "const response = await this.app.execute(this.context, 'make_person', convertCalimeroBytesForWasm(params));",
+        "method: 'make_person',",
+      );
+      expect(clientContent).toContain(
+        'args: convertCalimeroBytesForWasm(params),',
       );
     });
 
@@ -288,14 +284,12 @@ describe('Codegen', () => {
 
       expect(clientContent).toContain('export class KVStoreClient {');
       expect(clientContent).toContain(
-        'constructor(app: CalimeroApp, context: Context) {',
+        'constructor(mero: MeroJs, context: AppContext) {',
       );
-      expect(clientContent).toContain('import {');
-      expect(clientContent).toContain('  CalimeroApp,');
-      expect(clientContent).toContain('  Context,');
       expect(clientContent).toContain(
-        "} from '@calimero-network/calimero-client';",
+        "import type { MeroJs } from '@calimero-network/mero-js';",
       );
+      expect(clientContent).toContain('export interface AppContext {');
     });
   });
 
@@ -329,25 +323,29 @@ describe('Codegen', () => {
       const clientPath = path.join(tmpDir, 'client.ts');
       fs.writeFileSync(clientPath, clientContent);
 
-      // Remove the calimero-client import and add mock types for compile test
+      // Remove the mero-js import and add mock types for compile test
       const clientWithMockedImport = clientContent.replace(
-        `import {
-  CalimeroApp,
-  Context,
-} from '@calimero-network/calimero-client';`,
+        `import type { MeroJs } from '@calimero-network/mero-js';`,
         `// Mock types for compile test
-type CalimeroApp = any;
-type Context = any;`,
+type MeroJs = {
+  rpc: {
+    execute: <T>(params: { contextId: string; method: string; args: Record<string, unknown>; executorPublicKey: string }) => Promise<{ output: T | null }>;
+  };
+};`,
       );
 
       // Add a test stub to verify the new parameter structure compiles
       const testStub = `
 // Test stub to verify parameter structure
-const app = { execute: async (_c: any, _m: string, _p?: Record<string, unknown>) => ({ success: true, result: null }) } as any;
-const ctx = {} as any;
-const client = new Client(app, ctx);
-await client.roundtripId({ x: "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef" });
-await client.makePerson({ p: { id: "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef" as any, name: "test", age: 25 } });
+const mero: MeroJs = {
+  rpc: {
+    execute: async (_params: any) => ({ output: null }),
+  },
+};
+const ctx: AppContext = { contextId: 'test', executorPublicKey: 'test' };
+const client = new Client(mero, ctx);
+await client.roundtripId({ x: new CalimeroBytes("1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef") });
+await client.makePerson({ p: { id: new CalimeroBytes("1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"), name: "test", age: 25 } });
 await client.act({ a: Action.Ping() });
 `;
       const clientWithTestStub = clientWithMockedImport + testStub;
