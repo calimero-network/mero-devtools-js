@@ -157,11 +157,13 @@ function validateInvariants(manifest: AbiManifest): void {
         checkTypeRefs(typeRef.key, `${context}.key`);
         checkTypeRefs(typeRef.value, `${context}.value`);
       } else if (typeRef.kind === 'record') {
+        if (typeRef.inner_type) {
+          checkTypeRefs(typeRef.inner_type, `${context}.inner_type`);
+        }
         for (const field of typeRef.fields) {
           checkTypeRefs(field.type, `${context}.field.${field.name}`);
         }
       }
-      // Scalar types and bytes types don't have nested TypeRefs
     }
   };
 
@@ -226,11 +228,13 @@ function validateInvariants(manifest: AbiManifest): void {
       } else if (typeRef.kind === 'list') {
         validateMapKeys(typeRef.items, `${context}.items`);
       } else if (typeRef.kind === 'record') {
+        if (typeRef.inner_type) {
+          validateMapKeys(typeRef.inner_type, `${context}.inner_type`);
+        }
         for (const field of typeRef.fields) {
           validateMapKeys(field.type, `${context}.field.${field.name}`);
         }
       }
-      // Scalar types and bytes types don't have nested TypeRefs
     }
   };
 

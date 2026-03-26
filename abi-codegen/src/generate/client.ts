@@ -756,7 +756,14 @@ function generateTypeRef(
       );
       return `Record<${keyType}, ${valueType}>`;
     case 'record':
-      // Inline record type
+      if (typeRef.crdt_type && typeRef.inner_type) {
+        return generateTypeRef(
+          typeRef.inner_type,
+          manifest,
+          useTypesNamespace,
+          forUserApi,
+        );
+      }
       const fields = typeRef.fields.map((field) => {
         const fieldType = generateTypeRef(
           field.type,
