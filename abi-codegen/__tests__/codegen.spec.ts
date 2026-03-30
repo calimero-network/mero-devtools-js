@@ -121,26 +121,26 @@ describe('Codegen', () => {
       // Assert key patterns
       expect(clientContent).toContain('export class TestClient {');
       expect(clientContent).toContain('import {');
-      expect(clientContent).toContain('  CalimeroApp,');
-      expect(clientContent).toContain('  Context,');
+      expect(clientContent).toContain('  MeroJs,');
+      
       // ExecutionResponse is no longer imported
       expect(clientContent).toContain(
-        "} from '@calimero-network/calimero-client';",
+        "} from '@calimero-network/mero-react';",
       );
       expect(clientContent).toContain(
-        'constructor(app: CalimeroApp, context: Context) {',
+        'constructor(mero: MeroJs, contextId: string, executorPublicKey: string) {',
       );
       expect(clientContent).toContain(
         'async optU32(params: { x: number | null }): Promise<number | null> {',
       );
       expect(clientContent).toContain(
-        "const response = await this.app.execute(this.context, 'opt_u32', params);",
+        "const response = await this.mero.rpc.execute({ contextId: this.contextId, method: 'opt_u32', argsJson: params, executorPublicKey: this.executorPublicKey });",
       );
       expect(clientContent).toContain(
         'async makePerson(params: { p: Person }): Promise<Person> {',
       );
       expect(clientContent).toContain(
-        "const response = await this.app.execute(this.context, 'make_person', convertCalimeroBytesForWasm(params));",
+        "const response = await this.mero.rpc.execute({ contextId: this.contextId, method: 'make_person', argsJson: convertCalimeroBytesForWasm(params), executorPublicKey: this.executorPublicKey });",
       );
       // Error documentation is now handled through standard error response pattern
     });
@@ -160,13 +160,13 @@ describe('Codegen', () => {
         'async roundtripId(params: { x: UserId32 }): Promise<UserId32> {',
       );
       expect(clientContent).toContain(
-        "const response = await this.app.execute(this.context, 'roundtrip_id', convertCalimeroBytesForWasm(params));",
+        "const response = await this.mero.rpc.execute({ contextId: this.contextId, method: 'roundtrip_id', argsJson: convertCalimeroBytesForWasm(params), executorPublicKey: this.executorPublicKey });",
       );
       expect(clientContent).toContain(
         'async optU32(params: { x: number | null }): Promise<number | null> {',
       );
       expect(clientContent).toContain(
-        "const response = await this.app.execute(this.context, 'opt_u32', params);",
+        "const response = await this.mero.rpc.execute({ contextId: this.contextId, method: 'opt_u32', argsJson: params, executorPublicKey: this.executorPublicKey });",
       );
     });
 
@@ -178,7 +178,7 @@ describe('Codegen', () => {
         'async makePerson(params: { p: Person }): Promise<Person> {',
       );
       expect(clientContent).toContain(
-        "const response = await this.app.execute(this.context, 'make_person', convertCalimeroBytesForWasm(params));",
+        "const response = await this.mero.rpc.execute({ contextId: this.contextId, method: 'make_person', argsJson: convertCalimeroBytesForWasm(params), executorPublicKey: this.executorPublicKey });",
       );
     });
 
@@ -203,8 +203,8 @@ describe('Codegen', () => {
       expect(clientContent).toContain(
         'async mayFail(params: { flag: boolean }): Promise<number> {',
       );
-      // Error handling is now done through the standard error response pattern
-      expect(clientContent).toContain('throw new Error(response.error || \'Execution failed\');');
+      // Errors are thrown by rpc.execute as RpcError — generated code just returns the result
+      expect(clientContent).toContain('return response as number;');
     });
 
     it('should handle methods with nullable returns', () => {
@@ -223,7 +223,7 @@ describe('Codegen', () => {
         'async makePerson(params: { p: Person }): Promise<Person> {',
       );
       expect(clientContent).toContain(
-        "const response = await this.app.execute(this.context, 'make_person', convertCalimeroBytesForWasm(params));",
+        "const response = await this.mero.rpc.execute({ contextId: this.contextId, method: 'make_person', argsJson: convertCalimeroBytesForWasm(params), executorPublicKey: this.executorPublicKey });",
       );
     });
 
@@ -288,13 +288,13 @@ describe('Codegen', () => {
 
       expect(clientContent).toContain('export class KVStoreClient {');
       expect(clientContent).toContain(
-        'constructor(app: CalimeroApp, context: Context) {',
+        'constructor(mero: MeroJs, contextId: string, executorPublicKey: string) {',
       );
       expect(clientContent).toContain('import {');
-      expect(clientContent).toContain('  CalimeroApp,');
-      expect(clientContent).toContain('  Context,');
+      expect(clientContent).toContain('  MeroJs,');
+      
       expect(clientContent).toContain(
-        "} from '@calimero-network/calimero-client';",
+        "} from '@calimero-network/mero-react';",
       );
     });
   });
@@ -329,23 +329,17 @@ describe('Codegen', () => {
       const clientPath = path.join(tmpDir, 'client.ts');
       fs.writeFileSync(clientPath, clientContent);
 
-      // Remove the calimero-client import and add mock types for compile test
+      // Remove the mero-react import and add mock types for compile test
       const clientWithMockedImport = clientContent.replace(
-        `import {
-  CalimeroApp,
-  Context,
-} from '@calimero-network/calimero-client';`,
-        `// Mock types for compile test
-type CalimeroApp = any;
-type Context = any;`,
+        `import {\n  MeroJs,\n} from '@calimero-network/mero-react';`,
+        `// Mock types for compile test\ntype MeroJs = { rpc: { execute: (params: any) => Promise<any> } };`,
       );
 
       // Add a test stub to verify the new parameter structure compiles
       const testStub = `
 // Test stub to verify parameter structure
-const app = { execute: async (_c: any, _m: string, _p?: Record<string, unknown>) => ({ success: true, result: null }) } as any;
-const ctx = {} as any;
-const client = new Client(app, ctx);
+const mero = { rpc: { execute: async (p: any) => p } } as any;
+const client = new Client(mero, 'ctx-1', 'exec-key-1');
 await client.roundtripId({ x: "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef" });
 await client.makePerson({ p: { id: "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef" as any, name: "test", age: 25 } });
 await client.act({ a: Action.Ping() });
