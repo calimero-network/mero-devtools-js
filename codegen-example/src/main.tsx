@@ -6,12 +6,12 @@ import {
   CalimeroBytes,
 } from './generated/abi-conformance/AbiConformanceClient';
 import {
-  Context,
-  CalimeroProvider,
-  useCalimero,
-  CalimeroConnectButton,
+
+  MeroProvider,
+  useMero,
+
   AppMode,
-} from '@calimero-network/calimero-client';
+} from '@calimero-network/mero-react';
 
 // Utility function for converting byte arrays to hex strings
 function bytesToHex(bytes: Uint8Array): string {
@@ -38,16 +38,16 @@ interface TestResult {
 function App() {
   const [results, setResults] = useState<TestResult[]>([]);
   const [isRunning, setIsRunning] = useState(false);
-  const { app, isAuthenticated } = useCalimero();
+  const { mero, isAuthenticated, contextId, contextIdentity } = useMero();
 
   const runComprehensiveTests = async () => {
-    if (!app || !isAuthenticated) {
+    if (!mero || !isAuthenticated) {
       setResults([
         {
           method: 'connection',
           status: 'error',
           message: '❌ Not connected to Calimero. Please connect first.',
-          details: { app: !!app, authenticated: isAuthenticated },
+          details: { mero: !!mero, authenticated: isAuthenticated },
         },
       ]);
       return;
@@ -57,17 +57,12 @@ function App() {
     setResults([]);
 
     // Create a context for the client (this calls init automatically)
-    let context: Context;
+    
     let client;
     try {
       // context = await app.createContext();
-      context = {
-        contextId: '44a5587LgLJntDLXjX5qbSxwEpaWXCxFtkmKqME5mXyV',
-        executorId: '5FU8fnDYh15HBKyXc5BRuxy6EQoWVEZAV6h5osqs87f3',
-        applicationId: '5xC9UMNuwh9ddCfXNnapiRuhBnqgLyz2rbu3C8yKXU5h',
-      };
-      console.log('Context creation result:', context);
-      client = new AbiConformanceClient(app, context);
+      
+      client = new AbiConformanceClient(mero, contextId || "", contextIdentity || "");
     } catch (error) {
       setResults([
         {
@@ -729,7 +724,7 @@ function App() {
         </p>
 
         <div className="connection-status">
-          <CalimeroConnectButton />
+          <button>Connect</button>
           {isAuthenticated ? (
             <span className="status connected">✅ Connected to Calimero</span>
           ) : (
@@ -813,12 +808,11 @@ function App() {
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <CalimeroProvider
-      clientApplicationId={calimeroConfig.clientApplicationId}
+    <MeroProvider
       mode={calimeroConfig.mode}
-      applicationPath={calimeroConfig.applicationPath}
+      packageName="com.calimero.abi-conformance"
     >
       <App />
-    </CalimeroProvider>
+    </MeroProvider>
   </React.StrictMode>,
 );

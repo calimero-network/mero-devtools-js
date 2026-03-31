@@ -163,7 +163,9 @@ function generateTypeRef(
       const valueType = generateTypeRef(typeRef.value, manifest, forUserApi);
       return `Record<${keyType}, ${valueType}>`;
     case 'record':
-      // Inline record type
+      if (typeRef.crdt_type && typeRef.inner_type) {
+        return generateTypeRef(typeRef.inner_type, manifest, forUserApi);
+      }
       const fields = typeRef.fields.map((field) => {
         const fieldType = generateTypeRef(field.type, manifest, forUserApi);
         const nullableType = field.nullable ? `${fieldType} | null` : fieldType;

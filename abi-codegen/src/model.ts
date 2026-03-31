@@ -6,6 +6,7 @@ export interface AbiManifest {
   types: Record<string, AbiTypeDef>;
   methods: AbiMethod[];
   events: AbiEvent[];
+  state_root?: string;
 }
 
 // Type references can be either inline types or references to named types
@@ -49,17 +50,21 @@ export interface AbiBytesFixed {
 export interface AbiList {
   kind: 'list';
   items: AbiTypeRef;
+  crdt_type?: string;
 }
 
 export interface AbiMap {
   kind: 'map';
   key: AbiTypeRef;
   value: AbiTypeRef;
+  crdt_type?: string;
 }
 
 export interface AbiRecord {
   kind: 'record';
   fields: AbiField[];
+  crdt_type?: string;
+  inner_type?: AbiTypeRef;
 }
 
 // Field definition
