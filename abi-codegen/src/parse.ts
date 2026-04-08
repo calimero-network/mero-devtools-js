@@ -4,6 +4,7 @@ import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { AbiManifest, AbiTypeRef } from './model.js';
+import { mapRustTypeToTs } from './generate/emit.js';
 import { deepFreeze } from './utils/deepFreeze.js';
 import { formatAjvErrors } from './utils/ajvFormat.js';
 
@@ -147,7 +148,7 @@ function validateInvariants(manifest: AbiManifest): void {
   // Helper function to check all TypeRefs in the manifest
   const checkTypeRefs = (typeRef: AbiTypeRef, context: string): void => {
     if (isTypeRef(typeRef)) {
-      if (!definedTypes.has(typeRef.$ref)) {
+      if (!definedTypes.has(typeRef.$ref) && !mapRustTypeToTs(typeRef.$ref)) {
         throw new Error(`Dangling $ref "${typeRef.$ref}" in ${context}`);
       }
     } else if (hasKind(typeRef)) {
@@ -162,6 +163,10 @@ function validateInvariants(manifest: AbiManifest): void {
         }
         for (const field of typeRef.fields) {
           checkTypeRefs(field.type, `${context}.field.${field.name}`);
+        }
+      } else if (typeRef.kind === 'tuple') {
+        for (let i = 0; i < typeRef.elements.length; i++) {
+          checkTypeRefs(typeRef.elements[i], `${context}.elements[${i}]`);
         }
       }
     }
@@ -238,6 +243,10 @@ function validateInvariants(manifest: AbiManifest): void {
         }
         for (const field of typeRef.fields) {
           validateMapKeys(field.type, `${context}.field.${field.name}`);
+        }
+      } else if (typeRef.kind === 'tuple') {
+        for (let i = 0; i < typeRef.elements.length; i++) {
+          validateMapKeys(typeRef.elements[i], `${context}.elements[${i}]`);
         }
       }
     }

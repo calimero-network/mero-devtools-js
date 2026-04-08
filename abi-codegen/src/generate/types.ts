@@ -5,7 +5,7 @@ import {
   AbiMethod,
   AbiEvent,
 } from '../model.js';
-import { formatIdentifier, generateFileBanner } from './emit.js';
+import { formatIdentifier, generateFileBanner, mapRustTypeToTs } from './emit.js';
 
 /**
  * Generate TypeScript types from a WASM-ABI v1 manifest
@@ -131,9 +131,17 @@ function generateTypeRef(
   forVariantParam: boolean = false,
 ): string {
   if ('$ref' in typeRef) {
+    const typeDef = manifest.types[typeRef.$ref];
+
+    // If not a known type in the manifest, try mapping as a raw Rust type
+    if (!typeDef) {
+      const mapped = mapRustTypeToTs(typeRef.$ref);
+      if (mapped) return mapped;
+    }
+
     const typeName = formatIdentifier(typeRef.$ref);
     // For variant types, return the Payload type when used as parameters
-    if (forVariantParam && manifest.types[typeRef.$ref]?.kind === 'variant') {
+    if (forVariantParam && typeDef?.kind === 'variant') {
       return `${typeName}Payload`;
     }
     return typeName;
@@ -162,6 +170,11 @@ function generateTypeRef(
       const keyType = generateTypeRef(typeRef.key, manifest, forUserApi);
       const valueType = generateTypeRef(typeRef.value, manifest, forUserApi);
       return `Record<${keyType}, ${valueType}>`;
+    case 'tuple':
+      const elements = (typeRef as any).elements.map((el: AbiTypeRef) =>
+        generateTypeRef(el, manifest, forUserApi),
+      );
+      return `[${elements.join(', ')}]`;
     case 'record':
       if (typeRef.crdt_type && typeRef.inner_type) {
         return generateTypeRef(typeRef.inner_type, manifest, forUserApi);

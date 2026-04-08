@@ -5,7 +5,7 @@ import {
   AbiTypeDef,
   AbiEvent,
 } from '../model.js';
-import { formatIdentifier, generateFileBanner, toCamelCase } from './emit.js';
+import { formatIdentifier, generateFileBanner, mapRustTypeToTs, sanitizeClassName, toCamelCase } from './emit.js';
 
 /**
  * Utility class for handling byte conversions in Calimero
@@ -114,6 +114,9 @@ export function generateClient(
   clientName: string = 'Client',
   importPath: string = '@calimero-network/mero-react',
 ): string {
+  // Sanitize clientName: remove spaces/special chars, preserve existing casing
+  clientName = sanitizeClassName(clientName);
+
   const lines: string[] = [];
 
   // Add file banner
@@ -275,14 +278,14 @@ export function generateClient(
 
   // Add Client class
   lines.push(`export class ${clientName} {`);
-  lines.push(`  private mero: MeroJs;`);
-  lines.push(`  private contextId: string;`);
-  lines.push(`  private executorPublicKey: string;`);
+  lines.push(`  private _mero: MeroJs;`);
+  lines.push(`  private _contextId: string;`);
+  lines.push(`  private _executorPublicKey: string;`);
   lines.push('');
   lines.push(`  constructor(mero: MeroJs, contextId: string, executorPublicKey: string) {`);
-  lines.push(`    this.mero = mero;`);
-  lines.push(`    this.contextId = contextId;`);
-  lines.push(`    this.executorPublicKey = executorPublicKey;`);
+  lines.push(`    this._mero = mero;`);
+  lines.push(`    this._contextId = contextId;`);
+  lines.push(`    this._executorPublicKey = executorPublicKey;`);
   lines.push(`  }`);
   lines.push('');
 
@@ -347,6 +350,9 @@ function isBytesType(typeRef: AbiTypeRef, manifest: AbiManifest): boolean {
       if ('fields' in typeRef) {
         return typeRef.fields.some((field: any) => isBytesType(field.type, manifest));
       }
+    }
+    if (typeRef.kind === 'tuple' && 'elements' in typeRef) {
+      return (typeRef as any).elements.some((el: AbiTypeRef) => isBytesType(el, manifest));
     }
   }
   return false;
@@ -568,7 +574,7 @@ function generateMethod(
       `  public async ${methodName}(): Promise<${nullableReturnType}> {`,
     );
     lines.push(
-      `    const response = await this.mero.rpc.execute({ contextId: this.contextId, method: '${method.name}', argsJson: {}, executorPublicKey: this.executorPublicKey });`,
+      `    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: '${method.name}', argsJson: {}, executorPublicKey: this._executorPublicKey });`,
     );
   } else {
     // 1+ parameters - build object type and expose single params argument
@@ -591,7 +597,7 @@ function generateMethod(
     // Pass parameters to the WASM module based on count
     if (method.params.length === 0) {
       lines.push(
-        `    const response = await this.mero.rpc.execute({ contextId: this.contextId, method: '${method.name}', argsJson: {}, executorPublicKey: this.executorPublicKey });`,
+        `    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: '${method.name}', argsJson: {}, executorPublicKey: this._executorPublicKey });`,
       );
     } else if (method.params.length === 1) {
       // For single parameter methods, handle special cases
@@ -621,22 +627,22 @@ function generateMethod(
         // Only apply CalimeroBytes conversion if needed
         if (hasCalimeroBytesParams(method, manifest)) {
           lines.push(
-            `    const response = await this.mero.rpc.execute({ contextId: this.contextId, method: '${method.name}', argsJson: convertCalimeroBytesForWasm(convertedParams), executorPublicKey: this.executorPublicKey });`,
+            `    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: '${method.name}', argsJson: convertCalimeroBytesForWasm(convertedParams), executorPublicKey: this._executorPublicKey });`,
           );
         } else {
           lines.push(
-            `    const response = await this.mero.rpc.execute({ contextId: this.contextId, method: '${method.name}', argsJson: convertedParams, executorPublicKey: this.executorPublicKey });`,
+            `    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: '${method.name}', argsJson: convertedParams, executorPublicKey: this._executorPublicKey });`,
           );
         }
       } else {
         // Only apply CalimeroBytes conversion if needed
         if (hasCalimeroBytesParams(method, manifest)) {
           lines.push(
-            `    const response = await this.mero.rpc.execute({ contextId: this.contextId, method: '${method.name}', argsJson: convertCalimeroBytesForWasm(params), executorPublicKey: this.executorPublicKey });`,
+            `    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: '${method.name}', argsJson: convertCalimeroBytesForWasm(params), executorPublicKey: this._executorPublicKey });`,
           );
         } else {
           lines.push(
-            `    const response = await this.mero.rpc.execute({ contextId: this.contextId, method: '${method.name}', argsJson: params, executorPublicKey: this.executorPublicKey });`,
+            `    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: '${method.name}', argsJson: params, executorPublicKey: this._executorPublicKey });`,
           );
         }
       }
@@ -644,11 +650,11 @@ function generateMethod(
       // For multiple parameters, only apply CalimeroBytes conversion if needed
       if (hasCalimeroBytesParams(method, manifest)) {
         lines.push(
-          `    const response = await this.mero.rpc.execute({ contextId: this.contextId, method: '${method.name}', argsJson: convertCalimeroBytesForWasm(params), executorPublicKey: this.executorPublicKey });`,
+          `    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: '${method.name}', argsJson: convertCalimeroBytesForWasm(params), executorPublicKey: this._executorPublicKey });`,
         );
       } else {
         lines.push(
-          `    const response = await this.mero.rpc.execute({ contextId: this.contextId, method: '${method.name}', argsJson: params, executorPublicKey: this.executorPublicKey });`,
+          `    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: '${method.name}', argsJson: params, executorPublicKey: this._executorPublicKey });`,
         );
       }
     }
@@ -681,8 +687,15 @@ function generateTypeRef(
   forVariantParam: boolean = false,
 ): string {
   if ('$ref' in typeRef) {
-    const typeName = formatIdentifier(typeRef.$ref);
     const typeDef = manifest.types[typeRef.$ref];
+
+    // If not a known type in the manifest, try mapping as a raw Rust type
+    if (!typeDef) {
+      const mapped = mapRustTypeToTs(typeRef.$ref);
+      if (mapped) return mapped;
+    }
+
+    const typeName = formatIdentifier(typeRef.$ref);
 
     // Check if this is a bytes type
     if (typeDef && typeDef.kind === 'bytes') {
@@ -738,6 +751,11 @@ function generateTypeRef(
         forUserApi,
       );
       return `Record<${keyType}, ${valueType}>`;
+    case 'tuple':
+      const elements = (typeRef as any).elements.map((el: AbiTypeRef) =>
+        generateTypeRef(el, manifest, useTypesNamespace, forUserApi),
+      );
+      return `[${elements.join(', ')}]`;
     case 'record':
       if (typeRef.crdt_type && typeRef.inner_type) {
         return generateTypeRef(

@@ -4,7 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import { loadAbiManifestFromFile } from './parse.js';
 import { generateClient } from './generate/client.js';
-import { deriveClientNameFromPath } from './generate/emit.js';
+import { deriveClientNameFromPath, sanitizeClassName } from './generate/emit.js';
 
 const getArgs = () => {
   const args: { [key: string]: string } = {};
@@ -122,8 +122,8 @@ function main() {
     // Name resolution logic with priority order
     let clientName: string;
     if (args['client-name']) {
-      // 1. Explicit client name (highest priority)
-      clientName = args['client-name'];
+      // 1. Explicit client name (highest priority) — sanitize spaces/special chars
+      clientName = sanitizeClassName(args['client-name']);
     } else if (args['name-from']) {
       // 2. Derive from --name-from path
       clientName = deriveClientNameFromPath(args['name-from']);

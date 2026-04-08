@@ -122,7 +122,7 @@ describe('Codegen', () => {
       expect(clientContent).toContain('export class TestClient {');
       expect(clientContent).toContain('import {');
       expect(clientContent).toContain('  MeroJs,');
-      
+
       // ExecutionResponse is no longer imported
       expect(clientContent).toContain(
         "} from '@calimero-network/mero-react';",
@@ -134,13 +134,13 @@ describe('Codegen', () => {
         'async optU32(params: { x: number | null }): Promise<number | null> {',
       );
       expect(clientContent).toContain(
-        "const response = await this.mero.rpc.execute({ contextId: this.contextId, method: 'opt_u32', argsJson: params, executorPublicKey: this.executorPublicKey });",
+        "const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'opt_u32', argsJson: params, executorPublicKey: this._executorPublicKey });",
       );
       expect(clientContent).toContain(
         'async makePerson(params: { p: Person }): Promise<Person> {',
       );
       expect(clientContent).toContain(
-        "const response = await this.mero.rpc.execute({ contextId: this.contextId, method: 'make_person', argsJson: convertCalimeroBytesForWasm(params), executorPublicKey: this.executorPublicKey });",
+        "const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'make_person', argsJson: convertCalimeroBytesForWasm(params), executorPublicKey: this._executorPublicKey });",
       );
       // Error documentation is now handled through standard error response pattern
     });
@@ -160,13 +160,13 @@ describe('Codegen', () => {
         'async roundtripId(params: { x: UserId32 }): Promise<UserId32> {',
       );
       expect(clientContent).toContain(
-        "const response = await this.mero.rpc.execute({ contextId: this.contextId, method: 'roundtrip_id', argsJson: convertCalimeroBytesForWasm(params), executorPublicKey: this.executorPublicKey });",
+        "const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'roundtrip_id', argsJson: convertCalimeroBytesForWasm(params), executorPublicKey: this._executorPublicKey });",
       );
       expect(clientContent).toContain(
         'async optU32(params: { x: number | null }): Promise<number | null> {',
       );
       expect(clientContent).toContain(
-        "const response = await this.mero.rpc.execute({ contextId: this.contextId, method: 'opt_u32', argsJson: params, executorPublicKey: this.executorPublicKey });",
+        "const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'opt_u32', argsJson: params, executorPublicKey: this._executorPublicKey });",
       );
     });
 
@@ -178,7 +178,7 @@ describe('Codegen', () => {
         'async makePerson(params: { p: Person }): Promise<Person> {',
       );
       expect(clientContent).toContain(
-        "const response = await this.mero.rpc.execute({ contextId: this.contextId, method: 'make_person', argsJson: convertCalimeroBytesForWasm(params), executorPublicKey: this.executorPublicKey });",
+        "const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'make_person', argsJson: convertCalimeroBytesForWasm(params), executorPublicKey: this._executorPublicKey });",
       );
     });
 
@@ -223,7 +223,7 @@ describe('Codegen', () => {
         'async makePerson(params: { p: Person }): Promise<Person> {',
       );
       expect(clientContent).toContain(
-        "const response = await this.mero.rpc.execute({ contextId: this.contextId, method: 'make_person', argsJson: convertCalimeroBytesForWasm(params), executorPublicKey: this.executorPublicKey });",
+        "const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'make_person', argsJson: convertCalimeroBytesForWasm(params), executorPublicKey: this._executorPublicKey });",
       );
     });
 
@@ -290,9 +290,12 @@ describe('Codegen', () => {
       expect(clientContent).toContain(
         'constructor(mero: MeroJs, contextId: string, executorPublicKey: string) {',
       );
+      expect(clientContent).toContain('private _mero: MeroJs;');
+      expect(clientContent).toContain('private _contextId: string;');
+      expect(clientContent).toContain('private _executorPublicKey: string;');
       expect(clientContent).toContain('import {');
       expect(clientContent).toContain('  MeroJs,');
-      
+
       expect(clientContent).toContain(
         "} from '@calimero-network/mero-react';",
       );
