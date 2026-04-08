@@ -595,11 +595,7 @@ function generateMethod(
     );
 
     // Pass parameters to the WASM module based on count
-    if (method.params.length === 0) {
-      lines.push(
-        `    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: '${method.name}', argsJson: {}, executorPublicKey: this._executorPublicKey });`,
-      );
-    } else if (method.params.length === 1) {
+    if (method.params.length === 1) {
       // For single parameter methods, handle special cases
       const paramName = formatIdentifier(method.params[0].name);
 
