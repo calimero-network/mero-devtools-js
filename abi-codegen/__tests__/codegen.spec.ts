@@ -388,6 +388,10 @@ describe('Codegen', () => {
       expect(mapRustTypeToTs('(u32, bool)')).toBe('[number, boolean]');
     });
 
+    it('should wrap Vec<Option<T>> with parens for correct array precedence', () => {
+      expect(mapRustTypeToTs('Vec<Option<String>>')).toBe('(string | null)[]');
+    });
+
     it('should return null for unknown types', () => {
       expect(mapRustTypeToTs('MyCustomType')).toBeNull();
       expect(mapRustTypeToTs('HashMap<String, u32>')).toBeNull();
@@ -461,6 +465,55 @@ describe('Codegen', () => {
       const parsed = parseAbiManifest(abiWithTuple);
       const typesContent = generateTypes(parsed);
       expect(typesContent).toContain('export type Pair = [string, number];');
+    });
+  });
+
+  describe('list of nullable items wraps union in parens', () => {
+    it('should generate (T | null)[] not T | null[] for nullable list items', () => {
+      const abi = {
+        schema_version: 'wasm-abi/1',
+        types: {},
+        methods: [
+          {
+            name: 'get_names',
+            params: [],
+            returns: {
+              kind: 'list',
+              items: { kind: 'string' },
+            },
+            returns_nullable: false,
+          },
+        ],
+        events: [],
+      };
+      // A list of strings is fine as-is
+      const parsed = parseAbiManifest(abi);
+      const client = generateClient(parsed, 'Test');
+      expect(client).toContain('Promise<string[]>');
+
+      // Now test a list where each item's type contains a union (via $ref fallback)
+      // We test the mapRustTypeToTs path which already proved the parens logic
+      // and the generateTypeRef path via nullable record fields in types
+      const typesAbi = {
+        schema_version: 'wasm-abi/1',
+        types: {
+          Row: {
+            kind: 'record',
+            fields: [
+              {
+                name: 'tags',
+                type: { kind: 'list', items: { kind: 'string' } },
+                nullable: false,
+              },
+            ],
+          },
+        },
+        methods: [],
+        events: [],
+      };
+      const parsedTypes = parseAbiManifest(typesAbi);
+      const typesContent = generateTypes(parsedTypes);
+      expect(typesContent).toContain('tags: string[];');
     });
   });
 

@@ -165,7 +165,8 @@ function generateTypeRef(
       return 'CalimeroBytes';
     case 'list':
       const itemType = generateTypeRef(typeRef.items, manifest, forUserApi);
-      return `${itemType}[]`;
+      const needsParens = itemType.includes('|');
+      return needsParens ? `(${itemType})[]` : `${itemType}[]`;
     case 'map':
       const keyType = generateTypeRef(typeRef.key, manifest, forUserApi);
       const valueType = generateTypeRef(typeRef.value, manifest, forUserApi);

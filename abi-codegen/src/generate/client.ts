@@ -732,7 +732,9 @@ function generateTypeRef(
         useTypesNamespace,
         forUserApi,
       );
-      return `${itemType}[]`;
+      // Wrap union types in parens so `string | null[]` becomes `(string | null)[]`
+      const needsParens = itemType.includes('|');
+      return needsParens ? `(${itemType})[]` : `${itemType}[]`;
     case 'map':
       const keyType = generateTypeRef(
         typeRef.key,
