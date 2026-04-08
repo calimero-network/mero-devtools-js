@@ -162,10 +162,14 @@ export function mapRustTypeToTs(rustType: string): string | null {
   }
 
   // Result<T, E> — unwrap to T (errors thrown by RPC layer)
-  const resultMatch = trimmed.match(/^Result<(.+),\s*.+>$/);
-  if (resultMatch) {
-    const inner = mapRustTypeToTs(resultMatch[1]);
-    if (inner) return inner;
+  // Use splitTopLevelCommas instead of greedy regex to handle cases like
+  // Result<i32, (String, u32)> where E contains commas.
+  if (trimmed.startsWith('Result<') && trimmed.endsWith('>')) {
+    const parts = splitTopLevelCommas(trimmed.slice(7, -1));
+    if (parts.length >= 2) {
+      const inner = mapRustTypeToTs(parts[0].trim());
+      if (inner) return inner;
+    }
   }
 
   // Tuple: (A, B, ...) — split on top-level commas
