@@ -215,11 +215,14 @@ function splitTopLevelCommas(s: string): string[] {
  * "Task Board" → "TaskBoard", "TestClient" → "TestClient", "kv-store" → "KvStore"
  */
 export function sanitizeClassName(name: string): string {
-  return name
+  const result = name
     .split(/[^a-zA-Z0-9]+/)
     .filter(Boolean)
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
     .join('');
+  // TS identifiers cannot start with a digit — prefix with underscore
+  if (/^\d/.test(result)) return `_${result}`;
+  return result;
 }
 
 /**
