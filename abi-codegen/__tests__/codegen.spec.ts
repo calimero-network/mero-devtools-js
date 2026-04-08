@@ -5,7 +5,8 @@ import { execSync } from 'child_process';
 import { loadAbiManifestFromFile } from '../src/parse.js';
 import { generateTypes } from '../src/generate/types.js';
 import { generateClient } from '../src/generate/client.js';
-import { deriveClientNameFromPath } from '../src/generate/emit.js';
+import { deriveClientNameFromPath, sanitizeClassName, mapRustTypeToTs } from '../src/generate/emit.js';
+import { parseAbiManifest } from '../src/parse.js';
 
 describe('Codegen', () => {
   const conformanceAbiPath = path.join(
@@ -315,6 +316,199 @@ describe('Codegen', () => {
         // This should throw if the manifest is properly frozen
         (manifest.types.Action.variants[1] as any).payload = { kind: 'string' };
       }).toThrow();
+    });
+  });
+
+  describe('Bug 1: class name sanitization', () => {
+    it('should remove spaces and preserve casing', () => {
+      expect(sanitizeClassName('Task Board')).toBe('TaskBoard');
+      expect(sanitizeClassName('Mero Bench')).toBe('MeroBench');
+    });
+
+    it('should preserve already-valid PascalCase names', () => {
+      expect(sanitizeClassName('TestClient')).toBe('TestClient');
+      expect(sanitizeClassName('KVStoreClient')).toBe('KVStoreClient');
+    });
+
+    it('should handle hyphens and underscores', () => {
+      expect(sanitizeClassName('my-app')).toBe('MyApp');
+      expect(sanitizeClassName('kv_store')).toBe('KvStore');
+    });
+
+    it('should prefix with underscore when name starts with a digit', () => {
+      expect(sanitizeClassName('2048 Game')).toBe('_2048Game');
+      expect(sanitizeClassName('3d-viewer')).toBe('_3dViewer');
+    });
+
+    it('should produce a valid class name in generated output', () => {
+      const clientContent = generateClient(manifest, 'Task Board');
+      expect(clientContent).toContain('export class TaskBoard {');
+      expect(clientContent).not.toContain('export class Task Board {');
+    });
+  });
+
+  describe('Bug 2: Rust type mapping', () => {
+    it('should map Rust primitives to TypeScript', () => {
+      expect(mapRustTypeToTs('String')).toBe('string');
+      expect(mapRustTypeToTs('bool')).toBe('boolean');
+      expect(mapRustTypeToTs('u64')).toBe('number');
+      expect(mapRustTypeToTs('i32')).toBe('number');
+      expect(mapRustTypeToTs('f64')).toBe('number');
+      expect(mapRustTypeToTs('u8')).toBe('number');
+      expect(mapRustTypeToTs('i16')).toBe('number');
+      expect(mapRustTypeToTs('()')).toBe('void');
+    });
+
+    it('should map Vec<T> to T[]', () => {
+      expect(mapRustTypeToTs('Vec<String>')).toBe('string[]');
+      expect(mapRustTypeToTs('Vec<u64>')).toBe('number[]');
+    });
+
+    it('should map Option<T> to T | null', () => {
+      expect(mapRustTypeToTs('Option<String>')).toBe('string | null');
+      expect(mapRustTypeToTs('Option<u32>')).toBe('number | null');
+    });
+
+    it('should unwrap Result<T, E> to T', () => {
+      expect(mapRustTypeToTs('Result<String, Error>')).toBe('string');
+      expect(mapRustTypeToTs('Result<u64, String>')).toBe('number');
+    });
+
+    it('should handle Result<T, E> where E contains commas', () => {
+      expect(mapRustTypeToTs('Result<i32, (String, u32)>')).toBe('number');
+    });
+
+    it('should handle nested generics', () => {
+      expect(mapRustTypeToTs('Vec<Option<String>>')).toBe('(string | null)[]');
+      expect(mapRustTypeToTs('Option<Vec<u32>>')).toBe('number[] | null');
+    });
+
+    it('should map tuples to TS tuple types', () => {
+      expect(mapRustTypeToTs('(String, String)')).toBe('[string, string]');
+      expect(mapRustTypeToTs('(u32, bool)')).toBe('[number, boolean]');
+    });
+
+    it('should return null for unknown types', () => {
+      expect(mapRustTypeToTs('MyCustomType')).toBeNull();
+      expect(mapRustTypeToTs('HashMap<String, u32>')).toBeNull();
+    });
+  });
+
+  describe('Bug 3: tuple type support', () => {
+    it('should accept tuple kind in ABI schema', () => {
+      const abiWithTuple = {
+        schema_version: 'wasm-abi/1',
+        types: {},
+        methods: [
+          {
+            name: 'get_pair',
+            params: [],
+            returns: {
+              kind: 'tuple',
+              elements: [{ kind: 'string' }, { kind: 'string' }],
+            },
+          },
+        ],
+        events: [],
+      };
+      // Should not throw during parsing
+      const parsed = parseAbiManifest(abiWithTuple);
+      expect(parsed.methods[0].returns).toEqual({
+        kind: 'tuple',
+        elements: [{ kind: 'string' }, { kind: 'string' }],
+      });
+    });
+
+    it('should generate TypeScript tuple types in client', () => {
+      const abiWithTuple = {
+        schema_version: 'wasm-abi/1',
+        types: {},
+        methods: [
+          {
+            name: 'map_entries',
+            params: [],
+            returns: {
+              kind: 'list',
+              items: {
+                kind: 'tuple',
+                elements: [{ kind: 'string' }, { kind: 'string' }],
+              },
+            },
+          },
+        ],
+        events: [],
+      };
+      const parsed = parseAbiManifest(abiWithTuple);
+      const clientContent = generateClient(parsed, 'TestClient');
+      expect(clientContent).toContain('Promise<[string, string][]>');
+    });
+
+    it('should generate tuple types in standalone types output', () => {
+      const abiWithTuple = {
+        schema_version: 'wasm-abi/1',
+        types: {
+          Pair: {
+            kind: 'alias',
+            target: {
+              kind: 'tuple',
+              elements: [{ kind: 'string' }, { kind: 'u32' }],
+            },
+          },
+        },
+        methods: [],
+        events: [],
+      };
+      const parsed = parseAbiManifest(abiWithTuple);
+      const typesContent = generateTypes(parsed);
+      expect(typesContent).toContain('export type Pair = [string, number];');
+    });
+  });
+
+  describe('Bug 4: private field underscore prefix', () => {
+    it('should prefix private fields with underscore', () => {
+      const clientContent = generateClient(manifest, 'TestClient');
+      expect(clientContent).toContain('private _mero: MeroJs;');
+      expect(clientContent).toContain('private _contextId: string;');
+      expect(clientContent).toContain('private _executorPublicKey: string;');
+    });
+
+    it('should not have un-prefixed private fields', () => {
+      const clientContent = generateClient(manifest, 'TestClient');
+      expect(clientContent).not.toMatch(/private mero: MeroJs/);
+      expect(clientContent).not.toMatch(/private contextId: string/);
+      expect(clientContent).not.toMatch(/private executorPublicKey: string/);
+    });
+
+    it('should use underscore-prefixed fields in method bodies', () => {
+      const clientContent = generateClient(manifest, 'TestClient');
+      expect(clientContent).toContain('this._mero.rpc.execute');
+      expect(clientContent).toContain('contextId: this._contextId');
+      expect(clientContent).toContain('executorPublicKey: this._executorPublicKey');
+      expect(clientContent).not.toMatch(/this\.mero\.rpc/);
+    });
+
+    it('should not collide with a context_id contract method', () => {
+      const abiWithCollision = {
+        schema_version: 'wasm-abi/1',
+        types: {},
+        methods: [
+          {
+            name: 'context_id',
+            params: [],
+            returns: { kind: 'string' },
+          },
+        ],
+        events: [],
+      };
+      const parsed = parseAbiManifest(abiWithCollision);
+      const clientContent = generateClient(parsed, 'TestClient');
+
+      // Method should exist
+      expect(clientContent).toContain('async contextId(): Promise<string>');
+      // Private field uses underscore prefix — no collision
+      expect(clientContent).toContain('private _contextId: string;');
+      // Should not have duplicate identifier
+      expect(clientContent).not.toMatch(/private contextId:/);
     });
   });
 
