@@ -220,6 +220,8 @@ export function sanitizeClassName(name: string): string {
     .filter(Boolean)
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
     .join('');
+  // Fallback when input has no alphanumeric characters
+  if (!result) return 'Client';
   // TS identifiers cannot start with a digit — prefix with underscore
   if (/^\d/.test(result)) return `_${result}`;
   return result;

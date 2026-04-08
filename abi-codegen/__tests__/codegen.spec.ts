@@ -320,30 +320,74 @@ describe('Codegen', () => {
   });
 
   describe('Bug 1: class name sanitization', () => {
+    // Basic transformations
     it('should remove spaces and preserve casing', () => {
       expect(sanitizeClassName('Task Board')).toBe('TaskBoard');
       expect(sanitizeClassName('Mero Bench')).toBe('MeroBench');
+      expect(sanitizeClassName('my cool app')).toBe('MyCoolApp');
     });
 
     it('should preserve already-valid PascalCase names', () => {
       expect(sanitizeClassName('TestClient')).toBe('TestClient');
       expect(sanitizeClassName('KVStoreClient')).toBe('KVStoreClient');
+      expect(sanitizeClassName('Client')).toBe('Client');
     });
 
     it('should handle hyphens and underscores', () => {
       expect(sanitizeClassName('my-app')).toBe('MyApp');
       expect(sanitizeClassName('kv_store')).toBe('KvStore');
+      expect(sanitizeClassName('multi--dash')).toBe('MultiDash');
+      expect(sanitizeClassName('__leading')).toBe('Leading');
+      expect(sanitizeClassName('trailing__')).toBe('Trailing');
     });
 
+    it('should handle mixed separators', () => {
+      expect(sanitizeClassName('my-cool_app name')).toBe('MyCoolAppName');
+      expect(sanitizeClassName('a.b.c')).toBe('ABC');
+    });
+
+    // Leading digit edge case
     it('should prefix with underscore when name starts with a digit', () => {
       expect(sanitizeClassName('2048 Game')).toBe('_2048Game');
       expect(sanitizeClassName('3d-viewer')).toBe('_3dViewer');
+      expect(sanitizeClassName('123')).toBe('_123');
     });
 
+    // Empty / degenerate input
+    it('should fallback to "Client" for empty string', () => {
+      expect(sanitizeClassName('')).toBe('Client');
+    });
+
+    it('should fallback to "Client" for non-alphanumeric input', () => {
+      expect(sanitizeClassName('---')).toBe('Client');
+      expect(sanitizeClassName('@#$')).toBe('Client');
+      expect(sanitizeClassName('   ')).toBe('Client');
+      expect(sanitizeClassName('...')).toBe('Client');
+    });
+
+    // Single characters
+    it('should handle single character input', () => {
+      expect(sanitizeClassName('a')).toBe('A');
+      expect(sanitizeClassName('Z')).toBe('Z');
+      expect(sanitizeClassName('5')).toBe('_5');
+    });
+
+    // Unicode / special chars stripped
+    it('should strip non-ASCII characters', () => {
+      expect(sanitizeClassName('café')).toBe('Caf');
+      expect(sanitizeClassName('naïve')).toBe('NaVe');
+    });
+
+    // End-to-end with generateClient
     it('should produce a valid class name in generated output', () => {
       const clientContent = generateClient(manifest, 'Task Board');
       expect(clientContent).toContain('export class TaskBoard {');
       expect(clientContent).not.toContain('export class Task Board {');
+    });
+
+    it('should produce valid class for degenerate input', () => {
+      const clientContent = generateClient(manifest, '---');
+      expect(clientContent).toContain('export class Client {');
     });
   });
 
