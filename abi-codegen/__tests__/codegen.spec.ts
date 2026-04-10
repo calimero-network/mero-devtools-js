@@ -36,8 +36,9 @@ describe('Codegen', () => {
       // JSDoc comments are no longer included in the new format
       // Error codes are no longer generated in the new format
       expect(typesContent).toContain('export type AbiEvent =');
+      // Events with $ref payloads must include the payload field
       expect(typesContent).toContain(
-        '| { name: "PersonUpdated" }',
+        '| { name: "PersonUpdated"; payload: Person }',
       );
       // Unit events should not have payload property
       expect(typesContent).toContain('| { name: "Ping" }');
@@ -865,6 +866,94 @@ describe('Codegen', () => {
       expect(clientContent).toContain('export class CalimeroBytes');
       expect(clientContent).toContain('function convertCalimeroBytesForWasm');
       expect(clientContent).toContain('function convertWasmResultToCalimeroBytes');
+    });
+  });
+
+  describe('types.ts threads manifest through error/event generation', () => {
+    // Regression: previously generateMethodErrorTypes and
+    // generateEventPayloadType passed the method/event object as the manifest
+    // arg, causing a TypeError when error.payload or event.payload was a $ref
+    // (manifest.types[ref] crashes since method.types is undefined).
+
+    it('should generate error types referencing a $ref payload without crashing', () => {
+      const abi = {
+        schema_version: 'wasm-abi/1',
+        types: {
+          ErrorDetails: {
+            kind: 'record',
+            fields: [{ name: 'reason', type: { kind: 'string' } }],
+          },
+        },
+        methods: [
+          {
+            name: 'doThing',
+            params: [],
+            returns: { kind: 'string' },
+            errors: [
+              { code: 'BadInput', payload: { $ref: 'ErrorDetails' } },
+            ],
+          },
+        ],
+        events: [],
+      };
+      const parsed = parseAbiManifest(abi);
+      expect(() => generateTypes(parsed)).not.toThrow();
+      const typesContent = generateTypes(parsed);
+      expect(typesContent).toContain(
+        'export type doThingError = { code: doThingErrorCode } & (',
+      );
+      expect(typesContent).toContain(
+        '| { code: "BadInput"; payload: ErrorDetails }',
+      );
+    });
+
+    it('should generate event payload referencing a $ref without crashing', () => {
+      const abi = {
+        schema_version: 'wasm-abi/1',
+        types: {
+          NotificationData: {
+            kind: 'record',
+            fields: [{ name: 'message', type: { kind: 'string' } }],
+          },
+        },
+        methods: [],
+        events: [
+          { name: 'Notified', payload: { $ref: 'NotificationData' } },
+        ],
+      };
+      const parsed = parseAbiManifest(abi);
+      expect(() => generateTypes(parsed)).not.toThrow();
+      const typesContent = generateTypes(parsed);
+      expect(typesContent).toContain(
+        'export type AbiEvent =',
+      );
+      expect(typesContent).toContain(
+        '| { name: "Notified"; payload: NotificationData }',
+      );
+    });
+
+    it('should generate event with variant $ref payload (resolves to Payload suffix)', () => {
+      const abi = {
+        schema_version: 'wasm-abi/1',
+        types: {
+          ChangeKind: {
+            kind: 'variant',
+            variants: [
+              { name: 'Created' },
+              { name: 'Updated', payload: { kind: 'string' } },
+            ],
+          },
+        },
+        methods: [],
+        events: [{ name: 'Changed', payload: { $ref: 'ChangeKind' } }],
+      };
+      const parsed = parseAbiManifest(abi);
+      expect(() => generateTypes(parsed)).not.toThrow();
+      const typesContent = generateTypes(parsed);
+      // Mixed variant → Payload suffix
+      expect(typesContent).toContain(
+        '| { name: "Changed"; payload: ChangeKindPayload }',
+      );
     });
   });
 

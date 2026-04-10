@@ -560,7 +560,12 @@ function generateAbiEventUnion(
 
   lines.push('export type AbiEvent =');
   const eventLines = events.map((event) => {
-    if (event.payload) {
+    // Inline unit means "no data" — omit the payload field
+    const isInlineUnit =
+      event.payload &&
+      !('$ref' in event.payload) &&
+      event.payload.kind === 'unit';
+    if (event.payload && !isInlineUnit) {
       const payloadType = generateTypeRef(event.payload, manifest);
       return `  | { name: "${event.name}"; payload: ${payloadType} }`;
     } else {
@@ -636,7 +641,6 @@ function generateMethod(
         manifest,
         useTypesNamespace,
         true,
-        true, // forVariantParam - allow both enum values and payload variants
       );
       const nullableType = param.nullable ? `${paramType} | null` : paramType;
       return `${formatIdentifier(param.name)}: ${nullableType}`;
@@ -732,7 +736,6 @@ function generateTypeRef(
   manifest: AbiManifest,
   useTypesNamespace: boolean = false,
   forUserApi: boolean = false,
-  forVariantParam: boolean = false,
 ): string {
   if ('$ref' in typeRef) {
     const typeDef = manifest.types[typeRef.$ref];

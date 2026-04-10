@@ -34,20 +34,20 @@ export function generateTypes(manifest: AbiManifest): string {
   // Generate method error types
   for (const method of manifest.methods) {
     if (method.errors && method.errors.length > 0) {
-      lines.push(...generateMethodErrorTypes(method));
+      lines.push(...generateMethodErrorTypes(method, manifest));
       lines.push('');
     }
   }
 
   // Generate event payload types
   for (const event of manifest.events) {
-    lines.push(...generateEventPayloadType(event));
+    lines.push(...generateEventPayloadType(event, manifest));
     lines.push('');
   }
 
   // Generate union type for all events
   if (manifest.events.length > 0) {
-    lines.push(...generateAbiEventUnion(manifest.events));
+    lines.push(...generateAbiEventUnion(manifest.events, manifest));
     lines.push('');
   }
 
@@ -133,7 +133,6 @@ function generateTypeRef(
   typeRef: AbiTypeRef,
   manifest: AbiManifest,
   forUserApi: boolean = false,
-  forVariantParam: boolean = false,
 ): string {
   if ('$ref' in typeRef) {
     const typeDef = manifest.types[typeRef.$ref];
@@ -203,7 +202,10 @@ function generateTypeRef(
 /**
  * Generate error types for a method
  */
-function generateMethodErrorTypes(method: AbiMethod): string[] {
+function generateMethodErrorTypes(
+  method: AbiMethod,
+  manifest: AbiManifest,
+): string[] {
   const lines: string[] = [];
   const methodName = formatIdentifier(method.name);
 
@@ -220,7 +222,7 @@ function generateMethodErrorTypes(method: AbiMethod): string[] {
 
   const errorVariants = method.errors!.map((error) => {
     if (error.payload) {
-      const payloadType = generateTypeRef(error.payload, method as any);
+      const payloadType = generateTypeRef(error.payload, manifest);
       return `  | { code: "${error.code}"; payload: ${payloadType} }`;
     } else {
       return `  | { code: "${error.code}" }`;
@@ -236,7 +238,10 @@ function generateMethodErrorTypes(method: AbiMethod): string[] {
 /**
  * Generate event payload type
  */
-function generateEventPayloadType(event: AbiEvent): string[] {
+function generateEventPayloadType(
+  event: AbiEvent,
+  manifest: AbiManifest,
+): string[] {
   const lines: string[] = [];
   const eventName = formatIdentifier(event.name);
 
@@ -246,7 +251,7 @@ function generateEventPayloadType(event: AbiEvent): string[] {
     !('$ref' in event.payload) &&
     event.payload.kind !== 'unit'
   ) {
-    const payloadType = generateTypeRef(event.payload, event as any);
+    const payloadType = generateTypeRef(event.payload, manifest);
     lines.push(`export type ${eventName}Payload = ${payloadType};`);
   }
   // For unit events or events without payload, omit the payload type alias
@@ -258,22 +263,24 @@ function generateEventPayloadType(event: AbiEvent): string[] {
  * Generate union type for all events
  * Note: Events with unit payload or no payload omit the payload property entirely
  */
-function generateAbiEventUnion(events: readonly AbiEvent[]): string[] {
+function generateAbiEventUnion(
+  events: readonly AbiEvent[],
+  manifest: AbiManifest,
+): string[] {
   const lines: string[] = [];
 
   lines.push('export type AbiEvent =');
 
   const eventVariants = events.map((event) => {
-    const eventName = formatIdentifier(event.name);
-
-    // Check if event has a payload and it's not unit
-    const hasPayload =
+    // Emit payload when present, except for inline unit which means no data.
+    // $ref payloads MUST be included — they reference a named type.
+    const isInlineUnit =
       event.payload &&
       !('$ref' in event.payload) &&
-      event.payload.kind !== 'unit';
+      event.payload.kind === 'unit';
 
-    if (hasPayload) {
-      const payloadType = generateTypeRef(event.payload!, event as any);
+    if (event.payload && !isInlineUnit) {
+      const payloadType = generateTypeRef(event.payload, manifest);
       return `  | { name: "${event.name}"; payload: ${payloadType} }`;
     } else {
       // For unit events or events without payload, omit payload property
