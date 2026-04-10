@@ -17,7 +17,8 @@ export type AbiTypeRef =
   | AbiBytesFixed
   | AbiList
   | AbiMap
-  | AbiRecord;
+  | AbiRecord
+  | AbiTuple;
 
 // Scalar types
 export interface AbiScalar {
@@ -65,6 +66,11 @@ export interface AbiRecord {
   fields: AbiField[];
   crdt_type?: string;
   inner_type?: AbiTypeRef;
+}
+
+export interface AbiTuple {
+  kind: 'tuple';
+  elements: AbiTypeRef[];
 }
 
 // Field definition

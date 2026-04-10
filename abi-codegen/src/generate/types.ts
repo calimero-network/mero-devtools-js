@@ -5,7 +5,7 @@ import {
   AbiMethod,
   AbiEvent,
 } from '../model.js';
-import { formatIdentifier, generateFileBanner } from './emit.js';
+import { formatIdentifier, generateFileBanner, mapRustTypeToTs } from './emit.js';
 
 /**
  * Generate TypeScript types from a WASM-ABI v1 manifest
@@ -34,20 +34,20 @@ export function generateTypes(manifest: AbiManifest): string {
   // Generate method error types
   for (const method of manifest.methods) {
     if (method.errors && method.errors.length > 0) {
-      lines.push(...generateMethodErrorTypes(method));
+      lines.push(...generateMethodErrorTypes(method, manifest));
       lines.push('');
     }
   }
 
   // Generate event payload types
   for (const event of manifest.events) {
-    lines.push(...generateEventPayloadType(event));
+    lines.push(...generateEventPayloadType(event, manifest));
     lines.push('');
   }
 
   // Generate union type for all events
   if (manifest.events.length > 0) {
-    lines.push(...generateAbiEventUnion(manifest.events));
+    lines.push(...generateAbiEventUnion(manifest.events, manifest));
     lines.push('');
   }
 
@@ -74,36 +74,41 @@ function generateTypeDefinition(
     }
     lines.push('}');
   } else if (typeDef.kind === 'variant') {
-    // Generate discriminated union type for variants
-    lines.push(`export type ${safeName}Payload =`);
-    const variantLines = typeDef.variants.map((variant) => {
-      const variantName = formatIdentifier(variant.name);
-      if (variant.payload) {
-        const payloadType = generateTypeRef(variant.payload, manifest, true);
-        return `  | { name: '${variant.name}'; payload: ${payloadType} }`;
-      } else {
-        return `  | { name: '${variant.name}' }`;
-      }
-    });
-    lines.push(...variantLines);
+    if (typeDef.variants.every((v) => !v.payload)) {
+      // Unit-only variants — serde serializes as bare strings.
+      const literals = typeDef.variants.map((v) => `'${v.name}'`).join(' | ');
+      lines.push(`export type ${safeName} = ${literals};`);
+    } else {
+      // Mixed/payload variants — discriminated union + factory.
+      lines.push(`export type ${safeName}Payload =`);
+      const variantLines = typeDef.variants.map((variant) => {
+        if (variant.payload) {
+          const payloadType = generateTypeRef(variant.payload, manifest, true);
+          return `  | { name: '${variant.name}'; payload: ${payloadType} }`;
+        } else {
+          return `  | { name: '${variant.name}' }`;
+        }
+      });
+      lines.push(...variantLines);
 
-    // Generate factory object for variants
-    lines.push('');
-    lines.push(`export const ${safeName} = {`);
-    typeDef.variants.forEach((variant) => {
-      const variantName = formatIdentifier(variant.name);
-      if (variant.payload) {
-        const payloadType = generateTypeRef(variant.payload, manifest, true);
-        lines.push(
-          `  ${variantName}: (${formatIdentifier(variant.name.toLowerCase())}: ${payloadType}): ${safeName}Payload => ({ name: '${variant.name}', payload: ${formatIdentifier(variant.name.toLowerCase())} }),`,
-        );
-      } else {
-        lines.push(
-          `  ${variantName}: (): ${safeName}Payload => ({ name: '${variant.name}' }),`,
-        );
-      }
-    });
-    lines.push(`} as const;`);
+      // Generate factory object for variants
+      lines.push('');
+      lines.push(`export const ${safeName} = {`);
+      typeDef.variants.forEach((variant) => {
+        const variantName = formatIdentifier(variant.name);
+        if (variant.payload) {
+          const payloadType = generateTypeRef(variant.payload, manifest, true);
+          lines.push(
+            `  ${variantName}: (${formatIdentifier(variant.name.toLowerCase())}: ${payloadType}): ${safeName}Payload => ({ name: '${variant.name}', payload: ${formatIdentifier(variant.name.toLowerCase())} }),`,
+          );
+        } else {
+          lines.push(
+            `  ${variantName}: (): ${safeName}Payload => ({ name: '${variant.name}' }),`,
+          );
+        }
+      });
+      lines.push(`} as const;`);
+    }
   } else if (typeDef.kind === 'bytes') {
     if ('size' in typeDef) {
       lines.push(
@@ -128,12 +133,23 @@ function generateTypeRef(
   typeRef: AbiTypeRef,
   manifest: AbiManifest,
   forUserApi: boolean = false,
-  forVariantParam: boolean = false,
 ): string {
   if ('$ref' in typeRef) {
+    const typeDef = manifest.types[typeRef.$ref];
+
+    // If not a known type in the manifest, try mapping as a raw Rust type
+    if (!typeDef) {
+      const mapped = mapRustTypeToTs(typeRef.$ref);
+      if (mapped) return mapped;
+    }
+
     const typeName = formatIdentifier(typeRef.$ref);
-    // For variant types, return the Payload type when used as parameters
-    if (forVariantParam && manifest.types[typeRef.$ref]?.kind === 'variant') {
+    // For variant types: all-unit → bare name (string-literal type alias),
+    // mixed/payload → {Name}Payload (discriminated union).
+    if (typeDef?.kind === 'variant') {
+      if (typeDef.variants.every((v) => !v.payload)) {
+        return typeName;
+      }
       return `${typeName}Payload`;
     }
     return typeName;
@@ -157,11 +173,17 @@ function generateTypeRef(
       return 'CalimeroBytes';
     case 'list':
       const itemType = generateTypeRef(typeRef.items, manifest, forUserApi);
-      return `${itemType}[]`;
+      const needsParens = itemType.includes('|');
+      return needsParens ? `(${itemType})[]` : `${itemType}[]`;
     case 'map':
       const keyType = generateTypeRef(typeRef.key, manifest, forUserApi);
       const valueType = generateTypeRef(typeRef.value, manifest, forUserApi);
       return `Record<${keyType}, ${valueType}>`;
+    case 'tuple':
+      const elements = (typeRef as any).elements.map((el: AbiTypeRef) =>
+        generateTypeRef(el, manifest, forUserApi),
+      );
+      return `[${elements.join(', ')}]`;
     case 'record':
       if (typeRef.crdt_type && typeRef.inner_type) {
         return generateTypeRef(typeRef.inner_type, manifest, forUserApi);
@@ -180,7 +202,10 @@ function generateTypeRef(
 /**
  * Generate error types for a method
  */
-function generateMethodErrorTypes(method: AbiMethod): string[] {
+function generateMethodErrorTypes(
+  method: AbiMethod,
+  manifest: AbiManifest,
+): string[] {
   const lines: string[] = [];
   const methodName = formatIdentifier(method.name);
 
@@ -197,7 +222,7 @@ function generateMethodErrorTypes(method: AbiMethod): string[] {
 
   const errorVariants = method.errors!.map((error) => {
     if (error.payload) {
-      const payloadType = generateTypeRef(error.payload, method as any);
+      const payloadType = generateTypeRef(error.payload, manifest);
       return `  | { code: "${error.code}"; payload: ${payloadType} }`;
     } else {
       return `  | { code: "${error.code}" }`;
@@ -213,7 +238,10 @@ function generateMethodErrorTypes(method: AbiMethod): string[] {
 /**
  * Generate event payload type
  */
-function generateEventPayloadType(event: AbiEvent): string[] {
+function generateEventPayloadType(
+  event: AbiEvent,
+  manifest: AbiManifest,
+): string[] {
   const lines: string[] = [];
   const eventName = formatIdentifier(event.name);
 
@@ -223,7 +251,7 @@ function generateEventPayloadType(event: AbiEvent): string[] {
     !('$ref' in event.payload) &&
     event.payload.kind !== 'unit'
   ) {
-    const payloadType = generateTypeRef(event.payload, event as any);
+    const payloadType = generateTypeRef(event.payload, manifest);
     lines.push(`export type ${eventName}Payload = ${payloadType};`);
   }
   // For unit events or events without payload, omit the payload type alias
@@ -235,22 +263,24 @@ function generateEventPayloadType(event: AbiEvent): string[] {
  * Generate union type for all events
  * Note: Events with unit payload or no payload omit the payload property entirely
  */
-function generateAbiEventUnion(events: readonly AbiEvent[]): string[] {
+function generateAbiEventUnion(
+  events: readonly AbiEvent[],
+  manifest: AbiManifest,
+): string[] {
   const lines: string[] = [];
 
   lines.push('export type AbiEvent =');
 
   const eventVariants = events.map((event) => {
-    const eventName = formatIdentifier(event.name);
-
-    // Check if event has a payload and it's not unit
-    const hasPayload =
+    // Emit payload when present, except for inline unit which means no data.
+    // $ref payloads MUST be included — they reference a named type.
+    const isInlineUnit =
       event.payload &&
       !('$ref' in event.payload) &&
-      event.payload.kind !== 'unit';
+      event.payload.kind === 'unit';
 
-    if (hasPayload) {
-      const payloadType = generateTypeRef(event.payload!, event as any);
+    if (event.payload && !isInlineUnit) {
+      const payloadType = generateTypeRef(event.payload, manifest);
       return `  | { name: "${event.name}"; payload: ${payloadType} }`;
     } else {
       // For unit events or events without payload, omit payload property

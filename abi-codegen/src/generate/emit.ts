@@ -111,6 +111,123 @@ export function toCamelCase(str: string): string {
 }
 
 /**
+ * Rust-to-TypeScript primitive type mapping.
+ * Maps raw Rust type names that may appear as $ref values to TS equivalents.
+ */
+const RUST_PRIMITIVE_MAP: Record<string, string> = {
+  String: 'string',
+  bool: 'boolean',
+  u8: 'number',
+  u16: 'number',
+  u32: 'number',
+  u64: 'number',
+  i8: 'number',
+  i16: 'number',
+  i32: 'number',
+  i64: 'number',
+  f32: 'number',
+  f64: 'number',
+};
+
+/**
+ * Parse a raw Rust type string and return the equivalent TypeScript type.
+ * Handles: primitives, Vec<T>, Option<T>, Result<T, E>, (), and tuples like (A, B).
+ * Returns null if the string is not a recognized Rust type pattern.
+ */
+export function mapRustTypeToTs(rustType: string): string | null {
+  const trimmed = rustType.trim();
+
+  // Unit type
+  if (trimmed === '()') return 'void';
+
+  // Primitives
+  if (RUST_PRIMITIVE_MAP[trimmed]) return RUST_PRIMITIVE_MAP[trimmed];
+
+  // Vec<T>
+  const vecMatch = trimmed.match(/^Vec<(.+)>$/);
+  if (vecMatch) {
+    const inner = mapRustTypeToTs(vecMatch[1]);
+    if (inner) {
+      // Wrap complex types in parens for array syntax
+      const needsParens = inner.includes('|') || inner.includes(',');
+      return needsParens ? `(${inner})[]` : `${inner}[]`;
+    }
+  }
+
+  // Option<T>
+  const optionMatch = trimmed.match(/^Option<(.+)>$/);
+  if (optionMatch) {
+    const inner = mapRustTypeToTs(optionMatch[1]);
+    if (inner) return `${inner} | null`;
+  }
+
+  // Result<T, E> — unwrap to T (errors thrown by RPC layer)
+  // Use splitTopLevelCommas instead of greedy regex to handle cases like
+  // Result<i32, (String, u32)> where E contains commas.
+  if (trimmed.startsWith('Result<') && trimmed.endsWith('>')) {
+    const parts = splitTopLevelCommas(trimmed.slice(7, -1));
+    if (parts.length >= 2) {
+      const inner = mapRustTypeToTs(parts[0].trim());
+      if (inner) return inner;
+    }
+  }
+
+  // Tuple: (A, B, ...) — split on top-level commas
+  if (trimmed.startsWith('(') && trimmed.endsWith(')')) {
+    const inner = trimmed.slice(1, -1);
+    const parts = splitTopLevelCommas(inner);
+    if (parts.length >= 2) {
+      const mapped = parts.map((p) => mapRustTypeToTs(p.trim()));
+      if (mapped.every((m) => m !== null)) {
+        return `[${mapped.join(', ')}]`;
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Split a string on commas that are not nested inside angle brackets or parens.
+ */
+function splitTopLevelCommas(s: string): string[] {
+  const parts: string[] = [];
+  let depth = 0;
+  let current = '';
+  for (const ch of s) {
+    if (ch === '<' || ch === '(') depth++;
+    else if (ch === '>' || ch === ')') depth--;
+    if (ch === ',' && depth === 0) {
+      parts.push(current);
+      current = '';
+    } else {
+      current += ch;
+    }
+  }
+  if (current.trim()) parts.push(current);
+  return parts;
+}
+
+/**
+ * Sanitize a class name to be a valid TypeScript identifier.
+ * Splits on non-alphanumeric characters, capitalizes each part's first letter,
+ * and preserves existing casing within parts.
+ * "Task Board" → "TaskBoard", "TestClient" → "TestClient", "kv-store" → "KvStore"
+ */
+export function sanitizeClassName(name: string): string {
+  const result = name
+    .split(/[^a-zA-Z0-9]+/)
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join('');
+  // Fallback when input has no alphanumeric characters
+  if (!result) return 'Client';
+  // TS identifiers cannot start with a digit — prefix with underscore
+  if (/^\d/.test(result)) return `_${result}`;
+  return result;
+}
+
+/**
  * Derive a client class name from a file path
  * @param p - The file path to derive the name from
  * @returns The derived client class name
