@@ -74,36 +74,41 @@ function generateTypeDefinition(
     }
     lines.push('}');
   } else if (typeDef.kind === 'variant') {
-    // Generate discriminated union type for variants
-    lines.push(`export type ${safeName}Payload =`);
-    const variantLines = typeDef.variants.map((variant) => {
-      const variantName = formatIdentifier(variant.name);
-      if (variant.payload) {
-        const payloadType = generateTypeRef(variant.payload, manifest, true);
-        return `  | { name: '${variant.name}'; payload: ${payloadType} }`;
-      } else {
-        return `  | { name: '${variant.name}' }`;
-      }
-    });
-    lines.push(...variantLines);
+    if (typeDef.variants.every((v) => !v.payload)) {
+      // Unit-only variants — serde serializes as bare strings.
+      const literals = typeDef.variants.map((v) => `'${v.name}'`).join(' | ');
+      lines.push(`export type ${safeName} = ${literals};`);
+    } else {
+      // Mixed/payload variants — discriminated union + factory.
+      lines.push(`export type ${safeName}Payload =`);
+      const variantLines = typeDef.variants.map((variant) => {
+        if (variant.payload) {
+          const payloadType = generateTypeRef(variant.payload, manifest, true);
+          return `  | { name: '${variant.name}'; payload: ${payloadType} }`;
+        } else {
+          return `  | { name: '${variant.name}' }`;
+        }
+      });
+      lines.push(...variantLines);
 
-    // Generate factory object for variants
-    lines.push('');
-    lines.push(`export const ${safeName} = {`);
-    typeDef.variants.forEach((variant) => {
-      const variantName = formatIdentifier(variant.name);
-      if (variant.payload) {
-        const payloadType = generateTypeRef(variant.payload, manifest, true);
-        lines.push(
-          `  ${variantName}: (${formatIdentifier(variant.name.toLowerCase())}: ${payloadType}): ${safeName}Payload => ({ name: '${variant.name}', payload: ${formatIdentifier(variant.name.toLowerCase())} }),`,
-        );
-      } else {
-        lines.push(
-          `  ${variantName}: (): ${safeName}Payload => ({ name: '${variant.name}' }),`,
-        );
-      }
-    });
-    lines.push(`} as const;`);
+      // Generate factory object for variants
+      lines.push('');
+      lines.push(`export const ${safeName} = {`);
+      typeDef.variants.forEach((variant) => {
+        const variantName = formatIdentifier(variant.name);
+        if (variant.payload) {
+          const payloadType = generateTypeRef(variant.payload, manifest, true);
+          lines.push(
+            `  ${variantName}: (${formatIdentifier(variant.name.toLowerCase())}: ${payloadType}): ${safeName}Payload => ({ name: '${variant.name}', payload: ${formatIdentifier(variant.name.toLowerCase())} }),`,
+          );
+        } else {
+          lines.push(
+            `  ${variantName}: (): ${safeName}Payload => ({ name: '${variant.name}' }),`,
+          );
+        }
+      });
+      lines.push(`} as const;`);
+    }
   } else if (typeDef.kind === 'bytes') {
     if ('size' in typeDef) {
       lines.push(
@@ -140,9 +145,12 @@ function generateTypeRef(
     }
 
     const typeName = formatIdentifier(typeRef.$ref);
-    // For variant types, always use the Payload type — the bare name is a
-    // const value (factory object), not a type.
+    // For variant types: all-unit → bare name (string-literal type alias),
+    // mixed/payload → {Name}Payload (discriminated union).
     if (typeDef?.kind === 'variant') {
+      if (typeDef.variants.every((v) => !v.payload)) {
+        return typeName;
+      }
       return `${typeName}Payload`;
     }
     return typeName;

@@ -609,8 +609,12 @@ describe('Codegen', () => {
     });
   });
 
-  describe('variant references in struct fields use Payload type', () => {
-    const variantFieldAbi = {
+  describe('variant references in struct fields and return types', () => {
+    // ─────────────────────────────────────────────────────────────────
+    // ALL-UNIT VARIANTS — serde serializes as bare strings, so we emit
+    // a string-literal union and reference the bare name as a type.
+    // ─────────────────────────────────────────────────────────────────
+    const allUnitAbi = {
       schema_version: 'wasm-abi/1',
       types: {
         MatchStatus: {
@@ -630,32 +634,43 @@ describe('Codegen', () => {
         },
       },
       methods: [
-        {
-          name: 'get_match',
-          params: [],
-          returns: { $ref: 'MatchSummary' },
-        },
+        { name: 'get_match', params: [], returns: { $ref: 'MatchSummary' } },
       ],
       events: [],
     };
 
-    it('should reference variant types as Payload in record fields (client.ts)', () => {
-      const parsed = parseAbiManifest(variantFieldAbi);
+    it('should emit a string-literal union for all-unit variants (client.ts)', () => {
+      const parsed = parseAbiManifest(allUnitAbi);
       const clientContent = generateClient(parsed, 'TestClient');
-      // Field must use the Payload type, not the const value
-      expect(clientContent).toContain('status: MatchStatusPayload;');
-      expect(clientContent).not.toMatch(/status: MatchStatus;/);
+      expect(clientContent).toContain(
+        "export type MatchStatus = 'Pending' | 'Active' | 'Finished';",
+      );
+      // No Payload type, no const factory
+      expect(clientContent).not.toContain('MatchStatusPayload');
+      expect(clientContent).not.toContain('export const MatchStatus =');
     });
 
-    it('should reference variant types as Payload in record fields (types.ts)', () => {
-      const parsed = parseAbiManifest(variantFieldAbi);
+    it('should emit a string-literal union for all-unit variants (types.ts)', () => {
+      const parsed = parseAbiManifest(allUnitAbi);
       const typesContent = generateTypes(parsed);
-      expect(typesContent).toContain('status: MatchStatusPayload;');
-      expect(typesContent).not.toMatch(/status: MatchStatus;/);
+      expect(typesContent).toContain(
+        "export type MatchStatus = 'Pending' | 'Active' | 'Finished';",
+      );
+      expect(typesContent).not.toContain('MatchStatusPayload');
     });
 
-    it('should reference variant types as Payload in method return types', () => {
-      const abiReturningVariant = {
+    it('should reference all-unit variant by bare name in record fields', () => {
+      const parsed = parseAbiManifest(allUnitAbi);
+      const clientContent = generateClient(parsed, 'TestClient');
+      const typesContent = generateTypes(parsed);
+      expect(clientContent).toContain('status: MatchStatus;');
+      expect(typesContent).toContain('status: MatchStatus;');
+      // Must NOT use the (now-nonexistent) Payload form
+      expect(clientContent).not.toMatch(/status: MatchStatusPayload/);
+    });
+
+    it('should reference all-unit variant by bare name in return types', () => {
+      const abi = {
         schema_version: 'wasm-abi/1',
         types: {
           Status: {
@@ -668,14 +683,14 @@ describe('Codegen', () => {
         ],
         events: [],
       };
-      const parsed = parseAbiManifest(abiReturningVariant);
+      const parsed = parseAbiManifest(abi);
       const clientContent = generateClient(parsed, 'TestClient');
-      expect(clientContent).toContain('Promise<StatusPayload>');
-      expect(clientContent).not.toMatch(/Promise<Status>/);
+      expect(clientContent).toContain('Promise<Status>');
+      expect(clientContent).not.toContain('Promise<StatusPayload>');
     });
 
-    it('should reference variant types as Payload in nested types', () => {
-      const abiNested = {
+    it('should reference all-unit variant by bare name in nested types', () => {
+      const abi = {
         schema_version: 'wasm-abi/1',
         types: {
           Color: {
@@ -695,9 +710,59 @@ describe('Codegen', () => {
         methods: [],
         events: [],
       };
-      const parsed = parseAbiManifest(abiNested);
+      const parsed = parseAbiManifest(abi);
       const typesContent = generateTypes(parsed);
-      expect(typesContent).toContain('colors: ColorPayload[];');
+      expect(typesContent).toContain('colors: Color[];');
+      expect(typesContent).not.toContain('ColorPayload');
+    });
+
+    // ─────────────────────────────────────────────────────────────────
+    // MIXED / PAYLOAD VARIANTS — discriminated union + Payload suffix.
+    // ─────────────────────────────────────────────────────────────────
+    const mixedAbi = {
+      schema_version: 'wasm-abi/1',
+      types: {
+        Action: {
+          kind: 'variant',
+          variants: [
+            { name: 'Ping' },
+            { name: 'SetName', payload: { kind: 'string' } },
+          ],
+        },
+        Wrapper: {
+          kind: 'record',
+          fields: [{ name: 'action', type: { $ref: 'Action' } }],
+        },
+      },
+      methods: [
+        { name: 'do_it', params: [], returns: { $ref: 'Action' } },
+      ],
+      events: [],
+    };
+
+    it('should reference mixed variants as Payload in record fields', () => {
+      const parsed = parseAbiManifest(mixedAbi);
+      const clientContent = generateClient(parsed, 'TestClient');
+      const typesContent = generateTypes(parsed);
+      expect(clientContent).toContain('action: ActionPayload;');
+      expect(typesContent).toContain('action: ActionPayload;');
+      expect(clientContent).not.toMatch(/action: Action;/);
+    });
+
+    it('should reference mixed variants as Payload in method return types', () => {
+      const parsed = parseAbiManifest(mixedAbi);
+      const clientContent = generateClient(parsed, 'TestClient');
+      expect(clientContent).toContain('Promise<ActionPayload>');
+      expect(clientContent).not.toMatch(/Promise<Action>/);
+    });
+
+    it('should still emit discriminated union and factory for mixed variants', () => {
+      const parsed = parseAbiManifest(mixedAbi);
+      const clientContent = generateClient(parsed, 'TestClient');
+      expect(clientContent).toContain('export type ActionPayload =');
+      expect(clientContent).toContain("| { name: 'Ping' }");
+      expect(clientContent).toContain("| { name: 'SetName'; payload: string }");
+      expect(clientContent).toContain('export const Action = {');
     });
   });
 
