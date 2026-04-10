@@ -140,8 +140,9 @@ function generateTypeRef(
     }
 
     const typeName = formatIdentifier(typeRef.$ref);
-    // For variant types, return the Payload type when used as parameters
-    if (forVariantParam && typeDef?.kind === 'variant') {
+    // For variant types, always use the Payload type — the bare name is a
+    // const value (factory object), not a type.
+    if (typeDef?.kind === 'variant') {
       return `${typeName}Payload`;
     }
     return typeName;

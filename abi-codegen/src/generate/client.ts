@@ -117,6 +117,19 @@ export function generateClient(
   // Sanitize clientName: remove spaces/special chars, preserve existing casing
   clientName = sanitizeClassName(clientName);
 
+  // Determine if CalimeroBytes infrastructure is needed
+  const anyMethodHasBytesParams = manifest.methods.some((m) =>
+    hasCalimeroBytesParams(m, manifest),
+  );
+  const anyMethodReturnsBytes = manifest.methods.some(
+    (m) => m.returns && isBytesType(m.returns, manifest),
+  );
+  // CalimeroBytes class itself is needed if any type/field/param/return mentions bytes
+  const anyTypeUsesBytes =
+    anyMethodHasBytesParams ||
+    anyMethodReturnsBytes ||
+    Object.values(manifest.types).some((t) => typeDefUsesBytes(t, manifest));
+
   const lines: string[] = [];
 
   // Add file banner
@@ -164,7 +177,8 @@ export function generateClient(
 
   lines.push('');
 
-  // Add CalimeroBytes utility class
+  // Add CalimeroBytes utility class (only when any type uses bytes)
+  if (anyTypeUsesBytes) {
   lines.push('/**');
   lines.push(' * Utility class for handling byte conversions in Calimero');
   lines.push(' */');
@@ -209,8 +223,10 @@ export function generateClient(
   lines.push('  }');
   lines.push('}');
   lines.push('');
+  } // end if (anyTypeUsesBytes)
 
-  // Add utility function for CalimeroBytes conversion
+  // Add utility function for CalimeroBytes conversion (only when any method has bytes params)
+  if (anyMethodHasBytesParams) {
   lines.push('/**');
   lines.push(
     ' * Convert CalimeroBytes instances to arrays for WASM compatibility',
@@ -240,8 +256,11 @@ export function generateClient(
   lines.push('  return obj;');
   lines.push('}');
   lines.push('');
+  } // end if (anyMethodHasBytesParams)
 
   // Add utility function for converting WASM results back to CalimeroBytes
+  // (only when any method returns bytes)
+  if (anyMethodReturnsBytes) {
   lines.push('/**');
   lines.push(
     ' * Convert arrays back to CalimeroBytes instances from WASM responses',
@@ -275,6 +294,7 @@ export function generateClient(
   lines.push('  return obj;');
   lines.push('}');
   lines.push('');
+  } // end if (anyMethodReturnsBytes)
 
   // Add Client class
   lines.push(`export class ${clientName} {`);
@@ -354,6 +374,25 @@ function isBytesType(typeRef: AbiTypeRef, manifest: AbiManifest): boolean {
     if (typeRef.kind === 'tuple' && 'elements' in typeRef) {
       return (typeRef as any).elements.some((el: AbiTypeRef) => isBytesType(el, manifest));
     }
+  }
+  return false;
+}
+
+/**
+ * Check if a type definition references bytes anywhere (including nested fields)
+ */
+function typeDefUsesBytes(typeDef: AbiTypeDef, manifest: AbiManifest): boolean {
+  if (typeDef.kind === 'bytes') return true;
+  if (typeDef.kind === 'record') {
+    return typeDef.fields.some((f) => isBytesType(f.type, manifest));
+  }
+  if (typeDef.kind === 'variant') {
+    return typeDef.variants.some(
+      (v) => v.payload !== undefined && isBytesType(v.payload, manifest),
+    );
+  }
+  if (typeDef.kind === 'alias') {
+    return isBytesType(typeDef.target, manifest);
   }
   return false;
 }
@@ -698,8 +737,10 @@ function generateTypeRef(
       return 'CalimeroBytes'; // Return CalimeroBytes for bytes types
     }
 
-    // For variant types used as parameters, use the Payload type
-    if (forVariantParam && typeDef && typeDef.kind === 'variant') {
+    // For variant types, always use the Payload type — the bare name is a
+    // const value (factory object), not a type. The forVariantParam flag is
+    // kept for API compatibility but is no longer needed for correctness.
+    if (typeDef && typeDef.kind === 'variant') {
       const payloadType = useTypesNamespace
         ? `Types.${typeName}Payload`
         : `${typeName}Payload`;

@@ -609,6 +609,200 @@ describe('Codegen', () => {
     });
   });
 
+  describe('variant references in struct fields use Payload type', () => {
+    const variantFieldAbi = {
+      schema_version: 'wasm-abi/1',
+      types: {
+        MatchStatus: {
+          kind: 'variant',
+          variants: [
+            { name: 'Pending' },
+            { name: 'Active' },
+            { name: 'Finished' },
+          ],
+        },
+        MatchSummary: {
+          kind: 'record',
+          fields: [
+            { name: 'match_id', type: { kind: 'string' } },
+            { name: 'status', type: { $ref: 'MatchStatus' } },
+          ],
+        },
+      },
+      methods: [
+        {
+          name: 'get_match',
+          params: [],
+          returns: { $ref: 'MatchSummary' },
+        },
+      ],
+      events: [],
+    };
+
+    it('should reference variant types as Payload in record fields (client.ts)', () => {
+      const parsed = parseAbiManifest(variantFieldAbi);
+      const clientContent = generateClient(parsed, 'TestClient');
+      // Field must use the Payload type, not the const value
+      expect(clientContent).toContain('status: MatchStatusPayload;');
+      expect(clientContent).not.toMatch(/status: MatchStatus;/);
+    });
+
+    it('should reference variant types as Payload in record fields (types.ts)', () => {
+      const parsed = parseAbiManifest(variantFieldAbi);
+      const typesContent = generateTypes(parsed);
+      expect(typesContent).toContain('status: MatchStatusPayload;');
+      expect(typesContent).not.toMatch(/status: MatchStatus;/);
+    });
+
+    it('should reference variant types as Payload in method return types', () => {
+      const abiReturningVariant = {
+        schema_version: 'wasm-abi/1',
+        types: {
+          Status: {
+            kind: 'variant',
+            variants: [{ name: 'Ok' }, { name: 'Err' }],
+          },
+        },
+        methods: [
+          { name: 'get_status', params: [], returns: { $ref: 'Status' } },
+        ],
+        events: [],
+      };
+      const parsed = parseAbiManifest(abiReturningVariant);
+      const clientContent = generateClient(parsed, 'TestClient');
+      expect(clientContent).toContain('Promise<StatusPayload>');
+      expect(clientContent).not.toMatch(/Promise<Status>/);
+    });
+
+    it('should reference variant types as Payload in nested types', () => {
+      const abiNested = {
+        schema_version: 'wasm-abi/1',
+        types: {
+          Color: {
+            kind: 'variant',
+            variants: [{ name: 'Red' }, { name: 'Blue' }],
+          },
+          Palette: {
+            kind: 'record',
+            fields: [
+              {
+                name: 'colors',
+                type: { kind: 'list', items: { $ref: 'Color' } },
+              },
+            ],
+          },
+        },
+        methods: [],
+        events: [],
+      };
+      const parsed = parseAbiManifest(abiNested);
+      const typesContent = generateTypes(parsed);
+      expect(typesContent).toContain('colors: ColorPayload[];');
+    });
+  });
+
+  describe('conditional emission of CalimeroBytes helpers', () => {
+    it('should NOT emit CalimeroBytes class when no type uses bytes', () => {
+      const abiNoBytes = {
+        schema_version: 'wasm-abi/1',
+        types: {
+          Foo: {
+            kind: 'record',
+            fields: [{ name: 'name', type: { kind: 'string' } }],
+          },
+        },
+        methods: [
+          {
+            name: 'create',
+            params: [{ name: 'f', type: { $ref: 'Foo' } }],
+            returns: { kind: 'string' },
+          },
+        ],
+        events: [],
+      };
+      const parsed = parseAbiManifest(abiNoBytes);
+      const clientContent = generateClient(parsed, 'TestClient');
+      expect(clientContent).not.toContain('export class CalimeroBytes');
+      expect(clientContent).not.toContain('function convertCalimeroBytesForWasm');
+      expect(clientContent).not.toContain(
+        'function convertWasmResultToCalimeroBytes',
+      );
+    });
+
+    it('should NOT emit conversion helpers when no method has bytes params/returns', () => {
+      // Type defines bytes but no method uses it
+      const abi = {
+        schema_version: 'wasm-abi/1',
+        types: {
+          Hash: { kind: 'bytes', size: 32, encoding: 'hex' },
+        },
+        methods: [
+          { name: 'noop', params: [], returns: { kind: 'string' } },
+        ],
+        events: [],
+      };
+      const parsed = parseAbiManifest(abi);
+      const clientContent = generateClient(parsed, 'TestClient');
+      // CalimeroBytes class is needed (Hash is referenced as a type alias)
+      expect(clientContent).toContain('export class CalimeroBytes');
+      // But helpers are not needed
+      expect(clientContent).not.toContain('function convertCalimeroBytesForWasm');
+      expect(clientContent).not.toContain(
+        'function convertWasmResultToCalimeroBytes',
+      );
+    });
+
+    it('should emit convertCalimeroBytesForWasm when a method has bytes params', () => {
+      const abi = {
+        schema_version: 'wasm-abi/1',
+        types: {
+          Hash: { kind: 'bytes', size: 32, encoding: 'hex' },
+        },
+        methods: [
+          {
+            name: 'submit',
+            params: [{ name: 'h', type: { $ref: 'Hash' } }],
+            returns: { kind: 'string' },
+          },
+        ],
+        events: [],
+      };
+      const parsed = parseAbiManifest(abi);
+      const clientContent = generateClient(parsed, 'TestClient');
+      expect(clientContent).toContain('function convertCalimeroBytesForWasm');
+      // Result helper not needed since no bytes return
+      expect(clientContent).not.toContain(
+        'function convertWasmResultToCalimeroBytes',
+      );
+    });
+
+    it('should emit convertWasmResultToCalimeroBytes when a method returns bytes', () => {
+      const abi = {
+        schema_version: 'wasm-abi/1',
+        types: {
+          Hash: { kind: 'bytes', size: 32, encoding: 'hex' },
+        },
+        methods: [
+          { name: 'compute', params: [], returns: { $ref: 'Hash' } },
+        ],
+        events: [],
+      };
+      const parsed = parseAbiManifest(abi);
+      const clientContent = generateClient(parsed, 'TestClient');
+      expect(clientContent).toContain('function convertWasmResultToCalimeroBytes');
+      // No bytes params → no for-wasm helper
+      expect(clientContent).not.toContain('function convertCalimeroBytesForWasm');
+    });
+
+    it('should still emit both helpers when conformance ABI uses bytes (regression)', () => {
+      // The fixture conformance ABI uses bytes in both params and returns
+      const clientContent = generateClient(manifest, 'TestClient');
+      expect(clientContent).toContain('export class CalimeroBytes');
+      expect(clientContent).toContain('function convertCalimeroBytesForWasm');
+      expect(clientContent).toContain('function convertWasmResultToCalimeroBytes');
+    });
+  });
+
   describe('compile test', () => {
     it('should generate code that compiles under tsc --strict', () => {
       const clientContent = generateClient(manifest);
