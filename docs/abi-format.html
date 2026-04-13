@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calimero | WASM Dev Tools — ABI Format</title>
+<link rel="stylesheet" href="styles.css">
+<meta name="theme-color" content="#0d1117">
+</head>
+<body>
+<div class="main">
+<div class="content">
+<div class="breadcrumb"><a href="index.html">Home</a><span class="sep">/</span><span>ABI Format</span></div>
+
+<h1>ABI Format</h1>
+<p class="page-subtitle">JSON schema emitted by the Calimero Rust SDK — the input consumed by mero-devtools</p>
+
+<div class="card ga">
+<h2>Top-level Structure</h2>
+<div class="typedef">
+<span class="comment">// abi.json</span><br>
+&#123;<br>
+&nbsp;&nbsp;<span class="field">"version"</span>: <span class="comment">"1"</span>,<br>
+&nbsp;&nbsp;<span class="field">"methods"</span>: [ <span class="comment">/* AbiMethod[]  */</span> ],<br>
+&nbsp;&nbsp;<span class="field">"types"</span>: &nbsp;&nbsp;[ <span class="comment">/* AbiTypeDef[] */</span> ]<br>
+&#125;
+</div>
+<div class="fr" style="margin-top:12px;"><div class="fp">version</div><div class="fd">Schema version string. Currently <span class="code">"1"</span>. Used for forward-compatibility checks.</div></div>
+<div class="fr"><div class="fp">methods</div><div class="fd">Array of all public methods exposed by the WASM application.</div></div>
+<div class="fr"><div class="fp">types</div><div class="fd">Array of all named types (structs, enums) referenced by method signatures.</div></div>
+</div>
+
+<div class="card gb">
+<h2>AbiMethod</h2>
+<div class="typedef">
+&#123;<br>
+&nbsp;&nbsp;<span class="field">"name"</span>: <span class="comment">"get_post"</span>,&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">// Rust method name (snake_case)</span><br>
+&nbsp;&nbsp;<span class="field">"kind"</span>: <span class="comment">"query"</span>,&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">// "query" | "mutate"</span><br>
+&nbsp;&nbsp;<span class="field">"params"</span>: [<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&#123; <span class="field">"name"</span>: <span class="comment">"id"</span>, <span class="field">"type"</span>: <span class="comment">"u32"</span> &#125;<br>
+&nbsp;&nbsp;],<br>
+&nbsp;&nbsp;<span class="field">"returns"</span>: &#123; <span class="field">"type"</span>: <span class="comment">"Post"</span> &#125;&nbsp;&nbsp;<span class="comment">// null if void</span><br>
+&#125;
+</div>
+<div class="fr" style="margin-top:12px;"><div class="fp">kind: "query"</div><div class="fd">Read-only method. Maps to <span class="code">rpc.query()</span> in the generated client.</div></div>
+<div class="fr"><div class="fp">kind: "mutate"</div><div class="fd">State-changing method. Maps to <span class="code">rpc.mutate()</span> in the generated client.</div></div>
+</div>
+
+<div class="card gc">
+<h2>AbiTypeDef</h2>
+<div class="g2">
+  <div>
+    <h4 style="color:#8b949e;font-size:12px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Struct</h4>
+    <div class="typedef">&#123;<br>&nbsp;&nbsp;<span class="field">"name"</span>: <span class="comment">"Post"</span>,<br>&nbsp;&nbsp;<span class="field">"kind"</span>: <span class="comment">"struct"</span>,<br>&nbsp;&nbsp;<span class="field">"fields"</span>: [<br>&nbsp;&nbsp;&nbsp;&nbsp;&#123; <span class="field">"name"</span>: <span class="comment">"id"</span>, <span class="field">"type"</span>: <span class="comment">"u32"</span> &#125;,<br>&nbsp;&nbsp;&nbsp;&nbsp;&#123; <span class="field">"name"</span>: <span class="comment">"title"</span>, <span class="field">"type"</span>: <span class="comment">"String"</span> &#125;<br>&nbsp;&nbsp;]<br>&#125;</div>
+  </div>
+  <div>
+    <h4 style="color:#8b949e;font-size:12px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Enum</h4>
+    <div class="typedef">&#123;<br>&nbsp;&nbsp;<span class="field">"name"</span>: <span class="comment">"Status"</span>,<br>&nbsp;&nbsp;<span class="field">"kind"</span>: <span class="comment">"enum"</span>,<br>&nbsp;&nbsp;<span class="field">"variants"</span>: [<br>&nbsp;&nbsp;&nbsp;&nbsp;&#123; <span class="field">"name"</span>: <span class="comment">"Active"</span> &#125;,<br>&nbsp;&nbsp;&nbsp;&nbsp;&#123; <span class="field">"name"</span>: <span class="comment">"Archived"</span> &#125;<br>&nbsp;&nbsp;]<br>&#125;</div>
+  </div>
+</div>
+</div>
+
+<div class="card gd">
+<h2>Supported ABI Types</h2>
+<div class="g2">
+  <div class="cb"><h4>Primitive</h4>
+    <div class="fr"><div class="fp">bool</div><div class="fd"><span class="code">boolean</span></div></div>
+    <div class="fr"><div class="fp">u8, u16, u32</div><div class="fd"><span class="code">number</span></div></div>
+    <div class="fr"><div class="fp">u64, u128</div><div class="fd"><span class="code">bigint</span></div></div>
+    <div class="fr"><div class="fp">i8, i16, i32</div><div class="fd"><span class="code">number</span></div></div>
+    <div class="fr"><div class="fp">i64, i128</div><div class="fd"><span class="code">bigint</span></div></div>
+    <div class="fr"><div class="fp">f32, f64</div><div class="fd"><span class="code">number</span></div></div>
+    <div class="fr"><div class="fp">String</div><div class="fd"><span class="code">string</span></div></div>
+  </div>
+  <div class="cb"><h4>Generic</h4>
+    <div class="fr"><div class="fp">Vec&lt;T&gt;</div><div class="fd"><span class="code">T[]</span></div></div>
+    <div class="fr"><div class="fp">Option&lt;T&gt;</div><div class="fd"><span class="code">T | null</span></div></div>
+    <div class="fr"><div class="fp">HashMap&lt;K,V&gt;</div><div class="fd"><span class="code">Record&lt;K, V&gt;</span></div></div>
+    <div class="fr"><div class="fp">HashSet&lt;T&gt;</div><div class="fd"><span class="code">T[]</span></div></div>
+    <div class="fr"><div class="fp">BTreeMap&lt;K,V&gt;</div><div class="fd"><span class="code">Record&lt;K, V&gt;</span></div></div>
+    <div class="fr"><div class="fp">Tuple (A, B)</div><div class="fd"><span class="code">[A, B]</span></div></div>
+    <div class="fr"><div class="fp">Named struct/enum</div><div class="fd">Generated interface/type</div></div>
+  </div>
+</div>
+</div>
+
+</div>
+</div>
+<script src="nav.js"></script>
+</body>
+</html>

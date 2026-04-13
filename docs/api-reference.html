@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calimero | WASM Dev Tools — API Reference</title>
+<link rel="stylesheet" href="styles.css">
+<meta name="theme-color" content="#0d1117">
+</head>
+<body>
+<div class="main">
+<div class="content">
+<div class="breadcrumb"><a href="index.html">Home</a><span class="sep">/</span><span>API Reference</span></div>
+
+<h1>API Reference</h1>
+<p class="page-subtitle">Programmatic API for integrating codegen into build tooling</p>
+
+<div class="card ga">
+<h2>generate(options)</h2>
+<p style="margin-bottom:12px;">Main entry point when using mero-devtools-js as a library rather than a CLI:</p>
+<div class="typedef">
+<span class="kw">import</span> &#123; <span class="ty">generate</span> &#125; <span class="kw">from</span> <span class="comment">'@calimero-network/mero-devtools-js'</span>;<br><br>
+<span class="kw">await</span> <span class="ty">generate</span>(&#123;<br>
+&nbsp;&nbsp;<span class="field">input</span>: <span class="comment">'./abi.json'</span>,&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">// ABI JSON file path</span><br>
+&nbsp;&nbsp;<span class="field">output</span>: <span class="comment">'./src/client.ts'</span>,<span class="comment">// Output TypeScript path</span><br>
+&nbsp;&nbsp;<span class="field">className</span>: <span class="comment">'TodoClient'</span>, <span class="comment">// Generated class name</span><br>
+&nbsp;&nbsp;<span class="field">rpcImport</span>: <span class="comment">'@calimero-network/mero-js'</span>,<br>
+&#125;);
+</div>
+</div>
+
+<div class="card gb">
+<h2>GenerateOptions</h2>
+<div class="fr"><div class="fp">input: string</div><div class="fd"><strong>Required.</strong> Path to the ABI JSON file.</div></div>
+<div class="fr"><div class="fp">output: string</div><div class="fd"><strong>Required.</strong> Path where the TypeScript file will be written.</div></div>
+<div class="fr"><div class="fp">className?: string</div><div class="fd">Name for the generated client class. Default: <span class="code">'AppClient'</span>.</div></div>
+<div class="fr"><div class="fp">rpcImport?: string</div><div class="fd">Module specifier for the <span class="code">RpcClient</span> import. Default: <span class="code">'@calimero-network/mero-js'</span>.</div></div>
+<div class="fr"><div class="fp">noTypes?: boolean</div><div class="fd">Skip emitting TypeScript interface/type declarations. Default: <span class="code">false</span>.</div></div>
+</div>
+
+<div class="card gc">
+<h2>parseAbi(json)</h2>
+<p style="margin-bottom:12px;">Parse and validate an ABI JSON object. Returns an <span class="code">Abi</span> AST or throws on invalid input:</p>
+<div class="typedef">
+<span class="kw">import</span> &#123; <span class="ty">parseAbi</span> &#125; <span class="kw">from</span> <span class="comment">'@calimero-network/mero-devtools-js'</span>;<br><br>
+<span class="kw">const</span> <span class="field">raw</span> = JSON.<span class="ty">parse</span>(fs.<span class="ty">readFileSync</span>(<span class="comment">'abi.json'</span>, <span class="comment">'utf-8'</span>));<br>
+<span class="kw">const</span> <span class="field">abi</span> = <span class="ty">parseAbi</span>(<span class="field">raw</span>);<br><br>
+<span class="comment">// abi.methods — array of AbiMethod</span><br>
+<span class="comment">// abi.types   — array of AbiTypeDef (structs / enums)</span>
+</div>
+</div>
+
+<div class="card gd">
+<h2>renderClient(abi, options)</h2>
+<p style="margin-bottom:12px;">Render a TypeScript string from a parsed ABI. Returns the raw TypeScript source code:</p>
+<div class="typedef">
+<span class="kw">import</span> &#123; <span class="ty">parseAbi</span>, <span class="ty">renderClient</span> &#125; <span class="kw">from</span> <span class="comment">'@calimero-network/mero-devtools-js'</span>;<br><br>
+<span class="kw">const</span> <span class="field">abi</span> = <span class="ty">parseAbi</span>(raw);<br>
+<span class="kw">const</span> <span class="field">ts</span> = <span class="ty">renderClient</span>(<span class="field">abi</span>, &#123;<br>
+&nbsp;&nbsp;<span class="field">className</span>: <span class="comment">'TodoClient'</span>,<br>
+&#125;);<br>
+fs.<span class="ty">writeFileSync</span>(<span class="comment">'src/client.ts'</span>, <span class="field">ts</span>);
+</div>
+</div>
+
+</div>
+</div>
+<script src="nav.js"></script>
+</body>
+</html>

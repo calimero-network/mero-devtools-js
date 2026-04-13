@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calimero | ABI Codegen</title>
+<link rel="stylesheet" href="styles.css">
+<meta name="description" content="Calimero ABI Codegen — TypeScript client generation from WASM ABI manifest files. CLI and programmatic API.">
+<meta name="theme-color" content="#0d1117">
+</head>
+<body>
+<div class="main">
+<div class="content">
+
+<div class="hero">
+  <h1>Calimero <em>ABI Codegen</em></h1>
+  <p class="tagline">Parse WASM ABI manifest files and generate fully-typed TypeScript client code — zero boilerplate, correct types, and a clean CLI.</p>
+
+  <div class="g4" style="margin-bottom:36px;">
+    <div class="stat"><div class="v">1</div><div class="l">CLI command</div></div>
+    <div class="stat"><div class="v">TS</div><div class="l">output</div></div>
+    <div class="stat"><div class="v">ABI</div><div class="l">v1 format</div></div>
+    <div class="stat"><div class="v">2</div><div class="l">packages</div></div>
+  </div>
+</div>
+
+<div class="card ga">
+<h2>Quick Start</h2>
+<div class="g3">
+  <div class="step"><div class="n">1</div><h4>Install</h4>
+    <div class="typedef" style="margin-top:6px;"><span class="comment">npm install @calimero/abi-codegen</span></div>
+  </div>
+  <div class="step"><div class="n">2</div><h4>Generate</h4>
+    <div class="typedef" style="margin-top:6px;"><span class="comment"># From your ABI manifest file:</span><br><span class="field">npx</span> calimero-abi-codegen \<br>&nbsp;&nbsp;<span class="field">-i</span> abi.json \<br>&nbsp;&nbsp;<span class="field">-o</span> src/generated</div>
+  </div>
+  <div class="step"><div class="n">3</div><h4>Use generated client</h4>
+    <div class="typedef" style="margin-top:6px;"><span class="kw">import</span> &#123; <span class="ty">AppClient</span> &#125; <span class="kw">from</span> <span class="comment">'./generated'</span>;<br><br><span class="kw">const</span> <span class="field">client</span> = <span class="kw">new</span> <span class="ty">AppClient</span>(<span class="field">nodeUrl</span>);<br><span class="kw">const</span> <span class="field">result</span> = <span class="kw">await</span> <span class="field">client</span>.<span class="ty">getValue</span>(&#123;<span class="field">key</span>:<span class="comment">'foo'</span>&#125;);</div>
+  </div>
+</div>
+</div>
+
+<div class="card gb">
+<h2>Codegen Pipeline</h2>
+<svg viewBox="0 0 820 220" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="glow-dv"><feDropShadow dx="0" dy="0" stdDeviation="3" flood-color="#a5ff11" flood-opacity="0.25"/></filter>
+  </defs>
+
+  <!-- ABI JSON -->
+  <rect x="20" y="70" width="150" height="80" rx="10" fill="#f59e0b10" stroke="#f59e0b" stroke-width="1.4"/>
+  <text x="95" y="100" text-anchor="middle" fill="#f59e0b" font-family="JetBrains Mono" font-size="12" font-weight="700">abi.json</text>
+  <text x="95" y="120" text-anchor="middle" fill="#6b6b80" font-family="DM Sans" font-size="10">WASM ABI</text>
+  <text x="95" y="138" text-anchor="middle" fill="#6b6b80" font-family="DM Sans" font-size="10">manifest v1</text>
+
+  <!-- Parser -->
+  <rect x="230" y="50" width="160" height="120" rx="12" fill="#58a6ff08" stroke="#58a6ff" stroke-width="1.6"/>
+  <text x="310" y="80" text-anchor="middle" fill="#58a6ff" font-family="JetBrains Mono" font-size="12" font-weight="700">ABI Parser</text>
+  <text x="310" y="100" text-anchor="middle" fill="#6b6b80" font-family="DM Sans" font-size="10">validate schema</text>
+  <text x="310" y="118" text-anchor="middle" fill="#6b6b80" font-family="DM Sans" font-size="10">build AST</text>
+  <text x="310" y="136" text-anchor="middle" fill="#6b6b80" font-family="DM Sans" font-size="10">resolve types</text>
+  <text x="310" y="158" text-anchor="middle" fill="#58a6ff80" font-family="JetBrains Mono" font-size="8">loadAbiManifestFromFile()</text>
+
+  <!-- Codegen -->
+  <rect x="450" y="50" width="160" height="120" rx="12" fill="#a5ff1108" stroke="#a5ff11" stroke-width="1.6" filter="url(#glow-dv)"/>
+  <text x="530" y="80" text-anchor="middle" fill="#a5ff11" font-family="JetBrains Mono" font-size="12" font-weight="700">TypeScript</text>
+  <text x="530" y="98" text-anchor="middle" fill="#a5ff11" font-family="JetBrains Mono" font-size="12" font-weight="700">Generator</text>
+  <text x="530" y="120" text-anchor="middle" fill="#6b6b80" font-family="DM Sans" font-size="10">emit client class</text>
+  <text x="530" y="138" text-anchor="middle" fill="#6b6b80" font-family="DM Sans" font-size="10">emit method stubs</text>
+  <text x="530" y="156" text-anchor="middle" fill="#6b6b80" font-family="DM Sans" font-size="10">emit type defs</text>
+
+  <!-- Output -->
+  <rect x="670" y="70" width="130" height="80" rx="10" fill="#3fb95010" stroke="#3fb950" stroke-width="1.4"/>
+  <text x="735" y="100" text-anchor="middle" fill="#3fb950" font-family="JetBrains Mono" font-size="12" font-weight="700">client.ts</text>
+  <text x="735" y="120" text-anchor="middle" fill="#6b6b80" font-family="DM Sans" font-size="10">typed TypeScript</text>
+  <text x="735" y="138" text-anchor="middle" fill="#6b6b80" font-family="DM Sans" font-size="10">client class</text>
+
+  <!-- Arrows -->
+  <line x1="172" y1="110" x2="228" y2="110" stroke="#f59e0b" stroke-width="1.5"/>
+  <polygon points="228,110 220,106 220,114" fill="#f59e0b"/>
+  <line x1="392" y1="110" x2="448" y2="110" stroke="#58a6ff" stroke-width="1.5"/>
+  <polygon points="448,110 440,106 440,114" fill="#58a6ff"/>
+  <line x1="612" y1="110" x2="668" y2="110" stroke="#a5ff11" stroke-width="1.5"/>
+  <polygon points="668,110 660,106 660,114" fill="#a5ff11"/>
+</svg>
+</div>
+
+<h2 style="margin-top:40px;">Documentation</h2>
+<div class="g3">
+  <a href="cli.html" class="hero-card">
+    <span class="card-icon" style="color:var(--blue);">&#9670;</span>
+    <h3 style="color:var(--blue)">CLI Reference</h3>
+    <p><span class="code">npx calimero-abi-codegen</span> — all flags, output structure, and usage examples.</p>
+  </a>
+  <a href="api-reference.html" class="hero-card">
+    <span class="card-icon" style="color:var(--pink);">&#9670;</span>
+    <h3 style="color:var(--pink)">API Reference</h3>
+    <p>Programmatic API — <span class="code">loadAbiManifestFromFile</span> and code generation functions for custom pipelines.</p>
+  </a>
+  <a href="abi-format.html" class="hero-card">
+    <span class="card-icon" style="color:var(--cyan);">&#9670;</span>
+    <h3 style="color:var(--cyan)">ABI Format</h3>
+    <p>WASM ABI manifest v1 JSON schema — methods, types, arguments, return values, and how to write one.</p>
+  </a>
+</div>
+
+</div>
+</div>
+<script src="nav.js"></script>
+</body>
+</html>

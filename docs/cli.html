@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calimero | WASM Dev Tools — CLI Reference</title>
+<link rel="stylesheet" href="styles.css">
+<meta name="theme-color" content="#0d1117">
+</head>
+<body>
+<div class="main">
+<div class="content">
+<div class="breadcrumb"><a href="index.html">Home</a><span class="sep">/</span><span>CLI Reference</span></div>
+
+<h1>CLI Reference</h1>
+<p class="page-subtitle">Command-line options for generating TypeScript clients from WASM ABI JSON</p>
+
+<div class="card ga">
+<h2>Installation</h2>
+<div class="g2">
+  <div>
+    <h4 style="color:#8b949e;font-size:12px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Global install</h4>
+    <div class="typedef"><span class="field">npm install -g @calimero-network/mero-devtools-js</span><br><span class="comment"># or</span><br><span class="field">pnpm add -g @calimero-network/mero-devtools-js</span></div>
+  </div>
+  <div>
+    <h4 style="color:#8b949e;font-size:12px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Run without installing</h4>
+    <div class="typedef"><span class="field">npx @calimero-network/mero-devtools-js generate \</span><br>&nbsp;&nbsp;<span class="field">--input abi.json \</span><br>&nbsp;&nbsp;<span class="field">--output src/client.ts</span></div>
+  </div>
+</div>
+</div>
+
+<div class="card gb">
+<h2>Command: generate</h2>
+<p style="margin-bottom:14px;">Generates a TypeScript client from a WASM ABI JSON file:</p>
+<div class="typedef">
+<span class="field">mero-devtools generate [options]</span>
+</div>
+<div class="fr" style="margin-top:12px;"><div class="fp">--input &lt;path&gt;</div><div class="fd"><strong>Required.</strong> Path to the ABI JSON file exported from a Calimero WASM application.</div></div>
+<div class="fr"><div class="fp">--output &lt;path&gt;</div><div class="fd"><strong>Required.</strong> Destination path for the generated TypeScript file.</div></div>
+<div class="fr"><div class="fp">--name &lt;ClassName&gt;</div><div class="fd">Name for the generated client class. Default: <span class="code">AppClient</span>.</div></div>
+<div class="fr"><div class="fp">--rpc-import &lt;path&gt;</div><div class="fd">Import path for <span class="code">RpcClient</span>. Default: <span class="code">@calimero-network/mero-js</span>.</div></div>
+<div class="fr"><div class="fp">--no-types</div><div class="fd">Skip generating TypeScript interfaces for structs and enums. Useful when types are already defined elsewhere.</div></div>
+<div class="fr"><div class="fp">--watch</div><div class="fd">Watch <span class="code">--input</span> for changes and re-generate automatically.</div></div>
+</div>
+
+<div class="card gc">
+<h2>Full Example</h2>
+<div class="typedef">
+<span class="comment"># Export ABI from your Rust WASM app:</span><br>
+<span class="field">cargo build --target wasm32-unknown-unknown --release</span><br>
+<span class="field">calimero-sdk export-abi target/wasm32-unknown-unknown/release/app.wasm -o abi.json</span><br><br>
+<span class="comment"># Generate TypeScript client:</span><br>
+<span class="field">npx mero-devtools generate \</span><br>
+&nbsp;&nbsp;<span class="field">--input abi.json \</span><br>
+&nbsp;&nbsp;<span class="field">--output src/generated/client.ts \</span><br>
+&nbsp;&nbsp;<span class="field">--name TodoClient</span><br><br>
+<span class="comment"># Use the generated client:</span><br>
+<span class="kw">import</span> &#123; <span class="ty">TodoClient</span> &#125; <span class="kw">from</span> <span class="comment">'./generated/client'</span>;<br>
+<span class="kw">import</span> &#123; <span class="ty">MeroJs</span> &#125; <span class="kw">from</span> <span class="comment">'@calimero-network/mero-js'</span>;<br><br>
+<span class="kw">const</span> <span class="field">sdk</span> = <span class="kw">new</span> <span class="ty">MeroJs</span>(&#123; <span class="field">baseUrl</span>: <span class="comment">'http://localhost:2428'</span> &#125;);<br>
+<span class="kw">const</span> <span class="field">client</span> = <span class="kw">new</span> <span class="ty">TodoClient</span>(sdk.<span class="field">rpc</span>);<br>
+<span class="kw">const</span> <span class="field">todos</span> = <span class="kw">await</span> <span class="field">client</span>.<span class="ty">getTodos</span>();
+</div>
+</div>
+
+<div class="card gd">
+<h2>Integrating with package.json</h2>
+<p style="margin-bottom:12px;">Add a <span class="code">codegen</span> script to auto-generate on build:</p>
+<div class="typedef">
+<span class="comment">// package.json</span><br>
+&#123;<br>
+&nbsp;&nbsp;<span class="comment">"scripts"</span>: &#123;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">"codegen"</span>: <span class="comment">"mero-devtools generate --input abi.json --output src/client.ts"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">"build"</span>: <span class="comment">"npm run codegen && vite build"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">"dev"</span>: <span class="comment">"npm run codegen -- --watch & vite"</span><br>
+&nbsp;&nbsp;&#125;<br>
+&#125;
+</div>
+</div>
+
+</div>
+</div>
+<script src="nav.js"></script>
+</body>
+</html>
