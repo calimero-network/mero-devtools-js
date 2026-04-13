@@ -2,8 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Calimero | WASM Dev Tools — Architecture</title>
+<title>Calimero | mero-devtools-js — Architecture</title>
 <link rel="stylesheet" href="styles.css">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<meta name="description" content="mero-devtools-js architecture — codegen pipeline, ABI model, and generated output structure.">
 <meta name="theme-color" content="#0d1117">
 </head>
 <body>
@@ -12,79 +14,87 @@
 <div class="breadcrumb"><a href="index.html">Home</a><span class="sep">/</span><span>Architecture</span></div>
 
 <h1>Architecture</h1>
-<p class="page-subtitle">Source structure and codegen pipeline internals</p>
+<p class="page-subtitle">Inside the codegen pipeline — parser, model, generator, and emitter</p>
+
+<div class="g4" style="margin-bottom:36px;">
+  <div class="stat"><div class="v">4</div><div class="l">pipeline stages</div></div>
+  <div class="stat"><div class="v">1</div><div class="l">output file</div></div>
+  <div class="stat"><div class="v">AJV</div><div class="l">validation</div></div>
+  <div class="stat"><div class="v">v1</div><div class="l">ABI schema</div></div>
+</div>
 
 <div class="card ga">
 <h2>Codegen Pipeline</h2>
-<p style="margin-bottom:16px;">The tool reads a WASM ABI JSON file (exported by the Calimero Rust SDK) and emits TypeScript client code with typed method signatures and serialization helpers:</p>
-<svg viewBox="0 0 700 120" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:700px;display:block;margin:0 auto 8px;">
-  <rect x="10" y="30" width="130" height="60" rx="8" fill="#161b22" stroke="#30363d"/>
-  <text x="75" y="56" text-anchor="middle" fill="#a5ff11" font-family="JetBrains Mono,monospace" font-size="11">ABI JSON</text>
-  <text x="75" y="74" text-anchor="middle" fill="#8b949e" font-family="JetBrains Mono,monospace" font-size="10">abi.json</text>
-  <path d="M145 60 L185 60" stroke="#30363d" stroke-width="2" marker-end="url(#arr)"/>
-  <rect x="190" y="30" width="130" height="60" rx="8" fill="#161b22" stroke="#30363d"/>
-  <text x="255" y="56" text-anchor="middle" fill="#58a6ff" font-family="JetBrains Mono,monospace" font-size="11">Parser</text>
-  <text x="255" y="74" text-anchor="middle" fill="#8b949e" font-family="JetBrains Mono,monospace" font-size="10">validate + AST</text>
-  <path d="M325 60 L365 60" stroke="#30363d" stroke-width="2" marker-end="url(#arr)"/>
-  <rect x="370" y="30" width="130" height="60" rx="8" fill="#161b22" stroke="#30363d"/>
-  <text x="435" y="56" text-anchor="middle" fill="#f778ba" font-family="JetBrains Mono,monospace" font-size="11">Generator</text>
-  <text x="435" y="74" text-anchor="middle" fill="#8b949e" font-family="JetBrains Mono,monospace" font-size="10">type → TS template</text>
-  <path d="M505 60 L545 60" stroke="#30363d" stroke-width="2" marker-end="url(#arr)"/>
-  <rect x="550" y="30" width="140" height="60" rx="8" fill="#161b22" stroke="#30363d"/>
-  <text x="620" y="56" text-anchor="middle" fill="#a5ff11" font-family="JetBrains Mono,monospace" font-size="11">TypeScript</text>
-  <text x="620" y="74" text-anchor="middle" fill="#8b949e" font-family="JetBrains Mono,monospace" font-size="10">client.ts</text>
-  <defs><marker id="arr" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#30363d"/></marker></defs>
-</svg>
+<div class="g3">
+  <div class="step"><div class="n">1</div><h4>Parse &amp; Validate</h4><p><span class="code">parse.ts</span> reads the ABI JSON and validates it against the embedded JSON Schema using AJV. Checks for dangling <span class="code">$ref</span> references. Returns a typed <span class="code">AbiManifest</span> object.</p></div>
+  <div class="step"><div class="n">2</div><h4>Model</h4><p><span class="code">model.ts</span> defines the TypeScript interfaces that mirror the ABI schema 1:1. <span class="code">AbiManifest</span>, <span class="code">AbiMethod</span>, <span class="code">AbiEvent</span>, <span class="code">AbiTypeRef</span>, and all type definition variants.</p></div>
+  <div class="step"><div class="n">3</div><h4>Generate</h4><p><span class="code">generate/client.ts</span> traverses the manifest and emits TypeScript source. Handles all type definition kinds (record, variant, alias, scalar, collection), byte encoding, and client method signatures.</p></div>
+</div>
 </div>
 
 <div class="card gb">
-<h2>Source Structure</h2>
-<div class="fr"><div class="fp">src/</div><div class="fd">All TypeScript source files for the CLI and codegen library.</div></div>
-<div class="fr"><div class="fp">src/cli.ts</div><div class="fd">Entry point — parses <span class="code">--input</span>, <span class="code">--output</span>, <span class="code">--name</span> flags and orchestrates the pipeline.</div></div>
-<div class="fr"><div class="fp">src/parser.ts</div><div class="fd">Reads and validates the ABI JSON structure. Produces a typed in-memory representation of methods, arguments, and return types.</div></div>
-<div class="fr"><div class="fp">src/generator.ts</div><div class="fd">Maps ABI types to TypeScript types and renders the client class template with method stubs.</div></div>
-<div class="fr"><div class="fp">src/types.ts</div><div class="fd">Shared TypeScript interfaces for the ABI schema (<span class="code">AbiMethod</span>, <span class="code">AbiParam</span>, <span class="code">AbiType</span>).</div></div>
-<div class="fr"><div class="fp">src/templates/</div><div class="fd">Handlebars or string-template files for the generated client wrapper and type helpers.</div></div>
+<h2>Package Layout</h2>
+<div class="typedef">
+<span class="field">abi-codegen/</span><br>
+<span class="field">├── src/</span><br>
+<span class="field">│   ├── cli.ts</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">← calimero-abi-codegen CLI entrypoint</span><br>
+<span class="field">│   ├── parse.ts</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">← loadAbiManifestFromFile, parseAbiManifest</span><br>
+<span class="field">│   ├── model.ts</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">← TypeScript types for ABI manifest</span><br>
+<span class="field">│   ├── index.ts</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">← main entry re-exports</span><br>
+<span class="field">│   ├── generate/</span><br>
+<span class="field">│   │   ├── client.ts</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">← generateClient() — full TS source emitter</span><br>
+<span class="field">│   │   ├── types.ts</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">← type definition emitter helpers</span><br>
+<span class="field">│   │   └── emit.ts</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">← name utilities, sanitizers</span><br>
+<span class="field">│   ├── schema/</span><br>
+<span class="field">│   │   └── wasm-abi-v1.schema.json</span>&nbsp;&nbsp;<span class="comment">← embedded JSON Schema for validation</span><br>
+<span class="field">│   └── utils/</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">← shared internal helpers</span><br>
+<span class="field">create-mero-app/</span><br>
+<span class="field">└── src/index.ts</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">← interactive scaffolding CLI</span>
+</div>
 </div>
 
 <div class="card gc">
-<h2>ABI Type Mapping</h2>
-<p style="margin-bottom:12px;">Rust types from the ABI JSON are mapped to TypeScript equivalents:</p>
+<h2>Generated File Structure</h2>
+<p style="margin-bottom:12px;">The generator emits a single <span class="code">&lt;ClientName&gt;.ts</span> file with four sections:</p>
 <div class="g2">
-  <div class="cb"><h4>Primitive Types</h4>
-    <div class="fr"><div class="fp">u8 / u16 / u32 / u64</div><div class="fd"><span class="code">number</span> / <span class="code">bigint</span></div></div>
-    <div class="fr"><div class="fp">i8 / i16 / i32 / i64</div><div class="fd"><span class="code">number</span> / <span class="code">bigint</span></div></div>
-    <div class="fr"><div class="fp">bool</div><div class="fd"><span class="code">boolean</span></div></div>
-    <div class="fr"><div class="fp">String</div><div class="fd"><span class="code">string</span></div></div>
+  <div>
+    <div class="fr"><div class="fp">1. Imports</div><div class="fd">Imports <span class="code">RpcClient</span> (or <span class="code">useExecute</span>) from the configured import path.</div></div>
+    <div class="fr"><div class="fp">2. Type definitions</div><div class="fd">One <span class="code">interface</span> per record, one union type per variant, one <span class="code">type</span> alias per alias definition. All referenced types.</div></div>
   </div>
-  <div class="cb"><h4>Complex Types</h4>
-    <div class="fr"><div class="fp">Vec&lt;T&gt;</div><div class="fd"><span class="code">T[]</span></div></div>
-    <div class="fr"><div class="fp">Option&lt;T&gt;</div><div class="fd"><span class="code">T | null</span></div></div>
-    <div class="fr"><div class="fp">HashMap&lt;K,V&gt;</div><div class="fd"><span class="code">Record&lt;K, V&gt;</span></div></div>
-    <div class="fr"><div class="fp">struct / enum</div><div class="fd">Generated <span class="code">interface</span> / <span class="code">type</span></div></div>
+  <div>
+    <div class="fr"><div class="fp">3. CalimeroBytes</div><div class="fd">A minimal utility class for hex ↔ Uint8Array conversion, emitted if the manifest uses <span class="code">bytes</span> types.</div></div>
+    <div class="fr"><div class="fp">4. Client class</div><div class="fd">One typed method per ABI method. Each wraps <span class="code">rpc.execute()</span> with correct serialisation.</div></div>
   </div>
+</div>
+<div class="typedef" style="margin-top:14px;">
+<span class="comment">// Example generated output for a method named 'get_value':</span><br>
+<span class="kw">async</span> <span class="ty">getValue</span>(<span class="field">key</span>: <span class="ty">string</span>): <span class="ty">Promise</span>&lt;<span class="ty">string</span>&gt; &#123;<br>
+&nbsp;&nbsp;<span class="kw">return</span> <span class="kw">await</span> <span class="kw">this</span>.<span class="field">rpc</span>.<span class="ty">execute</span>&lt;<span class="ty">string</span>&gt;(&#123;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="field">contextId</span>: <span class="kw">this</span>.<span class="field">contextId</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="field">method</span>: <span class="comment">'get_value'</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="field">argsJson</span>: &#123; <span class="field">key</span> &#125;,<br>
+&nbsp;&nbsp;&#125;);<br>
+&#125;
 </div>
 </div>
 
 <div class="card gd">
-<h2>Generated Output</h2>
-<p style="margin-bottom:12px;">Example: a Rust method <code>fn get_post(id: u32) -&gt; Post</code> becomes:</p>
-<div class="typedef">
-<span class="comment">// Generated — do not edit</span><br>
-<span class="kw">export interface</span> <span class="ty">Post</span> &#123;<br>
-&nbsp;&nbsp;<span class="field">id</span>: <span class="ty">number</span>;<br>
-&nbsp;&nbsp;<span class="field">title</span>: <span class="ty">string</span>;<br>
-&nbsp;&nbsp;<span class="field">body</span>: <span class="ty">string</span>;<br>
-&#125;<br><br>
-<span class="kw">export class</span> <span class="ty">AppClient</span> &#123;<br>
-&nbsp;&nbsp;<span class="kw">constructor</span>(<span class="kw">private</span> <span class="field">rpc</span>: <span class="ty">RpcClient</span>) &#123;&#125;<br><br>
-&nbsp;&nbsp;<span class="kw">async</span> <span class="ty">getPost</span>(<span class="field">id</span>: <span class="ty">number</span>): <span class="ty">Promise</span>&lt;<span class="ty">Post</span>&gt; &#123;<br>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">return</span> <span class="kw">this</span>.<span class="field">rpc</span>.<span class="ty">query</span>(&#123;<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="field">method</span>: <span class="comment">'get_post'</span>,<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="field">argsJson</span>: JSON.<span class="ty">stringify</span>(&#123; <span class="field">id</span> &#125;),<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&#125;);<br>
-&nbsp;&nbsp;&#125;<br>
-&#125;
+<h2>create-mero-app</h2>
+<p style="margin-bottom:12px;">A separate interactive CLI in the same monorepo. Powered by <span class="code">prompts</span> and <span class="code">commander</span>.</p>
+<div class="g2">
+  <div>
+    <h4 style="color:#8b949e;font-size:12px;text-transform:uppercase;margin-bottom:8px;">Flow</h4>
+    <div class="fr"><div class="fp">1</div><div class="fd">Prompt for project name (npm-package-name validated)</div></div>
+    <div class="fr"><div class="fp">2</div><div class="fd">Select template (Rust or JavaScript kv-store)</div></div>
+    <div class="fr"><div class="fp">3</div><div class="fd">Clone template repo from GitHub (sparse, no history)</div></div>
+    <div class="fr"><div class="fp">4</div><div class="fd">Write project name into <span class="code">package.json</span></div></div>
+    <div class="fr"><div class="fp">5</div><div class="fd">Run <span class="code">git init</span> in new directory</div></div>
+  </div>
+  <div>
+    <h4 style="color:#8b949e;font-size:12px;text-transform:uppercase;margin-bottom:8px;">Templates</h4>
+    <div class="fr"><div class="fp">rust</div><div class="fd"><span class="code">calimero-network/kv-store</span> — Rust WASM contract + React frontend</div></div>
+    <div class="fr"><div class="fp">javascript</div><div class="fd"><span class="code">calimero-network/kv-store-js</span> — JS contract + React frontend</div></div>
+  </div>
 </div>
 </div>
 
