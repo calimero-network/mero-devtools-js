@@ -19,10 +19,10 @@
 <div class="card ga">
 <h2>Imports</h2>
 <div class="typedef">
-<span class="comment">// Main entry — parser + generator</span><br>
-<span class="kw">import</span> &#123; <span class="ty">parseAbiManifest</span>, <span class="ty">loadAbiManifestFromFile</span>, <span class="ty">generateClient</span> &#125;<br>
+<span class="comment">// Main entry — parser only</span><br>
+<span class="kw">import</span> &#123; <span class="ty">parseAbiManifest</span>, <span class="ty">loadAbiManifestFromFile</span> &#125;<br>
 &nbsp;&nbsp;<span class="kw">from</span> <span class="comment">'@calimero-network/abi-codegen'</span>;<br><br>
-<span class="comment">// Sub-path imports for tree-shaking</span><br>
+<span class="comment">// Sub-path imports (generateClient is not on the main entry)</span><br>
 <span class="kw">import</span> &#123; <span class="ty">parseAbiManifest</span> &#125; <span class="kw">from</span> <span class="comment">'@calimero-network/abi-codegen/parse'</span>;<br>
 <span class="kw">import</span> &#123; <span class="ty">generateClient</span> &#125; <span class="kw">from</span> <span class="comment">'@calimero-network/abi-codegen/generate/client'</span>;<br>
 <span class="kw">import</span> &#123; <span class="ty">deriveClientNameFromPath</span>, <span class="ty">sanitizeClassName</span> &#125; <span class="kw">from</span> <span class="comment">'@calimero-network/abi-codegen/generate/emit'</span>;
