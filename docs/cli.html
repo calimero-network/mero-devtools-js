@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calimero | Dev Tools — CLI Reference</title>
+<link rel="stylesheet" href="styles.css">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<meta name="description" content="CLI reference for calimero-abi-codegen and create-mero-app.">
+<meta name="theme-color" content="#0d1117">
+</head>
+<body>
+<div class="main">
+<div class="content">
+<div class="breadcrumb"><a href="index.html">Home</a><span class="sep">/</span><span>CLI Reference</span></div>
+
+<h1>CLI Reference</h1>
+<p class="page-subtitle">Command-line tools for scaffolding apps and generating TypeScript clients from WASM ABI manifests</p>
+
+<div class="card ga">
+<h2>calimero-abi-codegen</h2>
+<p style="margin-bottom:14px;">Parses a WASM ABI v1 manifest and generates a fully-typed TypeScript client. Installed as part of <span class="code">@calimero-network/abi-codegen</span>.</p>
+
+<div style="margin-bottom:12px;">
+  <h4 style="color:#8b949e;font-size:12px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Install</h4>
+  <div class="typedef">
+<span class="field">npm install @calimero-network/abi-codegen</span><br>
+<span class="comment"># or run without installing:</span><br>
+<span class="field">npx @calimero-network/abi-codegen -i abi.json -o src/generated</span>
+  </div>
+</div>
+
+<h4 style="color:#8b949e;font-size:12px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Options</h4>
+<div class="fr"><div class="fp">-i, --input &lt;file&gt;</div><div class="fd">Input ABI JSON file. Default: <span class="code">abi.json</span></div></div>
+<div class="fr"><div class="fp">-o, --outDir &lt;dir&gt;</div><div class="fd">Output directory for generated files. Default: <span class="code">src</span></div></div>
+<div class="fr"><div class="fp">--client-name &lt;Name&gt;</div><div class="fd">Override the generated client class name. Default derived from input file basename.</div></div>
+<div class="fr"><div class="fp">--name-from &lt;path&gt;</div><div class="fd">Derive client name from a file path (e.g. <span class="code">kv_store.wasm</span> → <span class="code">KvStoreClient</span>).</div></div>
+<div class="fr"><div class="fp">--import-path &lt;path&gt;</div><div class="fd">Override the import path for the mero-react/mero-js dep in generated files. Default: <span class="code">@calimero-network/mero-react</span></div></div>
+<div class="fr"><div class="fp">--validate</div><div class="fd">Validate the ABI manifest only — no code generation. Exits 0 on success.</div></div>
+<div class="fr"><div class="fp">-h, --help</div><div class="fd">Show usage help.</div></div>
+</div>
+
+<div class="card gb">
+<h2>Client Name Resolution</h2>
+<p style="margin-bottom:12px;">The generated client class name is resolved in priority order:</p>
+<div class="g3">
+  <div class="step"><div class="n">1</div><h4>--client-name</h4><p>Explicit name, highest priority. Sanitised to a valid identifier.</p><div class="typedef" style="margin-top:6px;"><span class="comment">--client-name "My Todo App"</span><br><span class="comment"># → MyTodoAppClient</span></div></div>
+  <div class="step"><div class="n">2</div><h4>--name-from</h4><p>Derive from a file path (e.g. the <span class="code">.wasm</span> file).</p><div class="typedef" style="margin-top:6px;"><span class="comment">--name-from kv_store.wasm</span><br><span class="comment"># → KvStoreClient</span></div></div>
+  <div class="step"><div class="n">3</div><h4>Input basename</h4><p>Falls back to deriving from the <span class="code">-i</span> file name.</p><div class="typedef" style="margin-top:6px;"><span class="comment">-i my_app.json</span><br><span class="comment"># → MyAppClient</span></div></div>
+</div>
+</div>
+
+<div class="card gc">
+<h2>Examples</h2>
+
+<h4 style="color:#8b949e;font-size:12px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Basic code generation</h4>
+<div class="typedef" style="margin-bottom:14px;">
+<span class="comment"># Generate into src/generated/</span><br>
+<span class="field">calimero-abi-codegen -i abi.json -o src/generated</span><br><br>
+<span class="comment"># Explicit client class name</span><br>
+<span class="field">calimero-abi-codegen -i abi.json -o src/generated --client-name TodoClient</span><br><br>
+<span class="comment"># Derive name from WASM binary path</span><br>
+<span class="field">calimero-abi-codegen -i abi.json -o src/generated --name-from kv_store.wasm</span>
+</div>
+
+<h4 style="color:#8b949e;font-size:12px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Validate only</h4>
+<div class="typedef" style="margin-bottom:14px;">
+<span class="comment"># Check manifest is well-formed (exits 0 on success)</span><br>
+<span class="field">calimero-abi-codegen --validate -i abi.json</span><br>
+<span class="comment"># ✅ ABI manifest validated successfully!</span><br>
+<span class="comment"># 📊 Summary: Methods: 5  Events: 2  Types: 8</span>
+</div>
+
+<h4 style="color:#8b949e;font-size:12px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Custom import path (for mero-js without React)</h4>
+<div class="typedef" style="margin-bottom:14px;">
+<span class="field">calimero-abi-codegen -i abi.json -o src/generated \</span><br>
+&nbsp;&nbsp;<span class="field">--import-path @calimero-network/mero-js</span>
+</div>
+
+<h4 style="color:#8b949e;font-size:12px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">package.json scripts</h4>
+<div class="typedef">
+<span class="comment">// package.json</span><br>
+&#123;<br>
+&nbsp;&nbsp;<span class="comment">"scripts"</span>: &#123;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">"codegen"</span>: <span class="comment">"calimero-abi-codegen -i abi.json -o src/generated"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">"build"</span>: <span class="comment">"npm run codegen &amp;&amp; vite build"</span><br>
+&nbsp;&nbsp;&#125;<br>
+&#125;
+</div>
+</div>
+
+<div class="card gd">
+<h2>Generated Output</h2>
+<p style="margin-bottom:12px;">The generator produces a single <span class="code">&lt;ClientName&gt;.ts</span> file containing both type definitions and the client class:</p>
+<div class="typedef">
+<span class="comment">// src/generated/KvStoreClient.ts</span><br><br>
+<span class="comment">// — Type definitions (records, variants, aliases) —</span><br>
+<span class="kw">export interface</span> <span class="ty">SetEntryRequest</span> &#123;<br>
+&nbsp;&nbsp;<span class="field">key</span>: <span class="ty">string</span>;<br>
+&nbsp;&nbsp;<span class="field">value</span>: <span class="ty">string</span>;<br>
+&#125;<br><br>
+<span class="comment">// — Generated client class —</span><br>
+<span class="kw">export class</span> <span class="ty">KvStoreClient</span> &#123;<br>
+&nbsp;&nbsp;<span class="kw">constructor</span>(<span class="field">rpc</span>: <span class="ty">RpcClient</span>, <span class="field">contextId</span>: <span class="ty">string</span>, <span class="field">executorId</span>: <span class="ty">string</span>);<br><br>
+&nbsp;&nbsp;<span class="comment">// One method per ABI method:</span><br>
+&nbsp;&nbsp;<span class="ty">getValue</span>(<span class="field">key</span>: <span class="ty">string</span>): <span class="ty">Promise</span>&lt;<span class="ty">string</span>&gt;;<br>
+&nbsp;&nbsp;<span class="ty">setValue</span>(<span class="field">req</span>: <span class="ty">SetEntryRequest</span>): <span class="ty">Promise</span>&lt;<span class="ty">void</span>&gt;;<br>
+&#125;
+</div>
+<p style="margin-top:10px;">Use it with <span class="code">mero.rpc</span> from the SDK:</p>
+<div class="typedef">
+<span class="kw">const</span> <span class="field">client</span> = <span class="kw">new</span> <span class="ty">KvStoreClient</span>(sdk.<span class="field">rpc</span>, <span class="field">contextId</span>, <span class="field">executorId</span>);<br>
+<span class="kw">const</span> <span class="field">val</span> = <span class="kw">await</span> <span class="field">client</span>.<span class="ty">getValue</span>(<span class="comment">'my-key'</span>);
+</div>
+</div>
+
+<div class="card ge">
+<h2>create-mero-app</h2>
+<p style="margin-bottom:14px;">Scaffold a new Calimero application from a template. Interactive prompts guide you through setup.</p>
+
+<div style="margin-bottom:12px;">
+  <h4 style="color:#8b949e;font-size:12px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Usage</h4>
+  <div class="typedef">
+<span class="field">npx create-mero-app</span><br>
+<span class="comment"># — or —</span><br>
+<span class="field">npm create mero-app</span>
+  </div>
+</div>
+
+<div class="g2">
+  <div>
+    <h4 style="color:#8b949e;font-size:12px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Templates</h4>
+    <div class="fr"><div class="fp">rust</div><div class="fd">Rust kv-store — WASM contract + React frontend starter</div></div>
+    <div class="fr"><div class="fp">javascript</div><div class="fd">JavaScript kv-store-js — pure JS contract + React frontend</div></div>
+  </div>
+  <div>
+    <h4 style="color:#8b949e;font-size:12px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">What it does</h4>
+    <div class="fr"><div class="fp">1</div><div class="fd">Prompts for project name (validated as npm package name)</div></div>
+    <div class="fr"><div class="fp">2</div><div class="fd">Lets you choose a template</div></div>
+    <div class="fr"><div class="fp">3</div><div class="fd">Clones template from GitHub into a new directory</div></div>
+    <div class="fr"><div class="fp">4</div><div class="fd">Writes your project name into <span class="code">package.json</span></div></div>
+    <div class="fr"><div class="fp">5</div><div class="fd">Initialises a fresh git repo</div></div>
+  </div>
+</div>
+</div>
+
+</div>
+</div>
+<script src="nav.js"></script>
+</body>
+</html>

@@ -55,7 +55,7 @@ function showHelp() {
     '  -i, --input <file>        Input ABI JSON file (default: abi.json)',
   );
   console.log(
-    '  -o, --outDir <dir>        Output directory for generated files (default: src)',
+    '  -o, --output <dir>        Output directory for generated files (default: src)',
   );
   console.log(
     '  --client-name <Name>      Custom client class name (default: Client)',
@@ -64,7 +64,7 @@ function showHelp() {
     '  --name-from <path>        Derive client name from file path (e.g., wasm file)',
   );
   console.log(
-    '  --import-path <path>      Custom import path for MeroJs (default: @calimero-network/mero-react)',
+    '  --import-path <path>      Custom import path for mero-react (default: @calimero-network/mero-react)',
   );
   console.log(
     '  --validate                Validate ABI manifest only (no code generation)',

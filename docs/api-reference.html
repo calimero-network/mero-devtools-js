@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calimero | mero-devtools-js — Programmatic API</title>
+<link rel="stylesheet" href="styles.css">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<meta name="description" content="Programmatic API for @calimero-network/abi-codegen — parse and generate TypeScript from ABI manifests.">
+<meta name="theme-color" content="#0d1117">
+</head>
+<body>
+<div class="main">
+<div class="content">
+<div class="breadcrumb"><a href="index.html">Home</a><span class="sep">/</span><span>API Reference</span></div>
+
+<h1>API Reference</h1>
+<p class="page-subtitle">Programmatic API for <span class="code">@calimero-network/abi-codegen</span> — use the parser and generator directly in build tooling</p>
+
+<div class="card ga">
+<h2>Imports</h2>
+<div class="typedef">
+<span class="comment">// Main entry — parser only</span><br>
+<span class="kw">import</span> &#123; <span class="ty">parseAbiManifest</span>, <span class="ty">loadAbiManifestFromFile</span> &#125;<br>
+&nbsp;&nbsp;<span class="kw">from</span> <span class="comment">'@calimero-network/abi-codegen'</span>;<br><br>
+<span class="comment">// Sub-path imports (generateClient is not on the main entry)</span><br>
+<span class="kw">import</span> &#123; <span class="ty">parseAbiManifest</span> &#125; <span class="kw">from</span> <span class="comment">'@calimero-network/abi-codegen/parse'</span>;<br>
+<span class="kw">import</span> &#123; <span class="ty">generateClient</span> &#125; <span class="kw">from</span> <span class="comment">'@calimero-network/abi-codegen/generate/client'</span>;<br>
+<span class="kw">import</span> &#123; <span class="ty">deriveClientNameFromPath</span>, <span class="ty">sanitizeClassName</span> &#125; <span class="kw">from</span> <span class="comment">'@calimero-network/abi-codegen/generate/emit'</span>;
+</div>
+</div>
+
+<div class="card gb">
+<h2>parseAbiManifest(json)</h2>
+<p style="margin-bottom:12px;">Validates a raw JSON object against the WASM ABI v1 JSON Schema and returns a typed <span class="code">AbiManifest</span>. Throws a descriptive error if validation fails.</p>
+<div class="typedef">
+<span class="kw">function</span> <span class="ty">parseAbiManifest</span>(<span class="field">json</span>: <span class="ty">unknown</span>): <span class="ty">AbiManifest</span>
+</div>
+<div class="typedef" style="margin-top:10px;">
+<span class="comment">// Usage:</span><br>
+<span class="kw">import</span> &#123; <span class="ty">parseAbiManifest</span> &#125; <span class="kw">from</span> <span class="comment">'@calimero-network/abi-codegen/parse'</span>;<br><br>
+<span class="kw">const</span> <span class="field">raw</span> = JSON.<span class="ty">parse</span>(fs.<span class="ty">readFileSync</span>(<span class="comment">'abi.json'</span>, <span class="comment">'utf8'</span>));<br>
+<span class="kw">const</span> <span class="field">manifest</span> = <span class="ty">parseAbiManifest</span>(<span class="field">raw</span>);<br>
+<span class="comment">// manifest.methods, manifest.events, manifest.types</span>
+</div>
+</div>
+
+<div class="card gc">
+<h2>loadAbiManifestFromFile(path)</h2>
+<p style="margin-bottom:12px;">Convenience wrapper — reads a JSON file from the filesystem, parses it, and validates it. Equivalent to <span class="code">parseAbiManifest(JSON.parse(fs.readFileSync(path)))</span>.</p>
+<div class="typedef">
+<span class="kw">function</span> <span class="ty">loadAbiManifestFromFile</span>(<span class="field">path</span>: <span class="ty">string</span>): <span class="ty">AbiManifest</span>
+</div>
+<div class="typedef" style="margin-top:10px;">
+<span class="kw">import</span> &#123; <span class="ty">loadAbiManifestFromFile</span> &#125; <span class="kw">from</span> <span class="comment">'@calimero-network/abi-codegen/parse'</span>;<br><br>
+<span class="kw">const</span> <span class="field">manifest</span> = <span class="ty">loadAbiManifestFromFile</span>(<span class="comment">'./abi.json'</span>);<br>
+console.<span class="ty">log</span>(<span class="comment">`${manifest.methods.length} methods`</span>);
+</div>
+</div>
+
+<div class="card gd">
+<h2>generateClient(manifest, clientName?, importPath?)</h2>
+<p style="margin-bottom:12px;">Takes a validated <span class="code">AbiManifest</span> and returns a TypeScript source string containing both type definitions and the client class.</p>
+<div class="typedef">
+<span class="kw">function</span> <span class="ty">generateClient</span>(<br>
+&nbsp;&nbsp;<span class="field">manifest</span>: <span class="ty">AbiManifest</span>,<br>
+&nbsp;&nbsp;<span class="field">clientName</span>?: <span class="ty">string</span>,&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">// default: 'Client'</span><br>
+&nbsp;&nbsp;<span class="field">importPath</span>?: <span class="ty">string</span>,&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">// default: '@calimero-network/mero-react'</span><br>
+): <span class="ty">string</span>
+</div>
+<div class="typedef" style="margin-top:10px;">
+<span class="kw">import</span> &#123; <span class="ty">loadAbiManifestFromFile</span> &#125; <span class="kw">from</span> <span class="comment">'@calimero-network/abi-codegen/parse'</span>;<br>
+<span class="kw">import</span> &#123; <span class="ty">generateClient</span> &#125; <span class="kw">from</span> <span class="comment">'@calimero-network/abi-codegen/generate/client'</span>;<br>
+<span class="kw">import</span> fs <span class="kw">from</span> <span class="comment">'fs'</span>;<br><br>
+<span class="kw">const</span> <span class="field">manifest</span> = <span class="ty">loadAbiManifestFromFile</span>(<span class="comment">'abi.json'</span>);<br>
+<span class="kw">const</span> <span class="field">source</span> = <span class="ty">generateClient</span>(<span class="field">manifest</span>, <span class="comment">'KvStoreClient'</span>);<br>
+fs.<span class="ty">writeFileSync</span>(<span class="comment">'src/generated/KvStoreClient.ts'</span>, <span class="field">source</span>);
+</div>
+</div>
+
+<div class="card ge">
+<h2>Name Utilities</h2>
+<div class="typedef">
+<span class="kw">import</span> &#123; <span class="ty">deriveClientNameFromPath</span>, <span class="ty">sanitizeClassName</span> &#125;<br>
+&nbsp;&nbsp;<span class="kw">from</span> <span class="comment">'@calimero-network/abi-codegen/generate/emit'</span>;<br><br>
+<span class="comment">// Derive a PascalCase client name from a file path:</span><br>
+<span class="ty">deriveClientNameFromPath</span>(<span class="comment">'kv_store.wasm'</span>)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">// 'KvStoreClient'</span><br>
+<span class="ty">deriveClientNameFromPath</span>(<span class="comment">'my-todo-app.json'</span>)  <span class="comment">// 'MyTodoAppClient'</span><br><br>
+<span class="comment">// Sanitize an arbitrary string to a valid identifier:</span><br>
+<span class="ty">sanitizeClassName</span>(<span class="comment">'My Todo App'</span>)&nbsp;&nbsp;<span class="comment">// 'MyTodoApp'</span>
+</div>
+</div>
+
+<div class="card gf">
+<h2>Vite / Rollup Plugin Pattern</h2>
+<p style="margin-bottom:12px;">Use the API to write a build plugin that auto-generates clients from ABI files:</p>
+<div class="typedef">
+<span class="comment">// vite-plugin-calimero-codegen.ts</span><br>
+<span class="kw">import</span> &#123; <span class="ty">loadAbiManifestFromFile</span> &#125; <span class="kw">from</span> <span class="comment">'@calimero-network/abi-codegen/parse'</span>;<br>
+<span class="kw">import</span> &#123; <span class="ty">generateClient</span> &#125; <span class="kw">from</span> <span class="comment">'@calimero-network/abi-codegen/generate/client'</span>;<br>
+<span class="kw">import</span> &#123; <span class="ty">deriveClientNameFromPath</span> &#125; <span class="kw">from</span> <span class="comment">'@calimero-network/abi-codegen/generate/emit'</span>;<br>
+<span class="kw">import</span> fs <span class="kw">from</span> <span class="comment">'fs'</span>;<br><br>
+<span class="kw">export function</span> <span class="ty">calimeroCodegen</span>(opts: &#123; <span class="field">input</span>: <span class="ty">string</span>, <span class="field">outDir</span>: <span class="ty">string</span> &#125;) &#123;<br>
+&nbsp;&nbsp;<span class="kw">return</span> &#123;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="field">name</span>: <span class="comment">'calimero-codegen'</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="field">buildStart</span>() &#123;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">const</span> <span class="field">manifest</span> = <span class="ty">loadAbiManifestFromFile</span>(opts.<span class="field">input</span>);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">const</span> <span class="field">name</span> = <span class="ty">deriveClientNameFromPath</span>(opts.<span class="field">input</span>);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">const</span> <span class="field">src</span> = <span class="ty">generateClient</span>(<span class="field">manifest</span>, <span class="field">name</span>);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;fs.<span class="ty">writeFileSync</span>(<span class="field">`${opts.outDir}/${name}.ts`</span>, <span class="field">src</span>);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&#125;<br>
+&nbsp;&nbsp;&#125;;<br>
+&#125;
+</div>
+</div>
+
+</div>
+</div>
+<script src="nav.js"></script>
+</body>
+</html>
