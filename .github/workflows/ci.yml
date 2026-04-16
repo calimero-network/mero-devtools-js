@@ -36,3 +36,83 @@ jobs:
         run: cd abi-codegen && pnpm run validate:abi
       - name: Test code generation
         run: cd abi-codegen && pnpm run generate:example
+
+  release:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    permissions:
+      contents: write
+      id-token: write
+      issues: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          registry-url: "https://registry.npmjs.org"
+          scope: "@calimero-network"
+          token: false
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build packages
+        run: pnpm build
+
+      - name: Run tests
+        run: pnpm test
+
+      - name: Publish @calimero-network/abi-codegen to npm
+        run: |
+          cd abi-codegen
+          VERSION=$(node -p "require('./package.json').version")
+          echo "📦 Package: @calimero-network/abi-codegen"
+          echo "📋 Version: ${VERSION}"
+
+          # Check if tag exists (indicates already released)
+          if git tag -l "abi-codegen-v${VERSION}" | grep -q .; then
+            echo "🔄 Tag exists, running semantic-release"
+            npx semantic-release
+          else
+            echo "🚀 Initial publish - publishing directly to npm"
+            npm publish --provenance --access public
+            echo "🏷️  Creating git tag: abi-codegen-v${VERSION}"
+            git tag "abi-codegen-v${VERSION}"
+            git push origin "abi-codegen-v${VERSION}"
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_ENV: production
+
+      - name: Publish create-mero-app to npm
+        run: |
+          cd create-mero-app
+          VERSION=$(node -p "require('./package.json').version")
+          echo "📦 Package: create-mero-app"
+          echo "📋 Version: ${VERSION}"
+
+          # Check if tag exists (indicates already released)
+          if git tag -l "create-mero-app-v${VERSION}" | grep -q .; then
+            echo "🔄 Tag exists, running semantic-release"
+            npx semantic-release
+          else
+            echo "🚀 Initial publish - publishing directly to npm"
+            npm publish --provenance --access public
+            echo "🏷️  Creating git tag: create-mero-app-v${VERSION}"
+            git tag "create-mero-app-v${VERSION}"
+            git push origin "create-mero-app-v${VERSION}"
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_ENV: production
