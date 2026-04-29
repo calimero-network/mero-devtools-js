@@ -38,8 +38,10 @@
       "enum": [
         "lww_register",
         "unordered_map",
+        "authored_map",
         "unordered_set",
         "vector",
+        "authored_vector",
         "counter",
         "replicated_growable_array"
       ]

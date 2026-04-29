@@ -163,21 +163,21 @@ function convertWasmResultToCalimeroBytes(obj: any): any {
 }
 
 export class Client {
-  private mero: MeroJs;
-  private contextId: string;
-  private executorPublicKey: string;
+  private _mero: MeroJs;
+  private _contextId: string;
+  private _executorPublicKey: string;
 
   constructor(mero: MeroJs, contextId: string, executorPublicKey: string) {
-    this.mero = mero;
-    this.contextId = contextId;
-    this.executorPublicKey = executorPublicKey;
+    this._mero = mero;
+    this._contextId = contextId;
+    this._executorPublicKey = executorPublicKey;
   }
 
   /**
    * init
    */
   public async init(): Promise<AbiState> {
-    const response = await this.mero.rpc.execute({ contextId: this.contextId, method: 'init', argsJson: {}, executorPublicKey: this.executorPublicKey });
+    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'init', argsJson: {}, executorPublicKey: this._executorPublicKey });
     return convertWasmResultToCalimeroBytes(response) as AbiState;
   }
 
@@ -185,7 +185,7 @@ export class Client {
    * noop
    */
   public async noop(): Promise<void> {
-    const response = await this.mero.rpc.execute({ contextId: this.contextId, method: 'noop', argsJson: {}, executorPublicKey: this.executorPublicKey });
+    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'noop', argsJson: {}, executorPublicKey: this._executorPublicKey });
     return response as void;
   }
 
@@ -193,7 +193,7 @@ export class Client {
    * echo_bool
    */
   public async echoBool(params: { b: boolean }): Promise<boolean> {
-    const response = await this.mero.rpc.execute({ contextId: this.contextId, method: 'echo_bool', argsJson: params, executorPublicKey: this.executorPublicKey });
+    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'echo_bool', argsJson: params, executorPublicKey: this._executorPublicKey });
     return response as boolean;
   }
 
@@ -201,7 +201,7 @@ export class Client {
    * echo_i32
    */
   public async echoI32(params: { x: number }): Promise<number> {
-    const response = await this.mero.rpc.execute({ contextId: this.contextId, method: 'echo_i32', argsJson: params, executorPublicKey: this.executorPublicKey });
+    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'echo_i32', argsJson: params, executorPublicKey: this._executorPublicKey });
     return response as number;
   }
 
@@ -209,7 +209,7 @@ export class Client {
    * echo_i64
    */
   public async echoI64(params: { x: number }): Promise<number> {
-    const response = await this.mero.rpc.execute({ contextId: this.contextId, method: 'echo_i64', argsJson: params, executorPublicKey: this.executorPublicKey });
+    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'echo_i64', argsJson: params, executorPublicKey: this._executorPublicKey });
     return response as number;
   }
 
@@ -217,7 +217,7 @@ export class Client {
    * echo_u32
    */
   public async echoU32(params: { x: number }): Promise<number> {
-    const response = await this.mero.rpc.execute({ contextId: this.contextId, method: 'echo_u32', argsJson: params, executorPublicKey: this.executorPublicKey });
+    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'echo_u32', argsJson: params, executorPublicKey: this._executorPublicKey });
     return response as number;
   }
 
@@ -225,7 +225,7 @@ export class Client {
    * echo_u64
    */
   public async echoU64(params: { x: number }): Promise<number> {
-    const response = await this.mero.rpc.execute({ contextId: this.contextId, method: 'echo_u64', argsJson: params, executorPublicKey: this.executorPublicKey });
+    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'echo_u64', argsJson: params, executorPublicKey: this._executorPublicKey });
     return response as number;
   }
 
@@ -233,7 +233,7 @@ export class Client {
    * echo_f32
    */
   public async echoF32(params: { x: number }): Promise<number> {
-    const response = await this.mero.rpc.execute({ contextId: this.contextId, method: 'echo_f32', argsJson: params, executorPublicKey: this.executorPublicKey });
+    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'echo_f32', argsJson: params, executorPublicKey: this._executorPublicKey });
     return response as number;
   }
 
@@ -241,7 +241,7 @@ export class Client {
    * echo_f64
    */
   public async echoF64(params: { x: number }): Promise<number> {
-    const response = await this.mero.rpc.execute({ contextId: this.contextId, method: 'echo_f64', argsJson: params, executorPublicKey: this.executorPublicKey });
+    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'echo_f64', argsJson: params, executorPublicKey: this._executorPublicKey });
     return response as number;
   }
 
@@ -249,7 +249,7 @@ export class Client {
    * echo_string
    */
   public async echoString(params: { s: string }): Promise<string> {
-    const response = await this.mero.rpc.execute({ contextId: this.contextId, method: 'echo_string', argsJson: params, executorPublicKey: this.executorPublicKey });
+    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'echo_string', argsJson: params, executorPublicKey: this._executorPublicKey });
     return response as string;
   }
 
@@ -257,7 +257,7 @@ export class Client {
    * echo_bytes
    */
   public async echoBytes(params: { b: CalimeroBytes }): Promise<CalimeroBytes> {
-    const response = await this.mero.rpc.execute({ contextId: this.contextId, method: 'echo_bytes', argsJson: convertCalimeroBytesForWasm(params), executorPublicKey: this.executorPublicKey });
+    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'echo_bytes', argsJson: convertCalimeroBytesForWasm(params), executorPublicKey: this._executorPublicKey });
     return convertWasmResultToCalimeroBytes(response) as CalimeroBytes;
   }
 
@@ -265,7 +265,7 @@ export class Client {
    * opt_u32
    */
   public async optU32(params: { x: number | null }): Promise<number | null> {
-    const response = await this.mero.rpc.execute({ contextId: this.contextId, method: 'opt_u32', argsJson: params, executorPublicKey: this.executorPublicKey });
+    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'opt_u32', argsJson: params, executorPublicKey: this._executorPublicKey });
     return response as number | null;
   }
 
@@ -273,7 +273,7 @@ export class Client {
    * opt_string
    */
   public async optString(params: { x: string | null }): Promise<string | null> {
-    const response = await this.mero.rpc.execute({ contextId: this.contextId, method: 'opt_string', argsJson: params, executorPublicKey: this.executorPublicKey });
+    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'opt_string', argsJson: params, executorPublicKey: this._executorPublicKey });
     return response as string | null;
   }
 
@@ -281,7 +281,7 @@ export class Client {
    * opt_record
    */
   public async optRecord(params: { p: Person | null }): Promise<Person | null> {
-    const response = await this.mero.rpc.execute({ contextId: this.contextId, method: 'opt_record', argsJson: convertCalimeroBytesForWasm(params), executorPublicKey: this.executorPublicKey });
+    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'opt_record', argsJson: convertCalimeroBytesForWasm(params), executorPublicKey: this._executorPublicKey });
     return convertWasmResultToCalimeroBytes(response) as Person | null;
   }
 
@@ -289,7 +289,7 @@ export class Client {
    * opt_id
    */
   public async optId(params: { x: UserId32 | null }): Promise<UserId32 | null> {
-    const response = await this.mero.rpc.execute({ contextId: this.contextId, method: 'opt_id', argsJson: convertCalimeroBytesForWasm(params), executorPublicKey: this.executorPublicKey });
+    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'opt_id', argsJson: convertCalimeroBytesForWasm(params), executorPublicKey: this._executorPublicKey });
     return convertWasmResultToCalimeroBytes(response) as UserId32 | null;
   }
 
@@ -297,7 +297,7 @@ export class Client {
    * list_u32
    */
   public async listU32(params: { xs: number[] }): Promise<number[]> {
-    const response = await this.mero.rpc.execute({ contextId: this.contextId, method: 'list_u32', argsJson: params, executorPublicKey: this.executorPublicKey });
+    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'list_u32', argsJson: params, executorPublicKey: this._executorPublicKey });
     return response as number[];
   }
 
@@ -305,7 +305,7 @@ export class Client {
    * list_strings
    */
   public async listStrings(params: { xs: string[] }): Promise<string[]> {
-    const response = await this.mero.rpc.execute({ contextId: this.contextId, method: 'list_strings', argsJson: params, executorPublicKey: this.executorPublicKey });
+    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'list_strings', argsJson: params, executorPublicKey: this._executorPublicKey });
     return response as string[];
   }
 
@@ -313,7 +313,7 @@ export class Client {
    * list_records
    */
   public async listRecords(params: { ps: Person[] }): Promise<Person[]> {
-    const response = await this.mero.rpc.execute({ contextId: this.contextId, method: 'list_records', argsJson: convertCalimeroBytesForWasm(params), executorPublicKey: this.executorPublicKey });
+    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'list_records', argsJson: convertCalimeroBytesForWasm(params), executorPublicKey: this._executorPublicKey });
     return convertWasmResultToCalimeroBytes(response) as Person[];
   }
 
@@ -321,7 +321,7 @@ export class Client {
    * list_ids
    */
   public async listIds(params: { xs: UserId32[] }): Promise<UserId32[]> {
-    const response = await this.mero.rpc.execute({ contextId: this.contextId, method: 'list_ids', argsJson: convertCalimeroBytesForWasm(params), executorPublicKey: this.executorPublicKey });
+    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'list_ids', argsJson: convertCalimeroBytesForWasm(params), executorPublicKey: this._executorPublicKey });
     return convertWasmResultToCalimeroBytes(response) as UserId32[];
   }
 
@@ -329,7 +329,7 @@ export class Client {
    * map_u32
    */
   public async mapU32(params: { m: Record<string, number> }): Promise<Record<string, number>> {
-    const response = await this.mero.rpc.execute({ contextId: this.contextId, method: 'map_u32', argsJson: params, executorPublicKey: this.executorPublicKey });
+    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'map_u32', argsJson: params, executorPublicKey: this._executorPublicKey });
     return response as Record<string, number>;
   }
 
@@ -337,7 +337,7 @@ export class Client {
    * map_list_u32
    */
   public async mapListU32(params: { m: Record<string, number[]> }): Promise<Record<string, number[]>> {
-    const response = await this.mero.rpc.execute({ contextId: this.contextId, method: 'map_list_u32', argsJson: params, executorPublicKey: this.executorPublicKey });
+    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'map_list_u32', argsJson: params, executorPublicKey: this._executorPublicKey });
     return response as Record<string, number[]>;
   }
 
@@ -345,7 +345,7 @@ export class Client {
    * map_record
    */
   public async mapRecord(params: { m: Record<string, Person> }): Promise<Record<string, Person>> {
-    const response = await this.mero.rpc.execute({ contextId: this.contextId, method: 'map_record', argsJson: convertCalimeroBytesForWasm(params), executorPublicKey: this.executorPublicKey });
+    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'map_record', argsJson: convertCalimeroBytesForWasm(params), executorPublicKey: this._executorPublicKey });
     return convertWasmResultToCalimeroBytes(response) as Record<string, Person>;
   }
 
@@ -353,7 +353,7 @@ export class Client {
    * make_person
    */
   public async makePerson(params: { p: Person }): Promise<Person> {
-    const response = await this.mero.rpc.execute({ contextId: this.contextId, method: 'make_person', argsJson: convertCalimeroBytesForWasm(params), executorPublicKey: this.executorPublicKey });
+    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'make_person', argsJson: convertCalimeroBytesForWasm(params), executorPublicKey: this._executorPublicKey });
     return convertWasmResultToCalimeroBytes(response) as Person;
   }
 
@@ -361,7 +361,7 @@ export class Client {
    * profile_roundtrip
    */
   public async profileRoundtrip(params: { p: Profile }): Promise<Profile> {
-    const response = await this.mero.rpc.execute({ contextId: this.contextId, method: 'profile_roundtrip', argsJson: convertCalimeroBytesForWasm(params), executorPublicKey: this.executorPublicKey });
+    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'profile_roundtrip', argsJson: convertCalimeroBytesForWasm(params), executorPublicKey: this._executorPublicKey });
     return convertWasmResultToCalimeroBytes(response) as Profile;
   }
 
@@ -378,7 +378,7 @@ export class Client {
         convertedParams.a = convertedParams.a.name;
       }
     }
-    const response = await this.mero.rpc.execute({ contextId: this.contextId, method: 'act', argsJson: convertedParams, executorPublicKey: this.executorPublicKey });
+    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'act', argsJson: convertedParams, executorPublicKey: this._executorPublicKey });
     return response as number;
   }
 
@@ -386,7 +386,7 @@ export class Client {
    * roundtrip_id
    */
   public async roundtripId(params: { x: UserId32 }): Promise<UserId32> {
-    const response = await this.mero.rpc.execute({ contextId: this.contextId, method: 'roundtrip_id', argsJson: convertCalimeroBytesForWasm(params), executorPublicKey: this.executorPublicKey });
+    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'roundtrip_id', argsJson: convertCalimeroBytesForWasm(params), executorPublicKey: this._executorPublicKey });
     return convertWasmResultToCalimeroBytes(response) as UserId32;
   }
 
@@ -394,7 +394,7 @@ export class Client {
    * roundtrip_hash
    */
   public async roundtripHash(params: { h: Hash64 }): Promise<Hash64> {
-    const response = await this.mero.rpc.execute({ contextId: this.contextId, method: 'roundtrip_hash', argsJson: convertCalimeroBytesForWasm(params), executorPublicKey: this.executorPublicKey });
+    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'roundtrip_hash', argsJson: convertCalimeroBytesForWasm(params), executorPublicKey: this._executorPublicKey });
     return convertWasmResultToCalimeroBytes(response) as Hash64;
   }
 
@@ -402,7 +402,7 @@ export class Client {
    * may_fail
    */
   public async mayFail(params: { flag: boolean }): Promise<number> {
-    const response = await this.mero.rpc.execute({ contextId: this.contextId, method: 'may_fail', argsJson: params, executorPublicKey: this.executorPublicKey });
+    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'may_fail', argsJson: params, executorPublicKey: this._executorPublicKey });
     return response as number;
   }
 
@@ -410,7 +410,7 @@ export class Client {
    * find_person
    */
   public async findPerson(params: { name: string }): Promise<Person> {
-    const response = await this.mero.rpc.execute({ contextId: this.contextId, method: 'find_person', argsJson: params, executorPublicKey: this.executorPublicKey });
+    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'find_person', argsJson: params, executorPublicKey: this._executorPublicKey });
     return convertWasmResultToCalimeroBytes(response) as Person;
   }
 
