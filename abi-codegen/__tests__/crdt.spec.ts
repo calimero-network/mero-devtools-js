@@ -250,6 +250,59 @@ describe('CRDT type annotations', () => {
       expect(clientContent).toContain('items: Record<string, number>');
     });
 
+    it('should accept authored_map crdt_type on map fields', () => {
+      const manifest = parseAbiManifest({
+        schema_version: 'wasm-abi/1',
+        types: {
+          Test: {
+            kind: 'record',
+            fields: [
+              {
+                name: 'authored',
+                type: {
+                  kind: 'map',
+                  key: { kind: 'string' },
+                  value: { kind: 'u32' },
+                  crdt_type: 'authored_map',
+                },
+              },
+            ],
+          },
+        },
+        methods: [],
+        events: [],
+      });
+
+      const clientContent = generateClient(manifest);
+      expect(clientContent).toContain('authored: Record<string, number>');
+    });
+
+    it('should accept authored_vector crdt_type on list fields', () => {
+      const manifest = parseAbiManifest({
+        schema_version: 'wasm-abi/1',
+        types: {
+          Test: {
+            kind: 'record',
+            fields: [
+              {
+                name: 'log',
+                type: {
+                  kind: 'list',
+                  items: { kind: 'string' },
+                  crdt_type: 'authored_vector',
+                },
+              },
+            ],
+          },
+        },
+        methods: [],
+        events: [],
+      });
+
+      const clientContent = generateClient(manifest);
+      expect(clientContent).toContain('log: string[]');
+    });
+
     it('should handle state_root field in manifest', () => {
       const manifest = parseAbiManifest({
         schema_version: 'wasm-abi/1',

@@ -415,9 +415,3 @@ export class Client {
   }
 
 }
-// Test stub to verify parameter structure
-const mero = { rpc: { execute: async (p: any) => p } } as any;
-const client = new Client(mero, 'ctx-1', 'exec-key-1');
-await client.roundtripId({ x: "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef" });
-await client.makePerson({ p: { id: "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef" as any, name: "test", age: 25 } });
-await client.act({ a: Action.Ping() });
