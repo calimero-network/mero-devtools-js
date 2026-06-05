@@ -4,8 +4,14 @@ import {
   AbiTypeRef,
   AbiTypeDef,
   AbiEvent,
-} from '../model.js';
-import { formatIdentifier, generateFileBanner, mapRustTypeToTs, sanitizeClassName, toCamelCase } from './emit.js';
+} from "../model.js";
+import {
+  formatIdentifier,
+  generateFileBanner,
+  mapRustTypeToTs,
+  sanitizeClassName,
+  toCamelCase,
+} from "./emit.js";
 
 /**
  * Utility class for handling byte conversions in Calimero
@@ -14,7 +20,7 @@ class CalimeroBytes {
   private data: Uint8Array;
 
   constructor(input: string | number[] | Uint8Array) {
-    if (typeof input === 'string') {
+    if (typeof input === "string") {
       // Hex string
       this.data = new Uint8Array(
         input.match(/.{1,2}/g)?.map((byte) => parseInt(byte, 16)) || [],
@@ -65,7 +71,7 @@ function convertCalimeroBytesForWasm(obj: any): any {
     return obj.map((item) => convertCalimeroBytesForWasm(item));
   }
 
-  if (typeof obj === 'object') {
+  if (typeof obj === "object") {
     const result: any = {};
     for (const [key, value] of Object.entries(obj)) {
       result[key] = convertCalimeroBytesForWasm(value);
@@ -84,7 +90,7 @@ function convertWasmResultToCalimeroBytes(obj: any): any {
     return obj;
   }
 
-  if (Array.isArray(obj) && obj.every((item) => typeof item === 'number')) {
+  if (Array.isArray(obj) && obj.every((item) => typeof item === "number")) {
     return new CalimeroBytes(obj);
   }
 
@@ -92,7 +98,7 @@ function convertWasmResultToCalimeroBytes(obj: any): any {
     return obj.map((item) => convertWasmResultToCalimeroBytes(item));
   }
 
-  if (typeof obj === 'object') {
+  if (typeof obj === "object") {
     const result: any = {};
     for (const [key, value] of Object.entries(obj)) {
       result[key] = convertWasmResultToCalimeroBytes(value);
@@ -111,8 +117,8 @@ function convertWasmResultToCalimeroBytes(obj: any): any {
  */
 export function generateClient(
   manifest: AbiManifest,
-  clientName: string = 'Client',
-  importPath: string = '@calimero-network/mero-react',
+  clientName: string = "Client",
+  importPath: string = "@calimero-network/mero-react",
 ): string {
   // Sanitize clientName: remove spaces/special chars, preserve existing casing
   clientName = sanitizeClassName(clientName);
@@ -134,166 +140,174 @@ export function generateClient(
 
   // Add file banner
   lines.push(generateFileBanner().trim());
-  lines.push('');
+  lines.push("");
 
-  // Add imports
-  lines.push('import {');
-  lines.push('  MeroJs,');
-  
+  // Add imports. RpcError is only pulled in when a method declares typed
+  // errors, which we map back from the thrown RpcError's `data` field.
+  const hasErrorMethods = manifest.methods.some(
+    (m) => m.errors && m.errors.length > 0,
+  );
+  lines.push("import {");
+  lines.push("  MeroJs,");
+  if (hasErrorMethods) {
+    lines.push("  RpcError,");
+  }
   lines.push(`} from '${importPath}';`);
-  lines.push('');
+  lines.push("");
 
   // Generate types inline
-  lines.push('// Generated types');
-  lines.push('');
+  lines.push("// Generated types");
+  lines.push("");
 
   // Generate type definitions
   for (const [typeName, typeDef] of Object.entries(manifest.types)) {
     lines.push(
       ...generateTypeDefinition(typeName, typeDef as AbiTypeDef, manifest),
     );
-    lines.push('');
+    lines.push("");
   }
 
   // Generate method error types
   for (const method of manifest.methods) {
     if (method.errors && method.errors.length > 0) {
       lines.push(...generateMethodErrorTypes(method, manifest));
-      lines.push('');
+      lines.push("");
     }
   }
 
   // Generate event payload types
   for (const event of manifest.events) {
     lines.push(...generateEventPayloadType(event, manifest));
-    lines.push('');
+    lines.push("");
   }
 
   // Generate union type for all events
   if (manifest.events.length > 0) {
     lines.push(...generateAbiEventUnion(manifest.events, manifest));
-    lines.push('');
+    lines.push("");
   }
 
-  lines.push('');
+  lines.push("");
 
   // Add CalimeroBytes utility class (only when any type uses bytes)
   if (anyTypeUsesBytes) {
-  lines.push('/**');
-  lines.push(' * Utility class for handling byte conversions in Calimero');
-  lines.push(' */');
-  lines.push('export class CalimeroBytes {');
-  lines.push('  private data: Uint8Array;');
-  lines.push('');
-  lines.push('  constructor(input: string | number[] | Uint8Array) {');
-  lines.push('    if (typeof input === "string") {');
-  lines.push('      // Hex string');
-  lines.push('      this.data = new Uint8Array(');
-  lines.push(
-    '        input.match(/.{1,2}/g)?.map((byte) => parseInt(byte, 16)) || []',
-  );
-  lines.push('      );');
-  lines.push('    } else if (Array.isArray(input)) {');
-  lines.push('      // Number array');
-  lines.push('      this.data = new Uint8Array(input);');
-  lines.push('    } else {');
-  lines.push('      // Uint8Array');
-  lines.push('      this.data = input;');
-  lines.push('    }');
-  lines.push('  }');
-  lines.push('');
-  lines.push('  toArray(): number[] {');
-  lines.push('    return Array.from(this.data);');
-  lines.push('  }');
-  lines.push('');
-  lines.push('  toUint8Array(): Uint8Array {');
-  lines.push('    return this.data;');
-  lines.push('  }');
-  lines.push('');
-  lines.push('  static fromHex(hex: string): CalimeroBytes {');
-  lines.push('    return new CalimeroBytes(hex);');
-  lines.push('  }');
-  lines.push('');
-  lines.push('  static fromArray(arr: number[]): CalimeroBytes {');
-  lines.push('    return new CalimeroBytes(arr);');
-  lines.push('  }');
-  lines.push('');
-  lines.push('  static fromUint8Array(bytes: Uint8Array): CalimeroBytes {');
-  lines.push('    return new CalimeroBytes(bytes);');
-  lines.push('  }');
-  lines.push('}');
-  lines.push('');
+    lines.push("/**");
+    lines.push(" * Utility class for handling byte conversions in Calimero");
+    lines.push(" */");
+    lines.push("export class CalimeroBytes {");
+    lines.push("  private data: Uint8Array;");
+    lines.push("");
+    lines.push("  constructor(input: string | number[] | Uint8Array) {");
+    lines.push('    if (typeof input === "string") {');
+    lines.push("      // Hex string");
+    lines.push("      this.data = new Uint8Array(");
+    lines.push(
+      "        input.match(/.{1,2}/g)?.map((byte) => parseInt(byte, 16)) || []",
+    );
+    lines.push("      );");
+    lines.push("    } else if (Array.isArray(input)) {");
+    lines.push("      // Number array");
+    lines.push("      this.data = new Uint8Array(input);");
+    lines.push("    } else {");
+    lines.push("      // Uint8Array");
+    lines.push("      this.data = input;");
+    lines.push("    }");
+    lines.push("  }");
+    lines.push("");
+    lines.push("  toArray(): number[] {");
+    lines.push("    return Array.from(this.data);");
+    lines.push("  }");
+    lines.push("");
+    lines.push("  toUint8Array(): Uint8Array {");
+    lines.push("    return this.data;");
+    lines.push("  }");
+    lines.push("");
+    lines.push("  static fromHex(hex: string): CalimeroBytes {");
+    lines.push("    return new CalimeroBytes(hex);");
+    lines.push("  }");
+    lines.push("");
+    lines.push("  static fromArray(arr: number[]): CalimeroBytes {");
+    lines.push("    return new CalimeroBytes(arr);");
+    lines.push("  }");
+    lines.push("");
+    lines.push("  static fromUint8Array(bytes: Uint8Array): CalimeroBytes {");
+    lines.push("    return new CalimeroBytes(bytes);");
+    lines.push("  }");
+    lines.push("}");
+    lines.push("");
   } // end if (anyTypeUsesBytes)
 
   // Add utility function for CalimeroBytes conversion (only when any method has bytes params)
   if (anyMethodHasBytesParams) {
-  lines.push('/**');
-  lines.push(
-    ' * Convert CalimeroBytes instances to arrays for WASM compatibility',
-  );
-  lines.push(' */');
-  lines.push('function convertCalimeroBytesForWasm(obj: any): any {');
-  lines.push('  if (obj === null || obj === undefined) {');
-  lines.push('    return obj;');
-  lines.push('  }');
-  lines.push('');
-  lines.push('  if (obj instanceof CalimeroBytes) {');
-  lines.push('    return obj.toArray();');
-  lines.push('  }');
-  lines.push('');
-  lines.push('  if (Array.isArray(obj)) {');
-  lines.push('    return obj.map(item => convertCalimeroBytesForWasm(item));');
-  lines.push('  }');
-  lines.push('');
-  lines.push('  if (typeof obj === "object") {');
-  lines.push('    const result: any = {};');
-  lines.push('    for (const [key, value] of Object.entries(obj)) {');
-  lines.push('      result[key] = convertCalimeroBytesForWasm(value);');
-  lines.push('    }');
-  lines.push('    return result;');
-  lines.push('  }');
-  lines.push('');
-  lines.push('  return obj;');
-  lines.push('}');
-  lines.push('');
+    lines.push("/**");
+    lines.push(
+      " * Convert CalimeroBytes instances to arrays for WASM compatibility",
+    );
+    lines.push(" */");
+    lines.push("function convertCalimeroBytesForWasm(obj: any): any {");
+    lines.push("  if (obj === null || obj === undefined) {");
+    lines.push("    return obj;");
+    lines.push("  }");
+    lines.push("");
+    lines.push("  if (obj instanceof CalimeroBytes) {");
+    lines.push("    return obj.toArray();");
+    lines.push("  }");
+    lines.push("");
+    lines.push("  if (Array.isArray(obj)) {");
+    lines.push(
+      "    return obj.map(item => convertCalimeroBytesForWasm(item));",
+    );
+    lines.push("  }");
+    lines.push("");
+    lines.push('  if (typeof obj === "object") {');
+    lines.push("    const result: any = {};");
+    lines.push("    for (const [key, value] of Object.entries(obj)) {");
+    lines.push("      result[key] = convertCalimeroBytesForWasm(value);");
+    lines.push("    }");
+    lines.push("    return result;");
+    lines.push("  }");
+    lines.push("");
+    lines.push("  return obj;");
+    lines.push("}");
+    lines.push("");
   } // end if (anyMethodHasBytesParams)
 
   // Add utility function for converting WASM results back to CalimeroBytes
   // (only when any method returns bytes)
   if (anyMethodReturnsBytes) {
-  lines.push('/**');
-  lines.push(
-    ' * Convert arrays back to CalimeroBytes instances from WASM responses',
-  );
-  lines.push(' */');
-  lines.push('function convertWasmResultToCalimeroBytes(obj: any): any {');
-  lines.push('  if (obj === null || obj === undefined) {');
-  lines.push('    return obj;');
-  lines.push('  }');
-  lines.push('');
-  lines.push(
-    '  if (Array.isArray(obj) && obj.every(item => typeof item === "number")) {',
-  );
-  lines.push('    return new CalimeroBytes(obj);');
-  lines.push('  }');
-  lines.push('');
-  lines.push('  if (Array.isArray(obj)) {');
-  lines.push(
-    '    return obj.map(item => convertWasmResultToCalimeroBytes(item));',
-  );
-  lines.push('  }');
-  lines.push('');
-  lines.push('  if (typeof obj === "object") {');
-  lines.push('    const result: any = {};');
-  lines.push('    for (const [key, value] of Object.entries(obj)) {');
-  lines.push('      result[key] = convertWasmResultToCalimeroBytes(value);');
-  lines.push('    }');
-  lines.push('    return result;');
-  lines.push('  }');
-  lines.push('');
-  lines.push('  return obj;');
-  lines.push('}');
-  lines.push('');
+    lines.push("/**");
+    lines.push(
+      " * Convert arrays back to CalimeroBytes instances from WASM responses",
+    );
+    lines.push(" */");
+    lines.push("function convertWasmResultToCalimeroBytes(obj: any): any {");
+    lines.push("  if (obj === null || obj === undefined) {");
+    lines.push("    return obj;");
+    lines.push("  }");
+    lines.push("");
+    lines.push(
+      '  if (Array.isArray(obj) && obj.every(item => typeof item === "number")) {',
+    );
+    lines.push("    return new CalimeroBytes(obj);");
+    lines.push("  }");
+    lines.push("");
+    lines.push("  if (Array.isArray(obj)) {");
+    lines.push(
+      "    return obj.map(item => convertWasmResultToCalimeroBytes(item));",
+    );
+    lines.push("  }");
+    lines.push("");
+    lines.push('  if (typeof obj === "object") {');
+    lines.push("    const result: any = {};");
+    lines.push("    for (const [key, value] of Object.entries(obj)) {");
+    lines.push("      result[key] = convertWasmResultToCalimeroBytes(value);");
+    lines.push("    }");
+    lines.push("    return result;");
+    lines.push("  }");
+    lines.push("");
+    lines.push("  return obj;");
+    lines.push("}");
+    lines.push("");
   } // end if (anyMethodReturnsBytes)
 
   // Add Client class
@@ -301,23 +315,25 @@ export function generateClient(
   lines.push(`  private _mero: MeroJs;`);
   lines.push(`  private _contextId: string;`);
   lines.push(`  private _executorPublicKey: string;`);
-  lines.push('');
-  lines.push(`  constructor(mero: MeroJs, contextId: string, executorPublicKey: string) {`);
+  lines.push("");
+  lines.push(
+    `  constructor(mero: MeroJs, contextId: string, executorPublicKey: string) {`,
+  );
   lines.push(`    this._mero = mero;`);
   lines.push(`    this._contextId = contextId;`);
   lines.push(`    this._executorPublicKey = executorPublicKey;`);
   lines.push(`  }`);
-  lines.push('');
+  lines.push("");
 
   // Generate methods
   for (const method of manifest.methods) {
     lines.push(...generateMethod(method, manifest, false));
-    lines.push('');
+    lines.push("");
   }
 
-  lines.push('}');
+  lines.push("}");
 
-  return lines.join('\n');
+  return lines.join("\n");
 }
 
 /**
@@ -332,20 +348,20 @@ function hasHexBytesTypes(manifest: AbiManifest): boolean {
  * Check if a type is a bytes type (direct bytes or alias to bytes)
  */
 function isBytesType(typeRef: AbiTypeRef, manifest: AbiManifest): boolean {
-  if ('$ref' in typeRef) {
+  if ("$ref" in typeRef) {
     const typeDef = manifest.types[typeRef.$ref];
     if (typeDef) {
-      if (typeDef.kind === 'bytes') {
+      if (typeDef.kind === "bytes") {
         return true;
       }
       if (
-        typeDef.kind === 'alias' &&
-        'kind' in typeDef.target &&
-        typeDef.target.kind === 'bytes'
+        typeDef.kind === "alias" &&
+        "kind" in typeDef.target &&
+        typeDef.target.kind === "bytes"
       ) {
         return true;
       }
-      if (typeDef.kind === 'record' && 'fields' in typeDef) {
+      if (typeDef.kind === "record" && "fields" in typeDef) {
         // Check if any field in the record is a bytes type
         return typeDef.fields.some((field) =>
           isBytesType(field.type, manifest),
@@ -353,26 +369,35 @@ function isBytesType(typeRef: AbiTypeRef, manifest: AbiManifest): boolean {
       }
     }
   }
-  if ('kind' in typeRef) {
-    if (typeRef.kind === 'bytes') {
+  if ("kind" in typeRef) {
+    if (typeRef.kind === "bytes") {
       return true;
     }
-    if (typeRef.kind === 'list' && 'items' in typeRef) {
+    if (typeRef.kind === "list" && "items" in typeRef) {
       return isBytesType(typeRef.items, manifest);
     }
-    if (typeRef.kind === 'map' && 'value' in typeRef) {
+    if (typeRef.kind === "map" && "value" in typeRef) {
       return isBytesType(typeRef.value, manifest);
     }
-    if (typeRef.kind === 'record') {
-      if ('crdt_type' in typeRef && typeRef.crdt_type && 'inner_type' in typeRef && typeRef.inner_type) {
+    if (typeRef.kind === "record") {
+      if (
+        "crdt_type" in typeRef &&
+        typeRef.crdt_type &&
+        "inner_type" in typeRef &&
+        typeRef.inner_type
+      ) {
         return isBytesType(typeRef.inner_type, manifest);
       }
-      if ('fields' in typeRef) {
-        return typeRef.fields.some((field: any) => isBytesType(field.type, manifest));
+      if ("fields" in typeRef) {
+        return typeRef.fields.some((field: any) =>
+          isBytesType(field.type, manifest),
+        );
       }
     }
-    if (typeRef.kind === 'tuple' && 'elements' in typeRef) {
-      return (typeRef as any).elements.some((el: AbiTypeRef) => isBytesType(el, manifest));
+    if (typeRef.kind === "tuple" && "elements" in typeRef) {
+      return (typeRef as any).elements.some((el: AbiTypeRef) =>
+        isBytesType(el, manifest),
+      );
     }
   }
   return false;
@@ -382,16 +407,16 @@ function isBytesType(typeRef: AbiTypeRef, manifest: AbiManifest): boolean {
  * Check if a type definition references bytes anywhere (including nested fields)
  */
 function typeDefUsesBytes(typeDef: AbiTypeDef, manifest: AbiManifest): boolean {
-  if (typeDef.kind === 'bytes') return true;
-  if (typeDef.kind === 'record') {
+  if (typeDef.kind === "bytes") return true;
+  if (typeDef.kind === "record") {
     return typeDef.fields.some((f) => isBytesType(f.type, manifest));
   }
-  if (typeDef.kind === 'variant') {
+  if (typeDef.kind === "variant") {
     return typeDef.variants.some(
       (v) => v.payload !== undefined && isBytesType(v.payload, manifest),
     );
   }
-  if (typeDef.kind === 'alias') {
+  if (typeDef.kind === "alias") {
     return isBytesType(typeDef.target, manifest);
   }
   return false;
@@ -421,7 +446,9 @@ function generateHexUtilityFunctions(): string[] {
  * emit a string-literal union type rather than a discriminated union.
  */
 function isAllUnitVariant(typeDef: AbiTypeDef): boolean {
-  return typeDef.kind === 'variant' && typeDef.variants.every((v) => !v.payload);
+  return (
+    typeDef.kind === "variant" && typeDef.variants.every((v) => !v.payload)
+  );
 }
 
 /**
@@ -435,21 +462,19 @@ function generateTypeDefinition(
   const lines: string[] = [];
   const safeName = formatIdentifier(typeName);
 
-  if (typeDef.kind === 'record') {
+  if (typeDef.kind === "record") {
     lines.push(`export interface ${safeName} {`);
     for (const field of typeDef.fields) {
       const fieldType = generateTypeRef(field.type, manifest, false);
       const nullableType = field.nullable ? `${fieldType} | null` : fieldType;
       lines.push(`  ${formatIdentifier(field.name)}: ${nullableType};`);
     }
-    lines.push('}');
-  } else if (typeDef.kind === 'variant') {
+    lines.push("}");
+  } else if (typeDef.kind === "variant") {
     if (isAllUnitVariant(typeDef)) {
       // Unit-only variants — serde serializes these as bare strings.
       // Emit a string-literal union type that matches the wire format.
-      const literals = typeDef.variants
-        .map((v) => `'${v.name}'`)
-        .join(' | ');
+      const literals = typeDef.variants.map((v) => `'${v.name}'`).join(" | ");
       lines.push(`export type ${safeName} = ${literals};`);
     } else {
       // Mixed/payload variants — emit a discriminated union and factory.
@@ -465,7 +490,7 @@ function generateTypeDefinition(
       lines.push(...variantLines);
 
       // Generate factory object for variants
-      lines.push('');
+      lines.push("");
       lines.push(`export const ${safeName} = {`);
       typeDef.variants.forEach((variant) => {
         const variantName = formatIdentifier(variant.name);
@@ -480,9 +505,9 @@ function generateTypeDefinition(
           );
         }
       });
-      lines.push('} as const;');
+      lines.push("} as const;");
     }
-  } else if (typeDef.kind === 'alias') {
+  } else if (typeDef.kind === "alias") {
     const targetType = generateTypeRef(typeDef.target, manifest, false);
     lines.push(`export type ${safeName} = ${targetType};`);
   }
@@ -503,7 +528,7 @@ function generateMethodErrorTypes(
   // Generate error code type
   const errorCodes = method
     .errors!.map((error) => `"${error.code}"`)
-    .join(' | ');
+    .join(" | ");
   lines.push(`export type ${methodName}ErrorCode = ${errorCodes};`);
 
   // Generate error union type
@@ -521,7 +546,7 @@ function generateMethodErrorTypes(
   });
 
   lines.push(...errorVariants);
-  lines.push(');');
+  lines.push(");");
 
   return lines;
 }
@@ -539,8 +564,8 @@ function generateEventPayloadType(
   // Only generate payload type if event has a payload and it's not unit
   if (
     event.payload &&
-    !('$ref' in event.payload) &&
-    event.payload.kind !== 'unit'
+    !("$ref" in event.payload) &&
+    event.payload.kind !== "unit"
   ) {
     const payloadType = generateTypeRef(event.payload, manifest);
     lines.push(`export type ${eventName}Payload = ${payloadType};`);
@@ -558,13 +583,13 @@ function generateAbiEventUnion(
 ): string[] {
   const lines: string[] = [];
 
-  lines.push('export type AbiEvent =');
+  lines.push("export type AbiEvent =");
   const eventLines = events.map((event) => {
     // Inline unit means "no data" — omit the payload field
     const isInlineUnit =
       event.payload &&
-      !('$ref' in event.payload) &&
-      event.payload.kind === 'unit';
+      !("$ref" in event.payload) &&
+      event.payload.kind === "unit";
     if (event.payload && !isInlineUnit) {
       const payloadType = generateTypeRef(event.payload, manifest);
       return `  | { name: "${event.name}"; payload: ${payloadType} }`;
@@ -573,7 +598,7 @@ function generateAbiEventUnion(
     }
   });
   lines.push(...eventLines);
-  lines.push(';');
+  lines.push(";");
 
   return lines;
 }
@@ -590,12 +615,12 @@ function generateMethod(
   const methodName = toCamelCase(method.name);
 
   // Generate JSDoc comment
-  lines.push('  /**');
+  lines.push("  /**");
   lines.push(`   * ${method.name}`);
 
   // Add error documentation if method has errors
   if (method.errors && method.errors.length > 0) {
-    lines.push('   *');
+    lines.push("   *");
     // Generate specific error type name
     const errorTypeName = `${method.name}Error`;
     const errorTypeRef = useTypesNamespace
@@ -615,24 +640,28 @@ function generateMethod(
     }
   }
 
-  lines.push('   */');
+  lines.push("   */");
 
   // Generate method signature and body
   const returnType = method.returns
     ? generateTypeRef(method.returns, manifest, useTypesNamespace, true)
-    : 'void';
+    : "void";
   const nullableReturnType = method.returns_nullable
     ? `${returnType} | null`
     : returnType;
 
+  const needsBytesConversion = hasCalimeroBytesParams(method, manifest);
+  const hasErrors = !!(method.errors && method.errors.length > 0);
+
+  // Emit the method signature and resolve the `argsJson` expression handed to
+  // the RPC client.
+  let argsExpr: string;
   if (method.params.length === 0) {
     // No parameters - expose method with no arguments and pass empty object
     lines.push(
       `  public async ${methodName}(): Promise<${nullableReturnType}> {`,
     );
-    lines.push(
-      `    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: '${method.name}', argsJson: {}, executorPublicKey: this._executorPublicKey });`,
-    );
+    argsExpr = "{}";
   } else {
     // 1+ parameters - build object type and expose single params argument
     const paramsTypeFields = method.params.map((param) => {
@@ -647,81 +676,84 @@ function generateMethod(
     });
 
     lines.push(
-      `  public async ${methodName}(params: { ${paramsTypeFields.join('; ')} }): Promise<${nullableReturnType}> {`,
+      `  public async ${methodName}(params: { ${paramsTypeFields.join("; ")} }): Promise<${nullableReturnType}> {`,
     );
 
-    // Pass parameters to the WASM module based on count
-    if (method.params.length === 1) {
-      // For single parameter methods, handle special cases
-      const paramName = formatIdentifier(method.params[0].name);
-
-      if (
-        '$ref' in method.params[0].type &&
-        method.params[0].type.$ref === 'Action'
-      ) {
-        // Special handling for Action parameters - convert the Action variant
-        lines.push(`    // Convert Action variant to WASM format`);
-        lines.push(`    const convertedParams = { ...params } as any;`);
-        lines.push(
-          `    if (convertedParams.${paramName} && typeof convertedParams.${paramName} === 'object' && 'name' in convertedParams.${paramName}) {`,
-        );
-        lines.push(`      if ('payload' in convertedParams.${paramName}) {`);
-        lines.push(
-          `        convertedParams.${paramName} = { [convertedParams.${paramName}.name]: convertedParams.${paramName}.payload };`,
-        );
-        lines.push(`      } else {`);
-        lines.push(
-          `        convertedParams.${paramName} = convertedParams.${paramName}.name;`,
-        );
-        lines.push(`      }`);
-        lines.push(`    }`);
-
-        // Only apply CalimeroBytes conversion if needed
-        if (hasCalimeroBytesParams(method, manifest)) {
-          lines.push(
-            `    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: '${method.name}', argsJson: convertCalimeroBytesForWasm(convertedParams), executorPublicKey: this._executorPublicKey });`,
-          );
-        } else {
-          lines.push(
-            `    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: '${method.name}', argsJson: convertedParams, executorPublicKey: this._executorPublicKey });`,
-          );
-        }
-      } else {
-        // Only apply CalimeroBytes conversion if needed
-        if (hasCalimeroBytesParams(method, manifest)) {
-          lines.push(
-            `    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: '${method.name}', argsJson: convertCalimeroBytesForWasm(params), executorPublicKey: this._executorPublicKey });`,
-          );
-        } else {
-          lines.push(
-            `    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: '${method.name}', argsJson: params, executorPublicKey: this._executorPublicKey });`,
-          );
-        }
-      }
+    const firstParam = method.params[0];
+    if (
+      method.params.length === 1 &&
+      "$ref" in firstParam.type &&
+      firstParam.type.$ref === "Action"
+    ) {
+      // Special handling for Action parameters - convert the Action variant
+      const paramName = formatIdentifier(firstParam.name);
+      lines.push(`    // Convert Action variant to WASM format`);
+      lines.push(`    const convertedParams = { ...params } as any;`);
+      lines.push(
+        `    if (convertedParams.${paramName} && typeof convertedParams.${paramName} === 'object' && 'name' in convertedParams.${paramName}) {`,
+      );
+      lines.push(`      if ('payload' in convertedParams.${paramName}) {`);
+      lines.push(
+        `        convertedParams.${paramName} = { [convertedParams.${paramName}.name]: convertedParams.${paramName}.payload };`,
+      );
+      lines.push(`      } else {`);
+      lines.push(
+        `        convertedParams.${paramName} = convertedParams.${paramName}.name;`,
+      );
+      lines.push(`      }`);
+      lines.push(`    }`);
+      argsExpr = needsBytesConversion
+        ? "convertCalimeroBytesForWasm(convertedParams)"
+        : "convertedParams";
     } else {
-      // For multiple parameters, only apply CalimeroBytes conversion if needed
-      if (hasCalimeroBytesParams(method, manifest)) {
-        lines.push(
-          `    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: '${method.name}', argsJson: convertCalimeroBytesForWasm(params), executorPublicKey: this._executorPublicKey });`,
-        );
-      } else {
-        lines.push(
-          `    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: '${method.name}', argsJson: params, executorPublicKey: this._executorPublicKey });`,
-        );
-      }
+      argsExpr = needsBytesConversion
+        ? "convertCalimeroBytesForWasm(params)"
+        : "params";
     }
   }
 
-  // rpc.execute<T>() returns T directly or throws RpcError — no wrapper
+  // rpc.execute returns the unwrapped output directly and throws RpcError on
+  // failure (no `{ success, result, error }` envelope).
+  const executeCall = `await this._mero.rpc.execute({ contextId: this._contextId, method: '${method.name}', argsJson: ${argsExpr}, executorPublicKey: this._executorPublicKey })`;
+
+  const indent = hasErrors ? "      " : "    ";
+  const bodyLines: string[] = [];
   if (method.returns) {
+    bodyLines.push(`${indent}const result = ${executeCall};`);
     if (isBytesType(method.returns, manifest)) {
-      lines.push(
-        `    return convertWasmResultToCalimeroBytes(response) as ${nullableReturnType};`,
+      bodyLines.push(
+        `${indent}return convertWasmResultToCalimeroBytes(result) as ${nullableReturnType};`,
       );
     } else {
-      lines.push(`    return response as ${nullableReturnType};`);
+      bodyLines.push(`${indent}return result as ${nullableReturnType};`);
     }
+  } else {
+    bodyLines.push(`${indent}${executeCall};`);
+    bodyLines.push(`${indent}return;`);
   }
+
+  if (hasErrors) {
+    // Typed method errors surface as RpcError; the structured payload lives in
+    // RpcError.data. Map it back to the generated error union when present,
+    // otherwise let the RpcError propagate unchanged.
+    const errorTypeName = `${method.name}Error`;
+    const errorTypeRef = useTypesNamespace
+      ? `Types.${errorTypeName}`
+      : errorTypeName;
+    lines.push(`    try {`);
+    lines.push(...bodyLines);
+    lines.push(`    } catch (error) {`);
+    lines.push(
+      `      if (error instanceof RpcError && error.data && typeof error.data === 'object') {`,
+    );
+    lines.push(`        throw error.data as ${errorTypeRef};`);
+    lines.push(`      }`);
+    lines.push(`      throw error;`);
+    lines.push(`    }`);
+  } else {
+    lines.push(...bodyLines);
+  }
+
   lines.push(`  }`);
 
   return lines;
@@ -737,7 +769,7 @@ function generateTypeRef(
   useTypesNamespace: boolean = false,
   forUserApi: boolean = false,
 ): string {
-  if ('$ref' in typeRef) {
+  if ("$ref" in typeRef) {
     const typeDef = manifest.types[typeRef.$ref];
 
     // If not a known type in the manifest, try mapping as a raw Rust type
@@ -749,15 +781,15 @@ function generateTypeRef(
     const typeName = formatIdentifier(typeRef.$ref);
 
     // Check if this is a bytes type
-    if (typeDef && typeDef.kind === 'bytes') {
-      return 'CalimeroBytes'; // Return CalimeroBytes for bytes types
+    if (typeDef && typeDef.kind === "bytes") {
+      return "CalimeroBytes"; // Return CalimeroBytes for bytes types
     }
 
     // For variant types, choose between string-literal union and discriminated
     // union based on whether all variants are unit (no payload):
     //   - all-unit  → bare name is the type alias (e.g. type Status = 'A' | 'B')
     //   - mixed     → use {Name}Payload (the discriminated union)
-    if (typeDef && typeDef.kind === 'variant') {
+    if (typeDef && typeDef.kind === "variant") {
       if (isAllUnitVariant(typeDef)) {
         return useTypesNamespace ? `Types.${typeName}` : typeName;
       }
@@ -771,22 +803,22 @@ function generateTypeRef(
   }
 
   switch (typeRef.kind) {
-    case 'bool':
-      return 'boolean';
-    case 'i32':
-    case 'i64':
-    case 'u32':
-    case 'u64':
-    case 'f32':
-    case 'f64':
-      return 'number';
-    case 'string':
-      return 'string';
-    case 'unit':
-      return 'void';
-    case 'bytes':
-      return 'CalimeroBytes'; // Return CalimeroBytes for bytes types
-    case 'list':
+    case "bool":
+      return "boolean";
+    case "i32":
+    case "i64":
+    case "u32":
+    case "u64":
+    case "f32":
+    case "f64":
+      return "number";
+    case "string":
+      return "string";
+    case "unit":
+      return "void";
+    case "bytes":
+      return "CalimeroBytes"; // Return CalimeroBytes for bytes types
+    case "list":
       const itemType = generateTypeRef(
         typeRef.items,
         manifest,
@@ -794,9 +826,9 @@ function generateTypeRef(
         forUserApi,
       );
       // Wrap union types in parens so `string | null[]` becomes `(string | null)[]`
-      const needsParens = itemType.includes('|');
+      const needsParens = itemType.includes("|");
       return needsParens ? `(${itemType})[]` : `${itemType}[]`;
-    case 'map':
+    case "map":
       const keyType = generateTypeRef(
         typeRef.key,
         manifest,
@@ -810,12 +842,12 @@ function generateTypeRef(
         forUserApi,
       );
       return `Record<${keyType}, ${valueType}>`;
-    case 'tuple':
+    case "tuple":
       const elements = (typeRef as any).elements.map((el: AbiTypeRef) =>
         generateTypeRef(el, manifest, useTypesNamespace, forUserApi),
       );
-      return `[${elements.join(', ')}]`;
-    case 'record':
+      return `[${elements.join(", ")}]`;
+    case "record":
       if (typeRef.crdt_type && typeRef.inner_type) {
         return generateTypeRef(
           typeRef.inner_type,
@@ -834,7 +866,7 @@ function generateTypeRef(
         const nullableType = field.nullable ? `${fieldType} | null` : fieldType;
         return `${formatIdentifier(field.name)}: ${nullableType}`;
       });
-      return `{ ${fields.join('; ')} }`;
+      return `{ ${fields.join("; ")} }`;
     default:
       throw new Error(`Unsupported type kind: ${(typeRef as any).kind}`);
   }
