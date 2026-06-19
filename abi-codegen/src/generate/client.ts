@@ -321,14 +321,6 @@ export function generateClient(
 }
 
 /**
- * Check if the manifest has any hex-encoded bytes types
- * Since we removed encoding fields, this is no longer needed
- */
-function hasHexBytesTypes(manifest: AbiManifest): boolean {
-  return false;
-}
-
-/**
  * Check if a type is a bytes type (direct bytes or alias to bytes)
  */
 function isBytesType(typeRef: AbiTypeRef, manifest: AbiManifest): boolean {
@@ -405,14 +397,6 @@ function hasCalimeroBytesParams(
   manifest: AbiManifest,
 ): boolean {
   return method.params.some((param) => isBytesType(param.type, manifest));
-}
-
-/**
- * Generate utility functions for hex string conversion
- * Since we removed encoding fields, this is no longer needed
- */
-function generateHexUtilityFunctions(): string[] {
-  return [];
 }
 
 /**
@@ -592,6 +576,13 @@ function generateMethod(
   // Generate JSDoc comment
   lines.push('  /**');
   lines.push(`   * ${method.name}`);
+
+  // Surface the app-declared read/write intent when present. mero-js has no
+  // read transport yet, so this is documentation only — not a routing hint.
+  if (method.intent && method.intent !== 'unspecified') {
+    lines.push('   *');
+    lines.push(`   * @intent ${method.intent}`);
+  }
 
   // Add error documentation if method has errors
   if (method.errors && method.errors.length > 0) {

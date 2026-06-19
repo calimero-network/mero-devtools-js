@@ -1,0 +1,130 @@
+{
+  "schema_version": "wasm-abi/1",
+  "types": {
+    "AccessControl": {
+      "kind": "record",
+      "fields": []
+    }
+  },
+  "methods": [
+    {
+      "name": "init",
+      "params": [],
+      "returns": {
+        "kind": "unit"
+      }
+    },
+    {
+      "name": "add_member",
+      "params": [
+        {
+          "name": "public_key",
+          "type": {
+            "kind": "bytes",
+            "size": 32
+          }
+        }
+      ],
+      "returns": {
+        "kind": "unit"
+      }
+    },
+    {
+      "name": "kick_member",
+      "params": [
+        {
+          "name": "public_key",
+          "type": {
+            "kind": "bytes",
+            "size": 32
+          }
+        }
+      ],
+      "returns": {
+        "kind": "unit"
+      }
+    },
+    {
+      "name": "is_member",
+      "params": [
+        {
+          "name": "public_key",
+          "type": {
+            "kind": "bytes",
+            "size": 32
+          }
+        }
+      ],
+      "returns": {
+        "kind": "bool"
+      }
+    },
+    {
+      "name": "get_all_members",
+      "params": [],
+      "returns": {
+        "kind": "list",
+        "items": {
+          "kind": "bytes",
+          "size": 32
+        }
+      }
+    },
+    {
+      "name": "create_context_child",
+      "params": [
+        {
+          "name": "protocol",
+          "type": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "app_id_base58",
+          "type": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "alias",
+          "type": {
+            "kind": "string"
+          }
+        }
+      ],
+      "returns": {
+        "kind": "unit"
+      }
+    },
+    {
+      "name": "get_child_id",
+      "params": [
+        {
+          "name": "alias",
+          "type": {
+            "kind": "string"
+          }
+        }
+      ],
+      "returns": {
+        "kind": "string"
+      }
+    },
+    {
+      "name": "delete_context_child",
+      "params": [
+        {
+          "name": "context_id_base58",
+          "type": {
+            "kind": "string"
+          }
+        }
+      ],
+      "returns": {
+        "kind": "unit"
+      }
+    }
+  ],
+  "events": [],
+  "state_root": "AccessControl"
+}

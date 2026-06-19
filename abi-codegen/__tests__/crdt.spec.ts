@@ -279,10 +279,11 @@ describe('CRDT type annotations', () => {
     });
 
     it('should NOT follow inner_type without crdt_type', () => {
-      // A record with inner_type but no crdt_type should be treated as
-      // a normal record, not unwrapped to check inner_type for bytes
-      const testManifest: AbiManifest = {
-        version: '0.1.0',
+      // A record with inner_type but no crdt_type is a normal record: its own
+      // bytes field drives detection, not the (ignored) inner_type.
+      const manifest = parseAbiManifest({
+        schema_version: 'wasm-abi/1',
+        types: {},
         methods: [
           {
             name: 'test_method',
@@ -293,25 +294,23 @@ describe('CRDT type annotations', () => {
                   kind: 'record',
                   fields: [{ name: 'value', type: { kind: 'bytes' } }],
                   inner_type: { kind: 'bytes' },
-                  // No crdt_type — should NOT follow inner_type
-                } as any,
+                },
               },
             ],
-            returns: null,
-            returns_nullable: false,
           },
         ],
         events: [],
-        types: {},
-      };
-      // Should still generate successfully
-      const client = generateClient(testManifest);
+      });
+      // Rendered as an inline record (not unwrapped to its inner_type).
+      const client = generateClient(manifest);
       expect(client).toContain('test_method');
+      expect(client).toContain('value: CalimeroBytes');
     });
 
     it('should follow inner_type WITH crdt_type for bytes detection', () => {
-      const testManifest: AbiManifest = {
-        version: '0.1.0',
+      const manifest = parseAbiManifest({
+        schema_version: 'wasm-abi/1',
+        types: {},
         methods: [
           {
             name: 'crdt_bytes_method',
@@ -323,17 +322,14 @@ describe('CRDT type annotations', () => {
                   crdt_type: 'lww_register',
                   inner_type: { kind: 'bytes' },
                   fields: [],
-                } as any,
+                },
               },
             ],
-            returns: null,
-            returns_nullable: false,
           },
         ],
         events: [],
-        types: {},
-      };
-      const client = generateClient(testManifest);
+      });
+      const client = generateClient(manifest);
       expect(client).toContain('convertCalimeroBytesForWasm');
     });
   });

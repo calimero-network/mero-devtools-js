@@ -7,6 +7,18 @@ export interface AbiManifest {
   methods: AbiMethod[];
   events: AbiEvent[];
   state_root?: string;
+  // AppState::SCHEMA_VERSION of the build (default 1). Absent only on manifests
+  // emitted by SDKs predating this field.
+  state_version?: number;
+  // Declared migration edges, one per retained from->from+1 hop.
+  migrations?: AbiMigrationEdge[];
+}
+
+// A single declared migration edge: invoking `method` carries state from
+// `fromVersion` to `fromVersion + 1`. Note the camelCase wire key `fromVersion`.
+export interface AbiMigrationEdge {
+  method: string;
+  fromVersion: number;
 }
 
 // Type references can be either inline types or references to named types
@@ -34,17 +46,19 @@ export interface AbiScalar {
     | 'unit';
 }
 
-// Bytes types - discriminated union for fixed vs variable
+// Bytes types - discriminated union for fixed vs variable.
+// `encoding` is an optional free-form hint (matches core's BytesType); current
+// SDKs omit it entirely.
 export interface AbiBytesVar {
   kind: 'bytes';
-  encoding: 'hex';
+  encoding?: string;
   // No size property for variable bytes
 }
 
 export interface AbiBytesFixed {
   kind: 'bytes';
   size: number; // minimum: 1
-  encoding: 'hex';
+  encoding?: string;
 }
 
 // Collection types
@@ -113,6 +127,12 @@ export interface AbiMethod {
   returns?: AbiTypeRef;
   returns_nullable?: boolean;
   errors?: AbiError[];
+  // Read/write intent declared by the app author. Absent on modules compiled
+  // before this field existed; the node then treats the method as write intent.
+  intent?: 'read_only' | 'mutating' | 'unspecified';
+  // Cross-context entry point declared via #[app::xcall]. Absent/false on
+  // modules compiled before this field existed.
+  xcall_callable?: boolean;
 }
 
 // Parameter definition

@@ -1,0 +1,7 @@
+node_modules/
+dist/
+pnpm-lock.yaml
+
+# Vendored verbatim from calimero core / mero-drive — must stay byte-faithful to
+# the source. Regenerate with `pnpm run sync:corpus`, never reformat.
+abi-codegen/__fixtures__/corpus/

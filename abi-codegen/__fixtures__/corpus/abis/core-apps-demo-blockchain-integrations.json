@@ -1,0 +1,239 @@
+{
+  "schema_version": "wasm-abi/1",
+  "types": {
+    "AppState": {
+      "kind": "record",
+      "fields": [
+        {
+          "name": "messages",
+          "type": {
+            "kind": "map",
+            "key": {
+              "kind": "string"
+            },
+            "value": {
+              "kind": "list",
+              "items": {
+                "$ref": "StoredMessage"
+              },
+              "crdt_type": "vector"
+            },
+            "crdt_type": "unordered_map"
+          }
+        }
+      ]
+    },
+    "CreateProposalRequest": {
+      "kind": "record",
+      "fields": [
+        {
+          "name": "action_type",
+          "type": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "params",
+          "type": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    "Event_ApprovedProposal": {
+      "kind": "record",
+      "fields": [
+        {
+          "name": "id",
+          "type": {
+            "kind": "bytes",
+            "size": 32
+          }
+        }
+      ]
+    },
+    "Event_ProposalCreated": {
+      "kind": "record",
+      "fields": [
+        {
+          "name": "id",
+          "type": {
+            "kind": "bytes",
+            "size": 32
+          }
+        }
+      ]
+    },
+    "Message": {
+      "kind": "record",
+      "fields": [
+        {
+          "name": "id",
+          "type": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "author",
+          "type": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "text",
+          "type": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "created_at",
+          "type": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    "StoredMessage": {
+      "kind": "record",
+      "fields": [
+        {
+          "name": "id",
+          "type": {
+            "kind": "record",
+            "fields": [],
+            "crdt_type": "lww_register",
+            "inner_type": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "author",
+          "type": {
+            "kind": "record",
+            "fields": [],
+            "crdt_type": "lww_register",
+            "inner_type": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "text",
+          "type": {
+            "kind": "record",
+            "fields": [],
+            "crdt_type": "lww_register",
+            "inner_type": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "created_at",
+          "type": {
+            "kind": "record",
+            "fields": [],
+            "crdt_type": "lww_register",
+            "inner_type": {
+              "kind": "string"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "methods": [
+    {
+      "name": "init",
+      "params": [],
+      "returns": {
+        "kind": "unit"
+      }
+    },
+    {
+      "name": "create_new_proposal",
+      "params": [
+        {
+          "name": "request",
+          "type": {
+            "$ref": "CreateProposalRequest"
+          }
+        }
+      ],
+      "returns": {
+        "kind": "bytes",
+        "size": 32
+      }
+    },
+    {
+      "name": "approve_proposal",
+      "params": [
+        {
+          "name": "proposal_id",
+          "type": {
+            "kind": "bytes",
+            "size": 32
+          }
+        }
+      ],
+      "returns": {
+        "kind": "unit"
+      }
+    },
+    {
+      "name": "get_proposal_messages",
+      "params": [
+        {
+          "name": "proposal_id",
+          "type": {
+            "kind": "bytes",
+            "size": 32
+          }
+        }
+      ],
+      "returns": {
+        "kind": "list",
+        "items": {
+          "$ref": "Message"
+        }
+      }
+    },
+    {
+      "name": "send_proposal_messages",
+      "params": [
+        {
+          "name": "proposal_id",
+          "type": {
+            "kind": "bytes",
+            "size": 32
+          }
+        },
+        {
+          "name": "message",
+          "type": {
+            "$ref": "Message"
+          }
+        }
+      ],
+      "returns": {
+        "kind": "unit"
+      }
+    }
+  ],
+  "events": [
+    {
+      "name": "ProposalCreated",
+      "payload": {
+        "$ref": "Event_ProposalCreated"
+      }
+    },
+    {
+      "name": "ApprovedProposal",
+      "payload": {
+        "$ref": "Event_ApprovedProposal"
+      }
+    }
+  ],
+  "state_root": "AppState"
+}

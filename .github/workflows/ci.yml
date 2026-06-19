@@ -73,25 +73,14 @@ jobs:
         run: pnpm test
 
       - name: Publish @calimero-network/abi-codegen to npm
-        run: |
-          cd abi-codegen
-          VERSION=$(node -p "require('./package.json').version")
-          echo "📦 Package: @calimero-network/abi-codegen"
-          echo "📋 Version: ${VERSION}"
-
-          # Check if tag exists (indicates already released)
-          if git tag -l "abi-codegen-v${VERSION}" | grep -q .; then
-            echo "🔄 Tag exists, running semantic-release"
-            npx semantic-release
-          else
-            echo "🚀 Initial publish - publishing directly to npm"
-            npm publish --provenance --access public
-            echo "🏷️  Creating git tag: abi-codegen-v${VERSION}"
-            git tag "abi-codegen-v${VERSION}"
-            git push origin "abi-codegen-v${VERSION}"
-          fi
+        # semantic-release is the single release mechanism: it derives the next
+        # version from conventional commits since the last `abi-codegen-v*` tag,
+        # bumps package.json, publishes to npm (shipping the bundled schema in
+        # dist/), and creates the matching git tag + GitHub release.
+        run: cd abi-codegen && npx semantic-release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_CONFIG_PROVENANCE: "true"
           NODE_ENV: production
 
       - name: Publish create-mero-app to npm
