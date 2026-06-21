@@ -56,6 +56,10 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           TAG=$(gh release list --repo calimero-network/core --limit 1 --json tagName --jq '.[0].tagName')
+          if [ -z "$TAG" ]; then
+            echo "::error::could not resolve a latest core release tag from calimero-network/core"
+            exit 1
+          fi
           echo "Latest core release: $TAG"
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
 
