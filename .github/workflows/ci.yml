@@ -40,10 +40,15 @@ jobs:
   # Validate the bundled schema + parser against the LATEST CORE RELEASE, not a
   # vendored snapshot — so the tool can't silently drift from what consumers
   # actually run. No core build: it sparse-checks-out core's two checked-in
-  # reference files (schema + conformance ABI) at the latest release tag (RCs
-  # included, like merobox), re-syncs from them, and runs the suite. Goes RED if
-  # a core release advances past the bundled schema (outside documented
-  # deviations). Live breadth/all-11 is covered separately on the core side.
+  # reference files (schema + conformance ABI) at the latest release tag, re-syncs
+  # from them, and runs the suite. Goes RED if a core release advances past the
+  # bundled schema (outside documented deviations). Live breadth/all-11 is covered
+  # separately on the core side.
+  #
+  # `gh release list --limit 1` includes pre-releases on purpose: core currently
+  # publishes ONLY release candidates (no GitHub "latest"/stable release exists,
+  # so `isLatest` resolves to nothing), and the RC line is what's actively shipped
+  # — same approach merobox uses to consume core.
   schema-parity-released-core:
     name: Schema parity vs released core
     runs-on: ubuntu-latest
@@ -95,7 +100,16 @@ jobs:
         env:
           CALIMERO_CORE_DIR: ${{ github.workspace }}/core
 
-      - name: Schema parity + real-ABI tests against released core
+      # Run the schema-level guards FIRST and on their own, so a release that has
+      # moved past the bundled schema surfaces as a clear "schema drifted" failure
+      # in this named step — distinct from a generic failure buried in the full
+      # suite.
+      - name: Schema drift + enum vs released core
+        run: cd abi-codegen && pnpm exec vitest run __tests__/schema-drift.spec.ts __tests__/enum-completeness.spec.ts
+        env:
+          CALIMERO_CORE_DIR: ${{ github.workspace }}/core
+
+      - name: Full suite against released core
         run: cd abi-codegen && pnpm test
         env:
           CALIMERO_CORE_DIR: ${{ github.workspace }}/core

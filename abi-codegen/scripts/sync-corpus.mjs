@@ -75,16 +75,27 @@ function readJsonChecked(src, label) {
 const schemaBuf = readJsonChecked(schemaSrc, 'schema');
 const conformanceBuf = readJsonChecked(conformanceSrc, 'conformance ABI');
 
+// Write a vendored file, loudly noting when the new content differs from what is
+// already committed — so an accidental change (local edits to the fixture, or a
+// CALIMERO_CORE_DIR pointed at a stale/older tag) is visible, not silent.
+function writeVendored(dest, buf) {
+  const rel = relative(pkgRoot, dest);
+  if (existsSync(dest) && !readFileSync(dest).equals(buf)) {
+    console.warn(`⚠ ${rel} changed vs the committed copy — overwriting`);
+  }
+  writeFileSync(dest, buf);
+}
+
 mkdirSync(abisDir, { recursive: true });
-writeFileSync(join(corpusDir, 'wasm-abi.schema.json'), schemaBuf);
-writeFileSync(
+writeVendored(join(corpusDir, 'wasm-abi.schema.json'), schemaBuf);
+writeVendored(
   join(abisDir, 'core-abi_conformance-expected.json'),
   conformanceBuf,
 );
 // Keep the PRIMARY fixture (used by validate:abi, generate:example, and the unit
 // specs) in lockstep with the corpus copy — they are the same core manifest, so
 // syncing one without the other would let them silently diverge.
-writeFileSync(
+writeVendored(
   join(pkgRoot, '__fixtures__', 'abi_conformance.json'),
   conformanceBuf,
 );
