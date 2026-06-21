@@ -170,7 +170,7 @@
 <div class="fr"><div class="fp">read_only</div><div class="fd">Reads state only; no mutation. Emitted for <span class="code">#[app::view]</span> methods.</div></div>
 <div class="fr"><div class="fp">mutating</div><div class="fd">Writes / changes state.</div></div>
 <div class="fr"><div class="fp">unspecified</div><div class="fd">Not declared; treated as potentially mutating.</div></div>
-<p style="margin-top:10px;">In practice only <span class="code">read_only</span> is emitted explicitly; methods without an <span class="code">intent</span> field default to write. The codegen surfaces a declared intent as a JSDoc tag on the generated method (e.g. <span class="code">@intent read_only</span>) — documentation only; it does not yet change how the method is called.</p>
+<p style="margin-top:10px;">In practice only <span class="code">read_only</span> is emitted explicitly; a method with no <span class="code">intent</span> field (equivalent to <span class="code">unspecified</span>) is treated as potentially mutating. The codegen surfaces a declared intent as a JSDoc tag on the generated method (e.g. <span class="code">@intent read_only</span>) — documentation only; it does not yet change how the method is called.</p>
 </div>
 
 <div class="card gh">
