@@ -24,23 +24,41 @@ const abiFiles = readdirSync(abisDir)
   .filter((f) => f.endsWith('.json'))
   .sort();
 
-describe('Real-ABI corpus (cross-repo with core)', () => {
-  it('vendored snapshot is present and matches SOURCES.json', () => {
-    // A zero/short corpus would make the parse loop vacuously pass — guard it.
-    expect(abiFiles.length).toBeGreaterThanOrEqual(20);
-    expect(abiFiles.length).toBe(sources.abis.length);
-    const recorded = sources.abis.map((a: { name: string }) => a.name).sort();
-    expect(abiFiles).toEqual(recorded);
-  });
+// Tiering: the full ~20-manifest corpus is exhaustive but slow to iterate. CI
+// (and an opt-in env) runs the whole thing on every PR; local `pnpm test` runs a
+// fast smoke against the single richest manifest — the conformance app's ABI,
+// which exercises the broadest method/type/event surface. The corpus stays
+// vendored either way; this only changes how many fixtures are walked locally.
+const FULL_CORPUS = !!process.env.CI || !!process.env.ABI_FULL_CORPUS;
+const SMOKE_FIXTURE = 'core-abi_conformance-expected.json';
+const corpusFiles = FULL_CORPUS
+  ? abiFiles
+  : abiFiles.includes(SMOKE_FIXTURE)
+    ? [SMOKE_FIXTURE]
+    : abiFiles.slice(0, 1);
 
-  it.each(abiFiles)('parses %s through the real parse path', (file) => {
+describe('Real-ABI corpus (cross-repo with core)', () => {
+  // Full-corpus-only: snapshot integrity and the all-11-CRDT proof need the
+  // whole vendored set, so they run in CI (and on opt-in), not in the local smoke.
+  it.runIf(FULL_CORPUS)(
+    'vendored snapshot is present and matches SOURCES.json',
+    () => {
+      // A zero/short corpus would make the parse loop vacuously pass — guard it.
+      expect(abiFiles.length).toBeGreaterThanOrEqual(20);
+      expect(abiFiles.length).toBe(sources.abis.length);
+      const recorded = sources.abis.map((a: { name: string }) => a.name).sort();
+      expect(abiFiles).toEqual(recorded);
+    },
+  );
+
+  it.each(corpusFiles)('parses %s through the real parse path', (file) => {
     const json = JSON.parse(readFileSync(join(abisDir, file), 'utf-8'));
     const manifest = parseAbiManifest(json);
     expect(manifest.schema_version).toBe('wasm-abi/1');
     expect(manifest.methods).toBeInstanceOf(Array);
   });
 
-  it.each(abiFiles)(
+  it.each(corpusFiles)(
     'generates a non-empty client with every method present from %s',
     (file) => {
       const json = JSON.parse(readFileSync(join(abisDir, file), 'utf-8'));
@@ -59,36 +77,39 @@ describe('Real-ABI corpus (cross-repo with core)', () => {
     },
   );
 
-  it('exercises all 11 CRDT collection types across the corpus', () => {
-    // Proves the widened CrdtType enum is actually required by real ABIs, not
-    // just permitted — every value below appears somewhere in the corpus.
-    const seen = new Set<string>();
-    const walk = (node: unknown): void => {
-      if (!node || typeof node !== 'object') return;
-      const obj = node as Record<string, unknown>;
-      if (typeof obj.crdt_type === 'string') seen.add(obj.crdt_type);
-      for (const value of Object.values(obj)) {
-        if (Array.isArray(value)) value.forEach(walk);
-        else if (value && typeof value === 'object') walk(value);
+  it.runIf(FULL_CORPUS)(
+    'exercises all 11 CRDT collection types across the corpus',
+    () => {
+      // Proves the widened CrdtType enum is actually required by real ABIs, not
+      // just permitted — every value below appears somewhere in the corpus.
+      const seen = new Set<string>();
+      const walk = (node: unknown): void => {
+        if (!node || typeof node !== 'object') return;
+        const obj = node as Record<string, unknown>;
+        if (typeof obj.crdt_type === 'string') seen.add(obj.crdt_type);
+        for (const value of Object.values(obj)) {
+          if (Array.isArray(value)) value.forEach(walk);
+          else if (value && typeof value === 'object') walk(value);
+        }
+      };
+      for (const file of abiFiles) {
+        walk(JSON.parse(readFileSync(join(abisDir, file), 'utf-8')));
       }
-    };
-    for (const file of abiFiles) {
-      walk(JSON.parse(readFileSync(join(abisDir, file), 'utf-8')));
-    }
-    expect([...seen].sort()).toEqual(
-      [
-        'authored_map',
-        'authored_vector',
-        'counter',
-        'lww_register',
-        'replicated_growable_array',
-        'shared_storage',
-        'sorted_map',
-        'sorted_set',
-        'unordered_map',
-        'unordered_set',
-        'vector',
-      ].sort(),
-    );
-  });
+      expect([...seen].sort()).toEqual(
+        [
+          'authored_map',
+          'authored_vector',
+          'counter',
+          'lww_register',
+          'replicated_growable_array',
+          'shared_storage',
+          'sorted_map',
+          'sorted_set',
+          'unordered_map',
+          'unordered_set',
+          'vector',
+        ].sort(),
+      );
+    },
+  );
 });
