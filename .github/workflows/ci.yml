@@ -37,8 +37,85 @@ jobs:
       - name: Test code generation
         run: cd abi-codegen && pnpm run generate:example
 
+  # Validate the bundled schema + parser against the LATEST CORE RELEASE, not a
+  # vendored snapshot — so the tool can't silently drift from what consumers
+  # actually run. No core build: it sparse-checks-out core's two checked-in
+  # reference files (schema + conformance ABI) at the latest release tag, re-syncs
+  # from them, and runs the suite. Goes RED if a core release advances past the
+  # bundled schema (outside documented deviations). Live breadth/all-11 is covered
+  # separately on the core side.
+  #
+  # `gh release list --limit 1` includes pre-releases on purpose: core currently
+  # publishes ONLY release candidates (no GitHub "latest"/stable release exists,
+  # so `isLatest` resolves to nothing), and the RC line is what's actively shipped
+  # — same approach merobox uses to consume core.
+  schema-parity-released-core:
+    name: Schema parity vs released core
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout abi-codegen
+        uses: actions/checkout@v4
+
+      - name: Resolve latest core release tag
+        id: coretag
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG=$(gh release list --repo calimero-network/core --limit 1 --json tagName --jq '.[0].tagName')
+          if [ -z "$TAG" ]; then
+            echo "::error::could not resolve a latest core release tag from calimero-network/core"
+            exit 1
+          fi
+          echo "Latest core release: $TAG"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout core reference files at release tag (no build)
+        uses: actions/checkout@v4
+        with:
+          repository: calimero-network/core
+          ref: ${{ steps.coretag.outputs.tag }}
+          path: core
+          sparse-checkout: |
+            crates/wasm-abi/wasm-abi.schema.json
+            apps/abi_conformance/abi.expected.json
+          sparse-checkout-cone-mode: false
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build packages
+        run: pnpm run build
+
+      - name: Sync reference files from released core
+        run: cd abi-codegen && node scripts/sync-corpus.mjs
+        env:
+          CALIMERO_CORE_DIR: ${{ github.workspace }}/core
+
+      # Run the schema-level guards FIRST and on their own, so a release that has
+      # moved past the bundled schema surfaces as a clear "schema drifted" failure
+      # in this named step — distinct from a generic failure buried in the full
+      # suite.
+      - name: Schema drift + enum vs released core
+        run: cd abi-codegen && pnpm exec vitest run __tests__/schema-drift.spec.ts __tests__/enum-completeness.spec.ts
+        env:
+          CALIMERO_CORE_DIR: ${{ github.workspace }}/core
+
+      - name: Full suite against released core
+        run: cd abi-codegen && pnpm test
+        env:
+          CALIMERO_CORE_DIR: ${{ github.workspace }}/core
+
   release:
-    needs: build-and-test
+    needs: [build-and-test, schema-parity-released-core]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     permissions:
@@ -74,25 +151,14 @@ jobs:
         run: pnpm test
 
       - name: Publish @calimero-network/abi-codegen to npm
-        run: |
-          cd abi-codegen
-          VERSION=$(node -p "require('./package.json').version")
-          echo "📦 Package: @calimero-network/abi-codegen"
-          echo "📋 Version: ${VERSION}"
-
-          # Check if tag exists (indicates already released)
-          if git tag -l "abi-codegen-v${VERSION}" | grep -q .; then
-            echo "🔄 Tag exists, running semantic-release"
-            npx semantic-release
-          else
-            echo "🚀 Initial publish - publishing directly to npm"
-            npm publish --provenance --access public
-            echo "🏷️  Creating git tag: abi-codegen-v${VERSION}"
-            git tag "abi-codegen-v${VERSION}"
-            git push origin "abi-codegen-v${VERSION}"
-          fi
+        # semantic-release is the single release mechanism: it derives the next
+        # version from conventional commits since the last `abi-codegen-v*` tag,
+        # bumps package.json, publishes to npm (shipping the bundled schema in
+        # dist/), and creates the matching git tag + GitHub release.
+        run: cd abi-codegen && npx semantic-release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_CONFIG_PROVENANCE: "true"
           NODE_ENV: production
 
       - name: Publish create-mero-app to npm

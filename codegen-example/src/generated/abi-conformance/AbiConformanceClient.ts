@@ -8,6 +8,7 @@ import {
 
 export interface AbiState {
   counters: Record<string, number>;
+  sorted_counters: Record<string, number>;
   users: UserId32[];
 }
 
@@ -15,12 +16,26 @@ export type ActionPayload =
   | { name: 'Ping' }
   | { name: 'SetName'; payload: string }
   | { name: 'Update'; payload: UpdatePayload }
+  | { name: 'MultiTuple'; payload: Action_MultiTuple }
+  | { name: 'MultiStruct'; payload: Action_MultiStruct }
 
 export const Action = {
   Ping: (): ActionPayload => ({ name: 'Ping' }),
   SetName: (setname: string): ActionPayload => ({ name: 'SetName', payload: setname }),
   Update: (update: UpdatePayload): ActionPayload => ({ name: 'Update', payload: update }),
+  MultiTuple: (multituple: Action_MultiTuple): ActionPayload => ({ name: 'MultiTuple', payload: multituple }),
+  MultiStruct: (multistruct: Action_MultiStruct): ActionPayload => ({ name: 'MultiStruct', payload: multistruct }),
 } as const;
+
+export interface Action_MultiStruct {
+  x: number;
+  y: string;
+}
+
+export interface Action_MultiTuple {
+  field_0: number;
+  field_1: string;
+}
 
 export type ConformanceErrorPayload =
   | { name: 'BadInput' }
@@ -31,7 +46,33 @@ export const ConformanceError = {
   NotFound: (notfound: string): ConformanceErrorPayload => ({ name: 'NotFound', payload: notfound }),
 } as const;
 
+export interface CustomRecord {
+  name: string;
+  value: number;
+  active: boolean;
+}
+
+export interface Event_StructEvent {
+  id: number;
+  name: string;
+}
+
+export interface Event_TupleEvent {
+  field_0: number;
+  field_1: string;
+}
+
 export type Hash64 = CalimeroBytes;
+
+export interface InternalResult {
+  original: number;
+  calculated: number;
+}
+
+export interface NestedRecord {
+  record: CustomRecord;
+  tags: string[];
+}
 
 export interface Person {
   id: UserId32;
@@ -43,6 +84,25 @@ export interface Profile {
   bio: string | null;
   avatar: CalimeroBytes | null;
   nicknames: string[];
+}
+
+export type StatusPayload =
+  | { name: 'Pending' }
+  | { name: 'Active'; payload: Status_Active }
+  | { name: 'Completed'; payload: Status_Completed }
+
+export const Status = {
+  Pending: (): StatusPayload => ({ name: 'Pending' }),
+  Active: (active: Status_Active): StatusPayload => ({ name: 'Active', payload: active }),
+  Completed: (completed: Status_Completed): StatusPayload => ({ name: 'Completed', payload: completed }),
+} as const;
+
+export interface Status_Active {
+  timestamp: number;
+}
+
+export interface Status_Completed {
+  result: string;
 }
 
 export interface UpdatePayload {
@@ -58,12 +118,16 @@ export type DataPayload = CalimeroBytes;
 
 
 
+
+
 export type AbiEvent =
   | { name: "Ping" }
   | { name: "Named"; payload: string }
   | { name: "Data"; payload: CalimeroBytes }
   | { name: "PersonUpdated"; payload: Person }
   | { name: "ActionTaken"; payload: ActionPayload }
+  | { name: "TupleEvent"; payload: Event_TupleEvent }
+  | { name: "StructEvent"; payload: Event_StructEvent }
 ;
 
 
@@ -164,29 +228,29 @@ function convertWasmResultToCalimeroBytes(obj: any): any {
 }
 
 export class AbiConformanceClient {
-  private mero: MeroJs;
-  private contextId: string;
-  private executorPublicKey: string;
+  private _mero: MeroJs;
+  private _contextId: string;
+  private _executorPublicKey: string;
 
   constructor(mero: MeroJs, contextId: string, executorPublicKey: string) {
-    this.mero = mero;
-    this.contextId = contextId;
-    this.executorPublicKey = executorPublicKey;
+    this._mero = mero;
+    this._contextId = contextId;
+    this._executorPublicKey = executorPublicKey;
   }
 
   /**
    * init
    */
-  public async init(): Promise<AbiState> {
-    const response = await this.mero.rpc.execute({ contextId: this.contextId, method: 'init', argsJson: {}, executorPublicKey: this.executorPublicKey });
-    return convertWasmResultToCalimeroBytes(response) as AbiState;
+  public async init(): Promise<void> {
+    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'init', argsJson: {}, executorPublicKey: this._executorPublicKey });
+    return response as void;
   }
 
   /**
    * noop
    */
   public async noop(): Promise<void> {
-    const response = await this.mero.rpc.execute({ contextId: this.contextId, method: 'noop', argsJson: {}, executorPublicKey: this.executorPublicKey });
+    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'noop', argsJson: {}, executorPublicKey: this._executorPublicKey });
     return response as void;
   }
 
@@ -194,7 +258,7 @@ export class AbiConformanceClient {
    * echo_bool
    */
   public async echoBool(params: { b: boolean }): Promise<boolean> {
-    const response = await this.mero.rpc.execute({ contextId: this.contextId, method: 'echo_bool', argsJson: params, executorPublicKey: this.executorPublicKey });
+    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'echo_bool', argsJson: params, executorPublicKey: this._executorPublicKey });
     return response as boolean;
   }
 
@@ -202,7 +266,7 @@ export class AbiConformanceClient {
    * echo_i32
    */
   public async echoI32(params: { x: number }): Promise<number> {
-    const response = await this.mero.rpc.execute({ contextId: this.contextId, method: 'echo_i32', argsJson: params, executorPublicKey: this.executorPublicKey });
+    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'echo_i32', argsJson: params, executorPublicKey: this._executorPublicKey });
     return response as number;
   }
 
@@ -210,7 +274,7 @@ export class AbiConformanceClient {
    * echo_i64
    */
   public async echoI64(params: { x: number }): Promise<number> {
-    const response = await this.mero.rpc.execute({ contextId: this.contextId, method: 'echo_i64', argsJson: params, executorPublicKey: this.executorPublicKey });
+    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'echo_i64', argsJson: params, executorPublicKey: this._executorPublicKey });
     return response as number;
   }
 
@@ -218,7 +282,7 @@ export class AbiConformanceClient {
    * echo_u32
    */
   public async echoU32(params: { x: number }): Promise<number> {
-    const response = await this.mero.rpc.execute({ contextId: this.contextId, method: 'echo_u32', argsJson: params, executorPublicKey: this.executorPublicKey });
+    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'echo_u32', argsJson: params, executorPublicKey: this._executorPublicKey });
     return response as number;
   }
 
@@ -226,7 +290,7 @@ export class AbiConformanceClient {
    * echo_u64
    */
   public async echoU64(params: { x: number }): Promise<number> {
-    const response = await this.mero.rpc.execute({ contextId: this.contextId, method: 'echo_u64', argsJson: params, executorPublicKey: this.executorPublicKey });
+    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'echo_u64', argsJson: params, executorPublicKey: this._executorPublicKey });
     return response as number;
   }
 
@@ -234,7 +298,7 @@ export class AbiConformanceClient {
    * echo_f32
    */
   public async echoF32(params: { x: number }): Promise<number> {
-    const response = await this.mero.rpc.execute({ contextId: this.contextId, method: 'echo_f32', argsJson: params, executorPublicKey: this.executorPublicKey });
+    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'echo_f32', argsJson: params, executorPublicKey: this._executorPublicKey });
     return response as number;
   }
 
@@ -242,7 +306,7 @@ export class AbiConformanceClient {
    * echo_f64
    */
   public async echoF64(params: { x: number }): Promise<number> {
-    const response = await this.mero.rpc.execute({ contextId: this.contextId, method: 'echo_f64', argsJson: params, executorPublicKey: this.executorPublicKey });
+    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'echo_f64', argsJson: params, executorPublicKey: this._executorPublicKey });
     return response as number;
   }
 
@@ -250,7 +314,7 @@ export class AbiConformanceClient {
    * echo_string
    */
   public async echoString(params: { s: string }): Promise<string> {
-    const response = await this.mero.rpc.execute({ contextId: this.contextId, method: 'echo_string', argsJson: params, executorPublicKey: this.executorPublicKey });
+    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'echo_string', argsJson: params, executorPublicKey: this._executorPublicKey });
     return response as string;
   }
 
@@ -258,7 +322,7 @@ export class AbiConformanceClient {
    * echo_bytes
    */
   public async echoBytes(params: { b: CalimeroBytes }): Promise<CalimeroBytes> {
-    const response = await this.mero.rpc.execute({ contextId: this.contextId, method: 'echo_bytes', argsJson: convertCalimeroBytesForWasm(params), executorPublicKey: this.executorPublicKey });
+    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'echo_bytes', argsJson: convertCalimeroBytesForWasm(params), executorPublicKey: this._executorPublicKey });
     return convertWasmResultToCalimeroBytes(response) as CalimeroBytes;
   }
 
@@ -266,7 +330,7 @@ export class AbiConformanceClient {
    * opt_u32
    */
   public async optU32(params: { x: number | null }): Promise<number | null> {
-    const response = await this.mero.rpc.execute({ contextId: this.contextId, method: 'opt_u32', argsJson: params, executorPublicKey: this.executorPublicKey });
+    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'opt_u32', argsJson: params, executorPublicKey: this._executorPublicKey });
     return response as number | null;
   }
 
@@ -274,7 +338,7 @@ export class AbiConformanceClient {
    * opt_string
    */
   public async optString(params: { x: string | null }): Promise<string | null> {
-    const response = await this.mero.rpc.execute({ contextId: this.contextId, method: 'opt_string', argsJson: params, executorPublicKey: this.executorPublicKey });
+    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'opt_string', argsJson: params, executorPublicKey: this._executorPublicKey });
     return response as string | null;
   }
 
@@ -282,7 +346,7 @@ export class AbiConformanceClient {
    * opt_record
    */
   public async optRecord(params: { p: Person | null }): Promise<Person | null> {
-    const response = await this.mero.rpc.execute({ contextId: this.contextId, method: 'opt_record', argsJson: convertCalimeroBytesForWasm(params), executorPublicKey: this.executorPublicKey });
+    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'opt_record', argsJson: convertCalimeroBytesForWasm(params), executorPublicKey: this._executorPublicKey });
     return convertWasmResultToCalimeroBytes(response) as Person | null;
   }
 
@@ -290,7 +354,7 @@ export class AbiConformanceClient {
    * opt_id
    */
   public async optId(params: { x: UserId32 | null }): Promise<UserId32 | null> {
-    const response = await this.mero.rpc.execute({ contextId: this.contextId, method: 'opt_id', argsJson: convertCalimeroBytesForWasm(params), executorPublicKey: this.executorPublicKey });
+    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'opt_id', argsJson: convertCalimeroBytesForWasm(params), executorPublicKey: this._executorPublicKey });
     return convertWasmResultToCalimeroBytes(response) as UserId32 | null;
   }
 
@@ -298,7 +362,7 @@ export class AbiConformanceClient {
    * list_u32
    */
   public async listU32(params: { xs: number[] }): Promise<number[]> {
-    const response = await this.mero.rpc.execute({ contextId: this.contextId, method: 'list_u32', argsJson: params, executorPublicKey: this.executorPublicKey });
+    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'list_u32', argsJson: params, executorPublicKey: this._executorPublicKey });
     return response as number[];
   }
 
@@ -306,7 +370,7 @@ export class AbiConformanceClient {
    * list_strings
    */
   public async listStrings(params: { xs: string[] }): Promise<string[]> {
-    const response = await this.mero.rpc.execute({ contextId: this.contextId, method: 'list_strings', argsJson: params, executorPublicKey: this.executorPublicKey });
+    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'list_strings', argsJson: params, executorPublicKey: this._executorPublicKey });
     return response as string[];
   }
 
@@ -314,7 +378,7 @@ export class AbiConformanceClient {
    * list_records
    */
   public async listRecords(params: { ps: Person[] }): Promise<Person[]> {
-    const response = await this.mero.rpc.execute({ contextId: this.contextId, method: 'list_records', argsJson: convertCalimeroBytesForWasm(params), executorPublicKey: this.executorPublicKey });
+    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'list_records', argsJson: convertCalimeroBytesForWasm(params), executorPublicKey: this._executorPublicKey });
     return convertWasmResultToCalimeroBytes(response) as Person[];
   }
 
@@ -322,7 +386,7 @@ export class AbiConformanceClient {
    * list_ids
    */
   public async listIds(params: { xs: UserId32[] }): Promise<UserId32[]> {
-    const response = await this.mero.rpc.execute({ contextId: this.contextId, method: 'list_ids', argsJson: convertCalimeroBytesForWasm(params), executorPublicKey: this.executorPublicKey });
+    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'list_ids', argsJson: convertCalimeroBytesForWasm(params), executorPublicKey: this._executorPublicKey });
     return convertWasmResultToCalimeroBytes(response) as UserId32[];
   }
 
@@ -330,7 +394,7 @@ export class AbiConformanceClient {
    * map_u32
    */
   public async mapU32(params: { m: Record<string, number> }): Promise<Record<string, number>> {
-    const response = await this.mero.rpc.execute({ contextId: this.contextId, method: 'map_u32', argsJson: params, executorPublicKey: this.executorPublicKey });
+    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'map_u32', argsJson: params, executorPublicKey: this._executorPublicKey });
     return response as Record<string, number>;
   }
 
@@ -338,7 +402,7 @@ export class AbiConformanceClient {
    * map_list_u32
    */
   public async mapListU32(params: { m: Record<string, number[]> }): Promise<Record<string, number[]>> {
-    const response = await this.mero.rpc.execute({ contextId: this.contextId, method: 'map_list_u32', argsJson: params, executorPublicKey: this.executorPublicKey });
+    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'map_list_u32', argsJson: params, executorPublicKey: this._executorPublicKey });
     return response as Record<string, number[]>;
   }
 
@@ -346,7 +410,7 @@ export class AbiConformanceClient {
    * map_record
    */
   public async mapRecord(params: { m: Record<string, Person> }): Promise<Record<string, Person>> {
-    const response = await this.mero.rpc.execute({ contextId: this.contextId, method: 'map_record', argsJson: convertCalimeroBytesForWasm(params), executorPublicKey: this.executorPublicKey });
+    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'map_record', argsJson: convertCalimeroBytesForWasm(params), executorPublicKey: this._executorPublicKey });
     return convertWasmResultToCalimeroBytes(response) as Record<string, Person>;
   }
 
@@ -354,7 +418,7 @@ export class AbiConformanceClient {
    * make_person
    */
   public async makePerson(params: { p: Person }): Promise<Person> {
-    const response = await this.mero.rpc.execute({ contextId: this.contextId, method: 'make_person', argsJson: convertCalimeroBytesForWasm(params), executorPublicKey: this.executorPublicKey });
+    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'make_person', argsJson: convertCalimeroBytesForWasm(params), executorPublicKey: this._executorPublicKey });
     return convertWasmResultToCalimeroBytes(response) as Person;
   }
 
@@ -362,7 +426,7 @@ export class AbiConformanceClient {
    * profile_roundtrip
    */
   public async profileRoundtrip(params: { p: Profile }): Promise<Profile> {
-    const response = await this.mero.rpc.execute({ contextId: this.contextId, method: 'profile_roundtrip', argsJson: convertCalimeroBytesForWasm(params), executorPublicKey: this.executorPublicKey });
+    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'profile_roundtrip', argsJson: convertCalimeroBytesForWasm(params), executorPublicKey: this._executorPublicKey });
     return convertWasmResultToCalimeroBytes(response) as Profile;
   }
 
@@ -379,7 +443,41 @@ export class AbiConformanceClient {
         convertedParams.a = convertedParams.a.name;
       }
     }
-    const response = await this.mero.rpc.execute({ contextId: this.contextId, method: 'act', argsJson: convertedParams, executorPublicKey: this.executorPublicKey });
+    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'act', argsJson: convertedParams, executorPublicKey: this._executorPublicKey });
+    return response as number;
+  }
+
+  /**
+   * handle_multi_tuple
+   */
+  public async handleMultiTuple(params: { a: ActionPayload }): Promise<string> {
+    // Convert Action variant to WASM format
+    const convertedParams = { ...params } as any;
+    if (convertedParams.a && typeof convertedParams.a === 'object' && 'name' in convertedParams.a) {
+      if ('payload' in convertedParams.a) {
+        convertedParams.a = { [convertedParams.a.name]: convertedParams.a.payload };
+      } else {
+        convertedParams.a = convertedParams.a.name;
+      }
+    }
+    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'handle_multi_tuple', argsJson: convertedParams, executorPublicKey: this._executorPublicKey });
+    return response as string;
+  }
+
+  /**
+   * handle_multi_struct
+   */
+  public async handleMultiStruct(params: { a: ActionPayload }): Promise<number> {
+    // Convert Action variant to WASM format
+    const convertedParams = { ...params } as any;
+    if (convertedParams.a && typeof convertedParams.a === 'object' && 'name' in convertedParams.a) {
+      if ('payload' in convertedParams.a) {
+        convertedParams.a = { [convertedParams.a.name]: convertedParams.a.payload };
+      } else {
+        convertedParams.a = convertedParams.a.name;
+      }
+    }
+    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'handle_multi_struct', argsJson: convertedParams, executorPublicKey: this._executorPublicKey });
     return response as number;
   }
 
@@ -387,7 +485,7 @@ export class AbiConformanceClient {
    * roundtrip_id
    */
   public async roundtripId(params: { x: UserId32 }): Promise<UserId32> {
-    const response = await this.mero.rpc.execute({ contextId: this.contextId, method: 'roundtrip_id', argsJson: convertCalimeroBytesForWasm(params), executorPublicKey: this.executorPublicKey });
+    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'roundtrip_id', argsJson: convertCalimeroBytesForWasm(params), executorPublicKey: this._executorPublicKey });
     return convertWasmResultToCalimeroBytes(response) as UserId32;
   }
 
@@ -395,7 +493,7 @@ export class AbiConformanceClient {
    * roundtrip_hash
    */
   public async roundtripHash(params: { h: Hash64 }): Promise<Hash64> {
-    const response = await this.mero.rpc.execute({ contextId: this.contextId, method: 'roundtrip_hash', argsJson: convertCalimeroBytesForWasm(params), executorPublicKey: this.executorPublicKey });
+    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'roundtrip_hash', argsJson: convertCalimeroBytesForWasm(params), executorPublicKey: this._executorPublicKey });
     return convertWasmResultToCalimeroBytes(response) as Hash64;
   }
 
@@ -403,7 +501,7 @@ export class AbiConformanceClient {
    * may_fail
    */
   public async mayFail(params: { flag: boolean }): Promise<number> {
-    const response = await this.mero.rpc.execute({ contextId: this.contextId, method: 'may_fail', argsJson: params, executorPublicKey: this.executorPublicKey });
+    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'may_fail', argsJson: params, executorPublicKey: this._executorPublicKey });
     return response as number;
   }
 
@@ -411,8 +509,66 @@ export class AbiConformanceClient {
    * find_person
    */
   public async findPerson(params: { name: string }): Promise<Person> {
-    const response = await this.mero.rpc.execute({ contextId: this.contextId, method: 'find_person', argsJson: params, executorPublicKey: this.executorPublicKey });
+    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'find_person', argsJson: params, executorPublicKey: this._executorPublicKey });
     return convertWasmResultToCalimeroBytes(response) as Person;
+  }
+
+  /**
+   * public_with_private_helper
+   */
+  public async publicWithPrivateHelper(params: { value: number }): Promise<number> {
+    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'public_with_private_helper', argsJson: params, executorPublicKey: this._executorPublicKey });
+    return response as number;
+  }
+
+  /**
+   * get_internal_result
+   */
+  public async getInternalResult(params: { value: number }): Promise<InternalResult> {
+    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'get_internal_result', argsJson: params, executorPublicKey: this._executorPublicKey });
+    return response as InternalResult;
+  }
+
+  /**
+   * create_custom_record
+   */
+  public async createCustomRecord(params: { name: string; value: number }): Promise<CustomRecord> {
+    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'create_custom_record', argsJson: params, executorPublicKey: this._executorPublicKey });
+    return response as CustomRecord;
+  }
+
+  /**
+   * get_nested_record
+   */
+  public async getNestedRecord(params: { name: string }): Promise<NestedRecord> {
+    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'get_nested_record', argsJson: params, executorPublicKey: this._executorPublicKey });
+    return response as NestedRecord;
+  }
+
+  /**
+   * get_status
+   */
+  public async getStatus(params: { timestamp: number }): Promise<StatusPayload> {
+    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'get_status', argsJson: params, executorPublicKey: this._executorPublicKey });
+    return response as StatusPayload;
+  }
+
+  /**
+   * view_constant
+   *
+   * @intent read_only
+   */
+  public async viewConstant(): Promise<number> {
+    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'view_constant', argsJson: {}, executorPublicKey: this._executorPublicKey });
+    return response as number;
+  }
+
+  /**
+   * xcall_noop
+   */
+  public async xcallNoop(): Promise<void> {
+    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'xcall_noop', argsJson: {}, executorPublicKey: this._executorPublicKey });
+    return response as void;
   }
 
 }

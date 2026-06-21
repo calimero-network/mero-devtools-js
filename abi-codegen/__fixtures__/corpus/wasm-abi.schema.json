@@ -4,7 +4,12 @@
   "description": "Schema for Calimero WASM ABI v1 format",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "types", "methods", "events"],
+  "required": [
+    "schema_version",
+    "types",
+    "methods",
+    "events"
+  ],
   "properties": {
     "schema_version": {
       "type": "string",
@@ -29,53 +34,47 @@
       }
     },
     "state_root": {
-      "type": "string"
+      "type": "string",
+      "description": "Name of the type that represents the application state"
     },
     "state_version": {
       "type": "integer",
-      "minimum": 1
+      "minimum": 1,
+      "description": "AppState::SCHEMA_VERSION of this build (#[app::state(version = N)], default 1). Always emitted by current SDKs; absent only on manifests from older SDKs."
     },
     "migrations": {
       "type": "array",
+      "description": "Declared migration edges, one per retained from->from+1 hop. Retained edges enable chained dispatch for members more than one version behind.",
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["method", "fromVersion"],
+        "required": [
+          "method",
+          "fromVersion"
+        ],
         "properties": {
           "method": {
-            "type": "string"
+            "type": "string",
+            "description": "The migrate entrypoint export for this hop"
           },
           "fromVersion": {
             "type": "integer",
-            "minimum": 1
+            "minimum": 1,
+            "description": "The state version this edge migrates FROM (targets fromVersion + 1)"
           }
         }
       }
     }
   },
   "definitions": {
-    "CrdtType": {
-      "type": "string",
-      "enum": [
-        "lww_register",
-        "counter",
-        "vector",
-        "unordered_map",
-        "sorted_map",
-        "authored_map",
-        "unordered_set",
-        "sorted_set",
-        "replicated_growable_array",
-        "authored_vector",
-        "shared_storage"
-      ]
-    },
     "TypeRef": {
       "oneOf": [
         {
           "type": "object",
           "additionalProperties": false,
-          "required": ["$ref"],
+          "required": [
+            "$ref"
+          ],
           "properties": {
             "$ref": {
               "type": "string"
@@ -96,7 +95,9 @@
     "ScalarType": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["kind"],
+      "required": [
+        "kind"
+      ],
       "properties": {
         "kind": {
           "type": "string",
@@ -117,7 +118,9 @@
     "BytesType": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["kind"],
+      "required": [
+        "kind"
+      ],
       "properties": {
         "kind": {
           "const": "bytes"
@@ -131,12 +134,31 @@
         }
       }
     },
+    "CrdtType": {
+      "type": "string",
+      "enum": [
+        "lww_register",
+        "counter",
+        "vector",
+        "unordered_map",
+        "sorted_map",
+        "authored_map",
+        "unordered_set",
+        "sorted_set",
+        "replicated_growable_array",
+        "authored_vector",
+        "shared_storage"
+      ]
+    },
     "CollectionType": {
       "oneOf": [
         {
           "type": "object",
           "additionalProperties": false,
-          "required": ["kind", "items"],
+          "required": [
+            "kind",
+            "items"
+          ],
           "properties": {
             "kind": {
               "const": "list"
@@ -152,7 +174,11 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": ["kind", "key", "value"],
+          "required": [
+            "kind",
+            "key",
+            "value"
+          ],
           "properties": {
             "kind": {
               "const": "map"
@@ -171,7 +197,10 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": ["kind", "fields"],
+          "required": [
+            "kind",
+            "fields"
+          ],
           "properties": {
             "kind": {
               "const": "record"
@@ -189,30 +218,16 @@
               "$ref": "#/definitions/TypeRef"
             }
           }
-        },
-        {
-          "type": "object",
-          "additionalProperties": false,
-          "required": ["kind", "elements"],
-          "properties": {
-            "kind": {
-              "const": "tuple"
-            },
-            "elements": {
-              "type": "array",
-              "items": {
-                "$ref": "#/definitions/TypeRef"
-              },
-              "minItems": 1
-            }
-          }
         }
       ]
     },
     "Field": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["name", "type"],
+      "required": [
+        "name",
+        "type"
+      ],
       "properties": {
         "name": {
           "type": "string"
@@ -228,7 +243,9 @@
     "Variant": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["name"],
+      "required": [
+        "name"
+      ],
       "properties": {
         "name": {
           "type": "string"
@@ -246,7 +263,10 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": ["kind", "fields"],
+          "required": [
+            "kind",
+            "fields"
+          ],
           "properties": {
             "kind": {
               "const": "record"
@@ -262,7 +282,10 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": ["kind", "variants"],
+          "required": [
+            "kind",
+            "variants"
+          ],
           "properties": {
             "kind": {
               "const": "variant"
@@ -278,7 +301,10 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": ["kind", "target"],
+          "required": [
+            "kind",
+            "target"
+          ],
           "properties": {
             "kind": {
               "const": "alias"
@@ -290,13 +316,19 @@
         },
         {
           "$ref": "#/definitions/BytesType"
+        },
+        {
+          "$ref": "#/definitions/VariableBytesType"
         }
       ]
     },
     "Parameter": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["name", "type"],
+      "required": [
+        "name",
+        "type"
+      ],
       "properties": {
         "name": {
           "type": "string"
@@ -312,7 +344,9 @@
     "Error": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["code"],
+      "required": [
+        "code"
+      ],
       "properties": {
         "code": {
           "type": "string"
@@ -325,7 +359,10 @@
     "Method": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["name", "params"],
+      "required": [
+        "name",
+        "params"
+      ],
       "properties": {
         "name": {
           "type": "string"
@@ -350,17 +387,25 @@
         },
         "intent": {
           "type": "string",
-          "enum": ["read_only", "mutating", "unspecified"]
+          "enum": [
+            "read_only",
+            "mutating",
+            "unspecified"
+          ],
+          "description": "Read/write intent declared by the app author. Absent on modules compiled before this field existed; treated as write intent by the node."
         },
         "xcall_callable": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Cross-context entry point declared via #[app::xcall]. Absent/false on modules compiled before this field existed. When any method in a module sets this, the node enforces that only such methods are reachable via xcall."
         }
       }
     },
     "Event": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["name"],
+      "required": [
+        "name"
+      ],
       "properties": {
         "name": {
           "type": "string"

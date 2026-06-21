@@ -1,0 +1,15 @@
+{
+  "description": "Vendored reference files from calimero core (checked-in sources, no build). Regenerate with `node scripts/sync-corpus.mjs`; do not hand-edit.",
+  "schema": {
+    "name": "wasm-abi.schema.json",
+    "source": "core/crates/wasm-abi/wasm-abi.schema.json",
+    "sha256": "37a6c2733d6a9e369645cfe47f985df4e5ad0612b68d8ff6ff691d257373fbf0"
+  },
+  "abis": [
+    {
+      "name": "core-abi_conformance-expected.json",
+      "source": "core/apps/abi_conformance/abi.expected.json",
+      "sha256": "3e6e700a9d5b024a4cc26fe107d9f3c4379d3f5d655fac65b86dff5fafa9497a"
+    }
+  ]
+}

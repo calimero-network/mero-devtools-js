@@ -27,9 +27,9 @@ describe('CLI', () => {
     const manifest = loadAbiManifestFromFile(fixturePath);
 
     expect(manifest.schema_version).toBe('wasm-abi/1');
-    expect(manifest.methods).toHaveLength(29);
-    expect(manifest.events).toHaveLength(5);
-    expect(Object.keys(manifest.types)).toHaveLength(8);
+    expect(manifest.methods).toHaveLength(38);
+    expect(manifest.events).toHaveLength(7);
+    expect(Object.keys(manifest.types)).toHaveLength(18);
   });
 
   it('should fail with invalid ABI and show formatted errors', () => {
