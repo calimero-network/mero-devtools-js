@@ -58,17 +58,22 @@ const conformanceSrc = join(
   'abi_conformance',
   'abi.expected.json',
 );
-for (const [label, src] of [
-  ['schema', schemaSrc],
-  ['conformance ABI', conformanceSrc],
-]) {
+// Read + JSON-validate a source file, failing with the file path in the message
+// if it is missing or malformed — and BEFORE any write, so a bad source can't
+// leave the vendored snapshot half-written.
+function readJsonChecked(src, label) {
   if (!existsSync(src)) fail(`core ${label} not found at ${src}.`);
+  const buf = readFileSync(src);
+  try {
+    JSON.parse(buf);
+  } catch (err) {
+    fail(`core ${label} at ${src} is not valid JSON: ${err.message}`);
+  }
+  return buf;
 }
 
-const schemaBuf = readFileSync(schemaSrc);
-const conformanceBuf = readFileSync(conformanceSrc);
-JSON.parse(schemaBuf); // fail loudly on malformed source JSON
-JSON.parse(conformanceBuf);
+const schemaBuf = readJsonChecked(schemaSrc, 'schema');
+const conformanceBuf = readJsonChecked(conformanceSrc, 'conformance ABI');
 
 mkdirSync(abisDir, { recursive: true });
 writeFileSync(join(corpusDir, 'wasm-abi.schema.json'), schemaBuf);

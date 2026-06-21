@@ -19,18 +19,30 @@ const vendoredCoreSchemaPath = join(
   '../__fixtures__/corpus/wasm-abi.schema.json',
 );
 
-// JSON-pointer paths where abi-codegen and core intentionally differ. Anything
-// outside this set is real drift and fails the test.
-const KNOWN_DEVIATIONS: { path: string; reason: string }[] = [
+// The two intentional divergences between abi-codegen's bundled schema and
+// core's, matched by CONTENT rather than array position — a positional allowlist
+// (e.g. `.../oneOf/3`) silently breaks when core reorders a `oneOf`. Each branch
+// is removed from whichever schema carries it before the comparison, so the
+// remainder must match exactly.
+const KNOWN_DEVIATIONS: {
+  label: string;
+  location: string[];
+  match: (branch: any) => boolean;
+  reason: string;
+}[] = [
   {
-    path: '/definitions/CollectionType/oneOf/3',
+    label: 'abi-codegen-only `tuple` CollectionType branch',
+    location: ['definitions', 'CollectionType', 'oneOf'],
+    match: (b) => b?.properties?.kind?.const === 'tuple',
     reason:
       'abi-codegen extension: a `tuple` collection branch. Core rejects tuples ' +
       'during normalization so never emits one; the extra branch only widens ' +
       'what abi-codegen accepts and cannot reject a valid core ABI.',
   },
   {
-    path: '/definitions/TypeDef/oneOf/4',
+    label: 'core-only VariableBytesType $ref in TypeDef',
+    location: ['definitions', 'TypeDef', 'oneOf'],
+    match: (b) => b?.['$ref'] === '#/definitions/VariableBytesType',
     reason:
       "core-only dangling $ref to #/definitions/VariableBytesType, which core's " +
       'schema never defines and whose Rust enum has no counterpart. Variable ' +
@@ -40,9 +52,19 @@ const KNOWN_DEVIATIONS: { path: string; reason: string }[] = [
 ];
 
 const STRIP_KEYS = new Set(['description', 'title', '$comment']);
+// JSON-Schema combinators whose element order carries no meaning.
+const ORDER_INSENSITIVE = new Set([
+  'enum',
+  'required',
+  'oneOf',
+  'anyOf',
+  'allOf',
+]);
+
+const canon = (x: unknown): string => JSON.stringify(x);
 
 // Drop human-facing annotations and impose a stable order on order-insensitive
-// arrays so only structural/semantic differences survive.
+// arrays so only real structural/semantic differences survive.
 function normalize(node: unknown): unknown {
   if (Array.isArray(node)) return node.map(normalize);
   if (node && typeof node === 'object') {
@@ -51,20 +73,37 @@ function normalize(node: unknown): unknown {
       if (STRIP_KEYS.has(key)) continue;
       out[key] = normalize(value);
     }
-    if (Array.isArray(out.enum)) out.enum = [...out.enum].sort();
-    if (Array.isArray(out.required)) out.required = [...out.required].sort();
+    for (const key of ORDER_INSENSITIVE) {
+      if (Array.isArray(out[key])) {
+        out[key] = [...(out[key] as unknown[])].sort((a, b) =>
+          canon(a) < canon(b) ? -1 : canon(a) > canon(b) ? 1 : 0,
+        );
+      }
+    }
     return out;
   }
   return node;
 }
 
-function eq(a: unknown, b: unknown): boolean {
-  return JSON.stringify(a) === JSON.stringify(b);
+// Remove the documented deviations by content; the remainder must match exactly.
+function stripDeviations(schema: any): any {
+  for (const dev of KNOWN_DEVIATIONS) {
+    let node: any = schema;
+    for (const key of dev.location.slice(0, -1)) node = node?.[key];
+    const arrKey = dev.location[dev.location.length - 1];
+    if (node && Array.isArray(node[arrKey])) {
+      node[arrKey] = node[arrKey].filter((b: unknown) => !dev.match(b));
+    }
+  }
+  return schema;
 }
 
-// Recursive structural diff producing granular JSON-pointer paths.
+// Recursive structural diff producing granular JSON-pointer paths for a clear
+// failure message. Order-insensitive arrays are already sorted by normalize(),
+// so index-wise comparison here is stable; length/key mismatches are labelled
+// with the side they are missing from rather than collapsed to one path.
 function diffPaths(a: any, b: any, path: string, out: string[]): void {
-  if (eq(a, b)) return;
+  if (canon(a) === canon(b)) return;
   if (
     a === undefined ||
     b === undefined ||
@@ -73,65 +112,62 @@ function diffPaths(a: any, b: any, path: string, out: string[]): void {
     typeof a !== typeof b ||
     typeof a !== 'object'
   ) {
-    out.push(path);
+    out.push(path || '/');
     return;
   }
   if (Array.isArray(a) || Array.isArray(b)) {
     if (!Array.isArray(a) || !Array.isArray(b)) {
-      out.push(path);
+      out.push(`${path} (array vs non-array)`);
       return;
     }
     const n = Math.max(a.length, b.length);
     for (let i = 0; i < n; i++) {
-      if (i >= a.length || i >= b.length) out.push(`${path}/${i}`);
+      if (i >= a.length) out.push(`${path}/${i} (only in core)`);
+      else if (i >= b.length) out.push(`${path}/${i} (only in bundled)`);
       else diffPaths(a[i], b[i], `${path}/${i}`, out);
     }
     return;
   }
   const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
   for (const key of keys) {
-    if (!(key in a) || !(key in b)) out.push(`${path}/${key}`);
+    if (!(key in a)) out.push(`${path}/${key} (only in core)`);
+    else if (!(key in b)) out.push(`${path}/${key} (only in bundled)`);
     else diffPaths(a[key], b[key], `${path}/${key}`, out);
   }
 }
 
-describe('Schema drift check (abi-codegen vs core)', () => {
-  const bundled = normalize(
-    JSON.parse(readFileSync(bundledSchemaPath, 'utf-8')),
-  );
-  const vendoredCore = normalize(
-    JSON.parse(readFileSync(vendoredCoreSchemaPath, 'utf-8')),
-  );
+function loadComparable(path: string): unknown {
+  return stripDeviations(normalize(JSON.parse(readFileSync(path, 'utf-8'))));
+}
 
-  it('diverges from core only in the documented, intentional ways', () => {
-    const allowed = new Set(KNOWN_DEVIATIONS.map((d) => d.path));
+describe('Schema drift check (abi-codegen vs core)', () => {
+  it('matches core exactly outside the documented deviations', () => {
+    const bundled = loadComparable(bundledSchemaPath);
+    const vendoredCore = loadComparable(vendoredCoreSchemaPath);
+
     const paths: string[] = [];
     diffPaths(bundled, vendoredCore, '', paths);
 
-    const unexpected = paths.filter((p) => !allowed.has(p));
     expect(
-      unexpected,
-      'Bundled schema has drifted from core/crates/wasm-abi/wasm-abi.schema.json. ' +
-        'Update src/schema/wasm-abi-v1.schema.json to match (and re-run ' +
-        '`node scripts/sync-corpus.mjs`), or add a documented entry to ' +
-        `KNOWN_DEVIATIONS. Unexpected paths: ${JSON.stringify(unexpected)}`,
+      paths,
+      'Bundled schema has drifted from core wasm-abi.schema.json. Update ' +
+        'src/schema/wasm-abi-v1.schema.json to match (and re-run ' +
+        '`node scripts/sync-corpus.mjs`), or document a new entry in ' +
+        `KNOWN_DEVIATIONS. Divergent paths: ${JSON.stringify(paths)}`,
     ).toEqual([]);
   });
 
-  // When a core checkout is available locally, prove the vendored snapshot is
-  // not stale — i.e. someone changed core without re-running the sync script.
-  // CI runs without core checked out and skips this leg (the vendored snapshot
-  // is the deterministic baseline there).
+  // Staleness guard: when a core checkout is present, the vendored snapshot must
+  // be byte-identical to live core's schema (raw, including descriptions). This
+  // is intentionally STRICTER than the drift test above — its job is to detect
+  // that someone edited core without re-running sync, so any change at all,
+  // cosmetic or not, should force a re-sync. CI without a core checkout skips it.
   const coreDir = resolve(
     process.env.CALIMERO_CORE_DIR || join(__dirname, '../../../core'),
   );
-  const liveCoreSchema = join(
-    coreDir,
-    'crates/wasm-abi/wasm-abi.schema.json',
-  );
-  const haveLiveCore = existsSync(liveCoreSchema);
+  const liveCoreSchema = join(coreDir, 'crates/wasm-abi/wasm-abi.schema.json');
 
-  it.runIf(haveLiveCore)(
+  it.runIf(existsSync(liveCoreSchema))(
     'vendored core schema is in sync with the live core checkout',
     () => {
       const live = JSON.parse(readFileSync(liveCoreSchema, 'utf-8'));
