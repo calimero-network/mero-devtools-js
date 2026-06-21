@@ -133,7 +133,12 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "24"
+          # Match the other jobs (Node 20). On Node 24 the semantic-release 21
+          # toolchain's commit parser silently parses zero commits (DEP0174
+          # "promisify" change), so analyzeCommits returns "no release" and the
+          # publish step no-ops while the job still exits green — which is why
+          # the 1.1.0 release never shipped to npm.
+          node-version: "20"
           registry-url: "https://registry.npmjs.org"
           scope: "@calimero-network"
           token: false
