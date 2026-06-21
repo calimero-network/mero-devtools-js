@@ -13,13 +13,13 @@ WASM-ABI v1 parser and code generator for Calimero applications. This tool gener
 
 ```bash
 # Install the package
-npm install @calimero/abi-codegen
+npm install @calimero-network/abi-codegen
 
 # Use the CLI tool
 npx calimero-abi-codegen -i abi.json -o src
 
 # Use programmatically
-import { loadAbiManifestFromFile } from '@calimero/abi-codegen/parse';
+import { loadAbiManifestFromFile } from '@calimero-network/abi-codegen/parse';
 ```
 
 ### For Developers
@@ -55,10 +55,10 @@ npx calimero-abi-codegen -i abi.json -o src --name-from kv_store.wasm
 ### Options
 
 - `-i, --input <file>` - Input ABI JSON file (default: abi.json)
-- `-o, --outDir <dir>` - Output directory for generated files (default: src)
+- `-o, --output <dir>` - Output directory for generated files (default: src)
 - `--client-name <Name>` - Custom client class name (default: Client)
 - `--name-from <path>` - Derive client name from file path (e.g., wasm file)
-- `--import-path <path>` - Custom import path for CalimeroApp and Context (default: @calimero-network/calimero-client)
+- `--import-path <path>` - Custom import path for mero-react (default: @calimero-network/mero-react)
 - `--validate` - Validate ABI manifest only (no code generation)
 - `-h, --help` - Show help message
 
@@ -148,10 +148,9 @@ The published package includes:
 
 ## 🎯 Generated Files
 
-The tool generates two main files:
+The tool generates a single file:
 
-1. **types.ts** - TypeScript type definitions for all ABI types, methods, and events
-2. **{ClientName}.ts** - The main client class with methods for all ABI functions
+- **{ClientName}.ts** - TypeScript type definitions and client class with methods for all ABI functions
 
 ## 📚 ABI Manifest Format
 

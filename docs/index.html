@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calimero | mero-devtools-js — Dev Tools</title>
+<link rel="stylesheet" href="styles.css">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<meta name="description" content="mero-devtools-js — ABI codegen and app scaffolding tools for Calimero development.">
+<meta property="og:title" content="Calimero | mero-devtools-js — Dev Tools">
+<meta property="og:description" content="ABI code generation and scaffolding CLI tools for Calimero application development.">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary">
+<meta name="theme-color" content="#0d1117">
+</head>
+<body>
+<div class="main">
+<div class="content">
+
+<div class="hero">
+  <h1>Calimero <em>mero-devtools-js</em></h1>
+  <p class="tagline">Developer tools for building Calimero applications — ABI code generation and project scaffolding.</p>
+
+  <div class="g4" style="margin-bottom:36px;">
+    <div class="stat"><div class="v">2</div><div class="l">tools</div></div>
+    <div class="stat"><div class="v">CLI</div><div class="l">interface</div></div>
+    <div class="stat"><div class="v">TS</div><div class="l">output</div></div>
+    <div class="stat"><div class="v">ABI</div><div class="l">v1 format</div></div>
+  </div>
+</div>
+
+<div class="card ga">
+<h2>Tools</h2>
+<div class="g2">
+  <div class="step" style="flex:1;">
+    <div class="n">1</div>
+    <h4>calimero-abi-codegen</h4>
+    <p>Parse a WASM ABI v1 manifest and generate a fully-typed TypeScript client class. One command, zero boilerplate.</p>
+    <div class="typedef" style="margin-top:10px;">
+<span class="field">calimero-abi-codegen</span> <span class="comment">-i abi.json -o src/generated</span>
+    </div>
+    <p style="margin-top:10px;"><a href="cli.html">CLI Reference &rarr;</a> &nbsp;&nbsp; <a href="api-reference.html">Programmatic API &rarr;</a></p>
+  </div>
+  <div class="step" style="flex:1;">
+    <div class="n">2</div>
+    <h4>create-mero-app</h4>
+    <p>Scaffold a new Calimero application from a template. Interactive prompts, GitHub clone, git init.</p>
+    <div class="typedef" style="margin-top:10px;">
+<span class="field">npx create-mero-app</span>
+    </div>
+    <p style="margin-top:10px;"><a href="cli.html#create-mero-app">create-mero-app docs &rarr;</a></p>
+  </div>
+</div>
+</div>
+
+<div class="card gb">
+<h2>Codegen Pipeline</h2>
+<svg viewBox="0 0 820 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="ga3"><feDropShadow dx="0" dy="0" stdDeviation="3" flood-color="#f59e0b" flood-opacity="0.25"/></filter>
+    <filter id="gb3"><feDropShadow dx="0" dy="0" stdDeviation="3" flood-color="#a5ff11" flood-opacity="0.25"/></filter>
+    <filter id="gc3"><feDropShadow dx="0" dy="0" stdDeviation="3" flood-color="#58a6ff" flood-opacity="0.25"/></filter>
+    <filter id="gd3"><feDropShadow dx="0" dy="0" stdDeviation="3" flood-color="#f778ba" flood-opacity="0.25"/></filter>
+    <marker id="arr3" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L6,3 z" fill="#444c56"/>
+    </marker>
+  </defs>
+  <!-- ABI JSON -->
+  <rect x="10" y="55" width="140" height="70" rx="10" fill="#f59e0b10" stroke="#f59e0b" stroke-width="1.4" filter="url(#ga3)"/>
+  <text x="80" y="83" text-anchor="middle" fill="#f59e0b" font-family="JetBrains Mono" font-size="12" font-weight="700">abi.json</text>
+  <text x="80" y="100" text-anchor="middle" fill="#6b6b80" font-family="DM Sans" font-size="10">WASM ABI v1</text>
+  <text x="80" y="116" text-anchor="middle" fill="#f59e0b80" font-family="JetBrains Mono" font-size="8">methods · events · types</text>
+  <!-- Arrow -->
+  <path d="M151 90 L185 90" stroke="#444c56" stroke-width="1.5" marker-end="url(#arr3)"/>
+  <!-- Parser -->
+  <rect x="186" y="55" width="150" height="70" rx="10" fill="#a5ff1108" stroke="#a5ff11" stroke-width="1.4" filter="url(#gb3)"/>
+  <text x="261" y="83" text-anchor="middle" fill="#a5ff11" font-family="JetBrains Mono" font-size="12" font-weight="700">Parser</text>
+  <text x="261" y="100" text-anchor="middle" fill="#6b6b80" font-family="DM Sans" font-size="10">JSON Schema validation</text>
+  <text x="261" y="116" text-anchor="middle" fill="#a5ff1180" font-family="JetBrains Mono" font-size="8">AbiManifest</text>
+  <!-- Arrow -->
+  <path d="M337 90 L371 90" stroke="#444c56" stroke-width="1.5" marker-end="url(#arr3)"/>
+  <!-- Generator -->
+  <rect x="372" y="55" width="150" height="70" rx="10" fill="#58a6ff08" stroke="#58a6ff" stroke-width="1.4" filter="url(#gc3)"/>
+  <text x="447" y="83" text-anchor="middle" fill="#58a6ff" font-family="JetBrains Mono" font-size="12" font-weight="700">Generator</text>
+  <text x="447" y="100" text-anchor="middle" fill="#6b6b80" font-family="DM Sans" font-size="10">type + client emit</text>
+  <text x="447" y="116" text-anchor="middle" fill="#58a6ff80" font-family="JetBrains Mono" font-size="8">generateClient()</text>
+  <!-- Arrow -->
+  <path d="M523 90 L557 90" stroke="#444c56" stroke-width="1.5" marker-end="url(#arr3)"/>
+  <!-- Output -->
+  <rect x="558" y="55" width="250" height="70" rx="10" fill="#f778ba08" stroke="#f778ba" stroke-width="1.4" filter="url(#gd3)"/>
+  <text x="683" y="83" text-anchor="middle" fill="#f778ba" font-family="JetBrains Mono" font-size="12" font-weight="700">TypeScript Client</text>
+  <text x="683" y="100" text-anchor="middle" fill="#6b6b80" font-family="DM Sans" font-size="10">interfaces + class + methods</text>
+  <text x="683" y="116" text-anchor="middle" fill="#f778ba80" font-family="JetBrains Mono" font-size="8">KvStoreClient.ts</text>
+</svg>
+</div>
+
+<div class="card gc">
+<h2>Quick Start</h2>
+<div class="g3">
+  <div class="step"><div class="n">1</div><h4>Install</h4>
+    <div class="typedef" style="margin-top:6px;"><span class="field">npm install @calimero-network/abi-codegen</span></div>
+  </div>
+  <div class="step"><div class="n">2</div><h4>Generate</h4>
+    <div class="typedef" style="margin-top:6px;"><span class="field">calimero-abi-codegen \</span><br>&nbsp;&nbsp;<span class="field">-i abi.json \</span><br>&nbsp;&nbsp;<span class="field">-o src/generated</span></div>
+  </div>
+  <div class="step"><div class="n">3</div><h4>Use</h4>
+    <div class="typedef" style="margin-top:6px;"><span class="kw">import</span> &#123; <span class="ty">KvStoreClient</span> &#125; <span class="kw">from</span> <span class="comment">'./generated/KvStoreClient'</span>;<br><span class="kw">const</span> <span class="field">c</span> = <span class="kw">new</span> <span class="ty">KvStoreClient</span>(sdk.<span class="field">rpc</span>, <span class="field">ctxId</span>, <span class="field">execId</span>);<br><span class="kw">await</span> <span class="field">c</span>.<span class="ty">getValue</span>(<span class="comment">'my-key'</span>);</div>
+  </div>
+</div>
+</div>
+
+<div class="card gd">
+<h2>Package Structure</h2>
+<p style="margin-bottom:12px;">This monorepo contains three packages:</p>
+<div class="fr"><div class="fp">@calimero-network/abi-codegen</div><div class="fd">ABI parser, TypeScript generator, and <span class="code">calimero-abi-codegen</span> CLI. Published to npm.</div></div>
+<div class="fr"><div class="fp">create-mero-app</div><div class="fd">Project scaffolding CLI — <span class="code">npx create-mero-app</span>. Clones templates from GitHub.</div></div>
+<div class="fr"><div class="fp">codegen-example</div><div class="fd">Reference example showing generated output for the ABI conformance test fixture.</div></div>
+</div>
+
+</div>
+</div>
+<script src="nav.js"></script>
+</body>
+</html>
