@@ -136,8 +136,12 @@ function diffPaths(a: any, b: any, path: string, out: string[]): void {
   }
 }
 
+// Parse FRESH each call so stripDeviations' in-place edits never leak between
+// tests. Strip the documented deviations first, THEN normalize, so the final
+// step is the sort — the order-insensitive arrays are guaranteed sorted *after*
+// any branch removal, keeping the index-wise diff stable.
 function loadComparable(path: string): unknown {
-  return stripDeviations(normalize(JSON.parse(readFileSync(path, 'utf-8'))));
+  return normalize(stripDeviations(JSON.parse(readFileSync(path, 'utf-8'))));
 }
 
 describe('Schema drift check (abi-codegen vs core)', () => {
