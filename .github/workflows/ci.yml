@@ -36,6 +36,65 @@ jobs:
       - name: Test code generation
         run: cd abi-codegen && pnpm run generate:example
 
+  # Validate the bundled schema + parser against the LATEST CORE RELEASE, not a
+  # vendored snapshot — so the tool can't silently drift from what consumers
+  # actually run. No core build: it sparse-checks-out core's two checked-in
+  # reference files (schema + conformance ABI) at the latest release tag (RCs
+  # included, like merobox), re-syncs from them, and runs the suite. Goes RED if
+  # a core release advances past the bundled schema (outside documented
+  # deviations). Live breadth/all-11 is covered separately on the core side.
+  schema-parity-released-core:
+    name: Schema parity vs released core
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout abi-codegen
+        uses: actions/checkout@v4
+
+      - name: Resolve latest core release tag
+        id: coretag
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG=$(gh release list --repo calimero-network/core --limit 1 --json tagName --jq '.[0].tagName')
+          echo "Latest core release: $TAG"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout core reference files at release tag (no build)
+        uses: actions/checkout@v4
+        with:
+          repository: calimero-network/core
+          ref: ${{ steps.coretag.outputs.tag }}
+          path: core
+          sparse-checkout: |
+            crates/wasm-abi/wasm-abi.schema.json
+            apps/abi_conformance/abi.expected.json
+          sparse-checkout-cone-mode: false
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build packages
+        run: pnpm run build
+
+      - name: Sync reference files from released core
+        run: cd abi-codegen && node scripts/sync-corpus.mjs
+        env:
+          CALIMERO_CORE_DIR: ${{ github.workspace }}/core
+
+      - name: Schema parity + real-ABI tests against released core
+        run: cd abi-codegen && pnpm test
+        env:
+          CALIMERO_CORE_DIR: ${{ github.workspace }}/core
+
   release:
     needs: test
     runs-on: ubuntu-latest
