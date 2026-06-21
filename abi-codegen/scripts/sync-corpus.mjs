@@ -1,26 +1,27 @@
 #!/usr/bin/env node
-// Sync the cross-repo ABI corpus and the upstream JSON Schema from calimero core
-// (and mero-drive) into a committed snapshot under __fixtures__/corpus/.
+// Sync the two cross-repo reference files from calimero core into the committed
+// snapshot under __fixtures__/corpus/:
 //
-// The snapshot is what CI parses — vendoring keeps the cross-repo guard
-// deterministic and checkout-free. Re-run this whenever core's ABIs or schema
-// change, then commit the result:
+//   • wasm-abi.schema.json                  — core's JSON Schema (the schema-parity
+//                                             reference for schema-drift / enum tests)
+//   • abis/core-abi_conformance-expected.json — core's richest real ABI (the one
+//                                             real-manifest end-to-end sample)
+//
+// Both are CHECKED-IN files in core, so this needs no core build and no other
+// repos — it works against a plain checkout or a release-tag checkout. The full
+// multi-app breadth and the "all 11 CRDT types are exercised" guarantee live on
+// the core side (core builds every app and validates its ABI against this tool),
+// so they are deliberately not vendored here.
+//
+// Re-run whenever core's schema or conformance ABI changes, then commit:
 //
 //   node scripts/sync-corpus.mjs
 //
-// Source repos are resolved relative to this package, override with env vars:
-//   CALIMERO_CORE_DIR        (default: ../../core)
-//   CALIMERO_MERO_DRIVE_DIR  (default: ../../mero-drive)
+// Core is resolved relative to this package; override with CALIMERO_CORE_DIR
+// (e.g. point it at a checkout of the latest core release tag).
 
 import { createHash } from 'crypto';
-import {
-  readFileSync,
-  writeFileSync,
-  readdirSync,
-  existsSync,
-  rmSync,
-  mkdirSync,
-} from 'fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { dirname, join, relative, resolve } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -29,10 +30,6 @@ const pkgRoot = resolve(__dirname, '..');
 
 const coreDir = resolve(
   process.env.CALIMERO_CORE_DIR || join(pkgRoot, '..', '..', 'core'),
-);
-const meroDriveDir = resolve(
-  process.env.CALIMERO_MERO_DRIVE_DIR ||
-    join(pkgRoot, '..', '..', 'mero-drive'),
 );
 
 const corpusDir = join(pkgRoot, '__fixtures__', 'corpus');
@@ -45,98 +42,57 @@ function fail(msg) {
 
 if (!existsSync(coreDir)) {
   fail(
-    `core repo not found at ${coreDir}. Set CALIMERO_CORE_DIR to its location.`,
-  );
-}
-if (!existsSync(meroDriveDir)) {
-  fail(
-    `mero-drive repo not found at ${meroDriveDir}. Set CALIMERO_MERO_DRIVE_DIR to its location.`,
+    `core repo not found at ${coreDir}. Set CALIMERO_CORE_DIR to its location ` +
+      `(e.g. a checkout of the latest core release tag).`,
   );
 }
 
-// Build the list of vendored entries. `repo` + `src` yield a stable,
-// machine-independent provenance path in SOURCES.json.
-const entries = [];
+const sha = (buf) => createHash('sha256').update(buf).digest('hex');
 
-// Every core app's emitted ABI.
-const appsDir = join(coreDir, 'apps');
-for (const app of readdirSync(appsDir).sort()) {
-  const src = join(appsDir, app, 'res', 'abi.json');
-  if (existsSync(src)) {
-    entries.push({ name: `core-apps-${app}.json`, repo: 'core', base: coreDir, src });
-  }
-}
-
-// The conformance app's checked-in expected ABI (the richest single manifest).
-const conformanceExpected = join(
+// Validate sources are readable BEFORE touching the vendored snapshot, so a
+// partial/missing checkout can't leave the corpus half-written.
+const schemaSrc = join(coreDir, 'crates', 'wasm-abi', 'wasm-abi.schema.json');
+const conformanceSrc = join(
   coreDir,
   'apps',
   'abi_conformance',
   'abi.expected.json',
 );
-if (existsSync(conformanceExpected)) {
-  entries.push({
-    name: 'core-abi_conformance-expected.json',
-    repo: 'core',
-    base: coreDir,
-    src: conformanceExpected,
-  });
-}
-
-// mero-drive's two real consumer ABIs.
-for (const crate of ['docs', 'registry']) {
-  const src = join(meroDriveDir, 'logic', 'crates', crate, 'res', 'abi.json');
-  if (existsSync(src)) {
-    entries.push({
-      name: `mero-drive-${crate}.json`,
-      repo: 'mero-drive',
-      base: meroDriveDir,
-      src,
-    });
-  }
-}
-
-if (entries.length === 0) {
-  fail('no ABI files found — check the source repo paths.');
-}
-
-const schemaSrc = join(coreDir, 'crates', 'wasm-abi', 'wasm-abi.schema.json');
-if (!existsSync(schemaSrc)) {
-  fail(`core schema not found at ${schemaSrc}.`);
-}
-
-const sha = (buf) => createHash('sha256').update(buf).digest('hex');
-
-// Rewrite the snapshot from scratch so deletions upstream propagate.
-rmSync(corpusDir, { recursive: true, force: true });
-mkdirSync(abisDir, { recursive: true });
-
-const abis = [];
-for (const { name, repo, base, src } of entries) {
-  const buf = readFileSync(src);
-  JSON.parse(buf); // fail loudly on malformed source JSON
-  writeFileSync(join(abisDir, name), buf);
-  abis.push({
-    name,
-    source: `${repo}/${relative(base, src)}`,
-    sha256: sha(buf),
-  });
+for (const [label, src] of [
+  ['schema', schemaSrc],
+  ['conformance ABI', conformanceSrc],
+]) {
+  if (!existsSync(src)) fail(`core ${label} not found at ${src}.`);
 }
 
 const schemaBuf = readFileSync(schemaSrc);
-JSON.parse(schemaBuf);
+const conformanceBuf = readFileSync(conformanceSrc);
+JSON.parse(schemaBuf); // fail loudly on malformed source JSON
+JSON.parse(conformanceBuf);
+
+mkdirSync(abisDir, { recursive: true });
 writeFileSync(join(corpusDir, 'wasm-abi.schema.json'), schemaBuf);
+writeFileSync(
+  join(abisDir, 'core-abi_conformance-expected.json'),
+  conformanceBuf,
+);
 
 const sources = {
   description:
-    'Vendored snapshot of the calimero core ABI corpus and JSON Schema. ' +
+    'Vendored reference files from calimero core (checked-in sources, no build). ' +
     'Regenerate with `node scripts/sync-corpus.mjs`; do not hand-edit.',
-  abis,
   schema: {
     name: 'wasm-abi.schema.json',
     source: `core/${relative(coreDir, schemaSrc)}`,
     sha256: sha(schemaBuf),
   },
+  abis: [
+    {
+      name: 'core-abi_conformance-expected.json',
+      source: `core/${relative(coreDir, conformanceSrc)}`,
+      sha256: sha(conformanceBuf),
+    },
+  ],
 };
 writeFileSync(
   join(corpusDir, 'SOURCES.json'),
@@ -144,5 +100,5 @@ writeFileSync(
 );
 
 console.log(
-  `✓ synced ${abis.length} ABIs + schema into __fixtures__/corpus/`,
+  '✓ synced wasm-abi.schema.json + conformance ABI into __fixtures__/corpus/',
 );

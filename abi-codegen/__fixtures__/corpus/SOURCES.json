@@ -1,110 +1,15 @@
 {
-  "description": "Vendored snapshot of the calimero core ABI corpus and JSON Schema. Regenerate with `node scripts/sync-corpus.mjs`; do not hand-edit.",
-  "abis": [
-    {
-      "name": "core-apps-abi_conformance.json",
-      "source": "core/apps/abi_conformance/res/abi.json",
-      "sha256": "3e6e700a9d5b024a4cc26fe107d9f3c4379d3f5d655fac65b86dff5fafa9497a"
-    },
-    {
-      "name": "core-apps-access-control.json",
-      "source": "core/apps/access-control/res/abi.json",
-      "sha256": "f04828ad77c7c742909556f0ad89acab63d1ae1e9e340881d384d9ba51426ab9"
-    },
-    {
-      "name": "core-apps-blobs.json",
-      "source": "core/apps/blobs/res/abi.json",
-      "sha256": "e1b9e7e2df9a7f0e08ea5faaca58fd499d87362d04c05eef9df007afcca41829"
-    },
-    {
-      "name": "core-apps-collaborative-editor.json",
-      "source": "core/apps/collaborative-editor/res/abi.json",
-      "sha256": "bd40e04fdbf293c6cbe9edff1007d013b941ccf843152fcfcd8ded5e3f9a4038"
-    },
-    {
-      "name": "core-apps-components-demo.json",
-      "source": "core/apps/components-demo/res/abi.json",
-      "sha256": "6a45d4feec3d383db03cc1a272c543e1e0af38d9d78d1c86b90006c7dbb014e2"
-    },
-    {
-      "name": "core-apps-demo-blockchain-integrations.json",
-      "source": "core/apps/demo-blockchain-integrations/res/abi.json",
-      "sha256": "1589dfba39a4fb22c3ed7d1153f53991e0eaa3b948b2a5fbe8b61d69e459384d"
-    },
-    {
-      "name": "core-apps-e2e-kv-store.json",
-      "source": "core/apps/e2e-kv-store/res/abi.json",
-      "sha256": "2f8ce7ccb3f93c95c0bb1f642b6db89952b649b2a35bb376f4e0f73da235e9ed"
-    },
-    {
-      "name": "core-apps-kv-store.json",
-      "source": "core/apps/kv-store/res/abi.json",
-      "sha256": "ee5b66c3d29224f4e2271a56878ee0ef92b80a97d8d7ae7a1859c75be370e676"
-    },
-    {
-      "name": "core-apps-kv-store-init.json",
-      "source": "core/apps/kv-store-init/res/abi.json",
-      "sha256": "cdc4ace025cb06a1cdb001681b145a223c630d7609ff3a1f2ccbc493e1c3d328"
-    },
-    {
-      "name": "core-apps-kv-store-with-handlers.json",
-      "source": "core/apps/kv-store-with-handlers/res/abi.json",
-      "sha256": "85e47429aba20e6a371d323362e4337211eaee3e29867021e5b468d67ccef63b"
-    },
-    {
-      "name": "core-apps-kv-store-with-shared-storage.json",
-      "source": "core/apps/kv-store-with-shared-storage/res/abi.json",
-      "sha256": "5f2d9e87426583e49a2bfc4f88c6505027ede6d59966f435e61057ba9d6642b6"
-    },
-    {
-      "name": "core-apps-kv-store-with-user-and-frozen-storage.json",
-      "source": "core/apps/kv-store-with-user-and-frozen-storage/res/abi.json",
-      "sha256": "98116fbead3ca93d25d4255bced1a794cfe20a4ac76f2a40c4872c8eec5106d2"
-    },
-    {
-      "name": "core-apps-scaffolding-e2e.json",
-      "source": "core/apps/scaffolding-e2e/res/abi.json",
-      "sha256": "d256e23ff1f2249535c2e69a6cbf46ac992ac8cfaa2bf6360c9d5e50e4069b7a"
-    },
-    {
-      "name": "core-apps-sorted-kv-store.json",
-      "source": "core/apps/sorted-kv-store/res/abi.json",
-      "sha256": "e5edf2ec89bb1279b60621d311662213b004a7a4c3e1f2b75088f8c2de453e0f"
-    },
-    {
-      "name": "core-apps-sorted-set-store.json",
-      "source": "core/apps/sorted-set-store/res/abi.json",
-      "sha256": "da2bc735f09bedbe051a626fc594523b6a07991faf54d0e61e94f897482e78c5"
-    },
-    {
-      "name": "core-apps-state-schema-conformance.json",
-      "source": "core/apps/state-schema-conformance/res/abi.json",
-      "sha256": "dfa9a2033004b0c7224d7c5afa19db0bc91edc7e5556009e04c5eb23266f5140"
-    },
-    {
-      "name": "core-apps-xcall-example.json",
-      "source": "core/apps/xcall-example/res/abi.json",
-      "sha256": "f3c4c61e058a25cd08e7fd6370e29a7808453cc8222aafb542c8d8cd5ed87a6d"
-    },
-    {
-      "name": "core-abi_conformance-expected.json",
-      "source": "core/apps/abi_conformance/abi.expected.json",
-      "sha256": "3e6e700a9d5b024a4cc26fe107d9f3c4379d3f5d655fac65b86dff5fafa9497a"
-    },
-    {
-      "name": "mero-drive-docs.json",
-      "source": "mero-drive/logic/crates/docs/res/abi.json",
-      "sha256": "ba6678a0ddddc7f66869fa6d657eb1dd9245a4e0a0e5a599a3909cd6f21f97cc"
-    },
-    {
-      "name": "mero-drive-registry.json",
-      "source": "mero-drive/logic/crates/registry/res/abi.json",
-      "sha256": "2115e7a340e6e40a3cacdf19482f74a22a77ae467fa6d0de743252a7dfb0a3a3"
-    }
-  ],
+  "description": "Vendored reference files from calimero core (checked-in sources, no build). Regenerate with `node scripts/sync-corpus.mjs`; do not hand-edit.",
   "schema": {
     "name": "wasm-abi.schema.json",
     "source": "core/crates/wasm-abi/wasm-abi.schema.json",
     "sha256": "37a6c2733d6a9e369645cfe47f985df4e5ad0612b68d8ff6ff691d257373fbf0"
-  }
+  },
+  "abis": [
+    {
+      "name": "core-abi_conformance-expected.json",
+      "source": "core/apps/abi_conformance/abi.expected.json",
+      "sha256": "2312808eb45b73294bf81ae4d7cfa42434c871541409c98737200e5aeae26cb5"
+    }
+  ]
 }
