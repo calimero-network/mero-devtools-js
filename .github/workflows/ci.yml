@@ -96,7 +96,7 @@ jobs:
           CALIMERO_CORE_DIR: ${{ github.workspace }}/core
 
   release:
-    needs: test
+    needs: [test, schema-parity-released-core]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     permissions:

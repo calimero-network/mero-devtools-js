@@ -76,6 +76,13 @@ writeFileSync(
   join(abisDir, 'core-abi_conformance-expected.json'),
   conformanceBuf,
 );
+// Keep the PRIMARY fixture (used by validate:abi, generate:example, and the unit
+// specs) in lockstep with the corpus copy — they are the same core manifest, so
+// syncing one without the other would let them silently diverge.
+writeFileSync(
+  join(pkgRoot, '__fixtures__', 'abi_conformance.json'),
+  conformanceBuf,
+);
 
 const sources = {
   description:
