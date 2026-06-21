@@ -62,7 +62,7 @@
     <div class="fr"><div class="fp">2. Type definitions</div><div class="fd">One <span class="code">interface</span> per record, one union type per variant, one <span class="code">type</span> alias per alias definition. All referenced types.</div></div>
   </div>
   <div>
-    <div class="fr"><div class="fp">3. CalimeroBytes</div><div class="fd">A minimal utility class for hex ↔ Uint8Array conversion, emitted if the manifest uses <span class="code">bytes</span> types.</div></div>
+    <div class="fr"><div class="fp">3. CalimeroBytes</div><div class="fd">A minimal utility class for byte (de)serialisation, emitted if the manifest uses <span class="code">bytes</span> types. The ABI <span class="code">bytes</span> type carries no mandated wire encoding — <span class="code">encoding</span> is an optional free-form hint most SDKs omit.</div></div>
     <div class="fr"><div class="fp">4. Client class</div><div class="fd">One typed method per ABI method. Each wraps <span class="code">rpc.execute()</span> with correct serialisation.</div></div>
   </div>
 </div>
