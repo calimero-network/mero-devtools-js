@@ -5,7 +5,7 @@
 <title>Calimero | mero-devtools-js — ABI Format</title>
 <link rel="stylesheet" href="styles.css">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
-<meta name="description" content="WASM ABI v1 manifest format — schema, types, methods, and events.">
+<meta name="description" content="WASM ABI v1 manifest format — schema, types, methods, events, intent, and migrations.">
 <meta name="theme-color" content="#0d1117">
 </head>
 <body>
@@ -14,7 +14,7 @@
 <div class="breadcrumb"><a href="index.html">Home</a><span class="sep">/</span><span>ABI Format</span></div>
 
 <h1>ABI Format</h1>
-<p class="page-subtitle">WASM ABI v1 manifest — the JSON schema the codegen tool reads</p>
+<p class="page-subtitle">WASM ABI v1 manifest — the JSON the codegen tool reads. Shapes here mirror <span class="code">wasm-abi-v1.schema.json</span> exactly; every example below passes <span class="code">--validate</span>.</p>
 
 <div class="card ga">
 <h2>Manifest Structure</h2>
@@ -22,10 +22,12 @@
 <div class="typedef">
 <span class="kw">interface</span> <span class="ty">AbiManifest</span> &#123;<br>
 &nbsp;&nbsp;<span class="field">schema_version</span>: <span class="comment">'wasm-abi/1'</span>;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">// must be exactly 'wasm-abi/1'</span><br>
-&nbsp;&nbsp;<span class="field">types</span>: <span class="ty">Record</span>&lt;<span class="ty">string</span>, <span class="ty">AbiTypeDef</span>&gt;;&nbsp;&nbsp;<span class="comment">// named type definitions</span><br>
-&nbsp;&nbsp;<span class="field">methods</span>: <span class="ty">AbiMethod</span>[];&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">// callable contract methods</span><br>
-&nbsp;&nbsp;<span class="field">events</span>: <span class="ty">AbiEvent</span>[];&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">// emitted events</span><br>
-&nbsp;&nbsp;<span class="field">state_root</span>?: <span class="ty">string</span>;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">// optional state root type reference</span><br>
+&nbsp;&nbsp;<span class="field">types</span>: <span class="ty">Record</span>&lt;<span class="ty">string</span>, <span class="ty">AbiTypeDef</span>&gt;;&nbsp;&nbsp;&nbsp;<span class="comment">// named type definitions</span><br>
+&nbsp;&nbsp;<span class="field">methods</span>: <span class="ty">AbiMethod</span>[];&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">// callable contract methods</span><br>
+&nbsp;&nbsp;<span class="field">events</span>: <span class="ty">AbiEvent</span>[];&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">// emitted events</span><br>
+&nbsp;&nbsp;<span class="field">state_root</span>?: <span class="ty">string</span>;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">// type name backing contract state</span><br>
+&nbsp;&nbsp;<span class="field">state_version</span>?: <span class="ty">number</span>;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">// state schema version (migrations)</span><br>
+&nbsp;&nbsp;<span class="field">migrations</span>?: <span class="ty">AbiMigrationEdge</span>[];&nbsp;<span class="comment">// declared migration edges</span><br>
 &#125;
 </div>
 </div>
@@ -38,22 +40,25 @@
 &nbsp;&nbsp;<span class="comment">"types"</span>: &#123;<br>
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">"SetEntryRequest"</span>: &#123;<br>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">"kind"</span>: <span class="comment">"record"</span>,<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">"fields"</span>: &#123;<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">"key"</span>: &#123; <span class="comment">"kind"</span>: <span class="comment">"string"</span> &#125;,<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">"value"</span>: &#123; <span class="comment">"kind"</span>: <span class="comment">"string"</span> &#125;<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&#125;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">"fields"</span>: [<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&#123; <span class="comment">"name"</span>: <span class="comment">"key"</span>, <span class="comment">"type"</span>: &#123; <span class="comment">"kind"</span>: <span class="comment">"string"</span> &#125; &#125;,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&#123; <span class="comment">"name"</span>: <span class="comment">"value"</span>, <span class="comment">"type"</span>: &#123; <span class="comment">"kind"</span>: <span class="comment">"string"</span> &#125; &#125;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;]<br>
 &nbsp;&nbsp;&nbsp;&nbsp;&#125;<br>
 &nbsp;&nbsp;&#125;,<br>
 &nbsp;&nbsp;<span class="comment">"methods"</span>: [<br>
 &nbsp;&nbsp;&nbsp;&nbsp;&#123;<br>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">"name"</span>: <span class="comment">"get_value"</span>,<br>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">"params"</span>: [&#123; <span class="comment">"name"</span>: <span class="comment">"key"</span>, <span class="comment">"type"</span>: &#123; <span class="comment">"kind"</span>: <span class="comment">"string"</span> &#125; &#125;],<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">"returns"</span>: &#123; <span class="comment">"kind"</span>: <span class="comment">"string"</span> &#125;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">"returns"</span>: &#123; <span class="comment">"kind"</span>: <span class="comment">"string"</span> &#125;,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">"returns_nullable"</span>: <span class="kw">true</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">"intent"</span>: <span class="comment">"read_only"</span><br>
 &nbsp;&nbsp;&nbsp;&nbsp;&#125;,<br>
 &nbsp;&nbsp;&nbsp;&nbsp;&#123;<br>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">"name"</span>: <span class="comment">"set_value"</span>,<br>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">"params"</span>: [&#123; <span class="comment">"name"</span>: <span class="comment">"req"</span>, <span class="comment">"type"</span>: &#123; <span class="comment">"$ref"</span>: <span class="comment">"SetEntryRequest"</span> &#125; &#125;],<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">"returns"</span>: &#123; <span class="comment">"kind"</span>: <span class="comment">"unit"</span> &#125;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">"returns"</span>: &#123; <span class="comment">"kind"</span>: <span class="comment">"unit"</span> &#125;,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">"intent"</span>: <span class="comment">"mutating"</span><br>
 &nbsp;&nbsp;&nbsp;&nbsp;&#125;<br>
 &nbsp;&nbsp;],<br>
 &nbsp;&nbsp;<span class="comment">"events"</span>: []<br>
@@ -77,32 +82,51 @@
     <div class="fr"><div class="fp">&#123; "kind": "u64" &#125;</div><div class="fd">Unsigned 64-bit integer</div></div>
     <div class="fr"><div class="fp">&#123; "kind": "f32" &#125;</div><div class="fd">32-bit float</div></div>
     <div class="fr"><div class="fp">&#123; "kind": "f64" &#125;</div><div class="fd">64-bit float</div></div>
-    <div class="fr"><div class="fp">&#123; "kind": "bytes", "encoding": "hex" &#125;</div><div class="fd">Byte array (hex-encoded). Add <span class="code">"size": N</span> for fixed-length.</div></div>
+    <div class="fr"><div class="fp">&#123; "kind": "bytes" &#125;</div><div class="fd">Byte array. Optional <span class="code">"size": N</span> for fixed length; optional free-form <span class="code">"encoding"</span> hint (most SDKs omit it).</div></div>
   </div>
 </div>
 </div>
 
 <div class="card gd">
 <h2>Collection Types</h2>
-<div class="fr"><div class="fp">list</div><div class="fd"><span class="code">&#123; "kind": "list", "items": &lt;type&gt; &#125;</span> — array of items. Optional <span class="code">"crdt_type"</span> for CRDT-backed lists.</div></div>
+<div class="fr"><div class="fp">list</div><div class="fd"><span class="code">&#123; "kind": "list", "items": &lt;type&gt; &#125;</span> — array of items.</div></div>
 <div class="fr"><div class="fp">map</div><div class="fd"><span class="code">&#123; "kind": "map", "key": &lt;type&gt;, "value": &lt;type&gt; &#125;</span> — key-value map.</div></div>
-<div class="fr"><div class="fp">tuple</div><div class="fd"><span class="code">&#123; "kind": "tuple", "elements": [&lt;type&gt;, ...] &#125;</span> — fixed-length heterogeneous tuple.</div></div>
+<div class="fr"><div class="fp">record</div><div class="fd"><span class="code">&#123; "kind": "record", "fields": [&lt;field&gt;, ...] &#125;</span> — inline struct; may carry <span class="code">"inner_type"</span> for a CRDT wrapper.</div></div>
+<div class="fr"><div class="fp">tuple</div><div class="fd"><span class="code">&#123; "kind": "tuple", "elements": [&lt;type&gt;, ...] &#125;</span> — fixed-length heterogeneous tuple. (Accepted by the codegen; core normalizes tuples away and does not emit them.)</div></div>
 <div class="fr"><div class="fp">$ref</div><div class="fd"><span class="code">&#123; "$ref": "TypeName" &#125;</span> — reference to a named type in <span class="code">types</span>.</div></div>
+<p style="margin-top:14px;margin-bottom:8px;">Any collection may carry an optional <span class="code">"crdt_type"</span> marking it as a CRDT-backed state collection. The 11 supported values:</p>
+<div class="g2">
+  <div>
+    <div class="fr"><div class="fp">lww_register</div><div class="fd">Last-writer-wins register</div></div>
+    <div class="fr"><div class="fp">counter</div><div class="fd">Additive counter</div></div>
+    <div class="fr"><div class="fp">vector</div><div class="fd">Growable list</div></div>
+    <div class="fr"><div class="fp">replicated_growable_array</div><div class="fd">RGA ordered list</div></div>
+    <div class="fr"><div class="fp">authored_vector</div><div class="fd">Per-author vector</div></div>
+    <div class="fr"><div class="fp">shared_storage</div><div class="fd">Shared storage region</div></div>
+  </div>
+  <div>
+    <div class="fr"><div class="fp">unordered_map</div><div class="fd">Hash map</div></div>
+    <div class="fr"><div class="fp">sorted_map</div><div class="fd">Key-ordered map</div></div>
+    <div class="fr"><div class="fp">authored_map</div><div class="fd">Per-author map</div></div>
+    <div class="fr"><div class="fp">unordered_set</div><div class="fd">Hash set</div></div>
+    <div class="fr"><div class="fp">sorted_set</div><div class="fd">Ordered set</div></div>
+  </div>
+</div>
 </div>
 
 <div class="card ge">
 <h2>Named Type Definitions</h2>
-<p style="margin-bottom:12px;">The <span class="code">types</span> map defines reusable named types:</p>
+<p style="margin-bottom:12px;">The <span class="code">types</span> map defines reusable named types. A record's <span class="code">fields</span> is an <strong>array</strong> of <span class="code">&#123; name, type &#125;</span>; a variant's <span class="code">variants</span> is an <strong>array</strong> of <span class="code">&#123; name, payload? &#125;</span>:</p>
 <div class="g2">
   <div>
     <h4 style="color:#8b949e;font-size:12px;text-transform:uppercase;margin-bottom:8px;">Record (struct)</h4>
     <div class="typedef">
 &#123;<br>
 &nbsp;&nbsp;<span class="comment">"kind"</span>: <span class="comment">"record"</span>,<br>
-&nbsp;&nbsp;<span class="comment">"fields"</span>: &#123;<br>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">"name"</span>: &#123; <span class="comment">"kind"</span>: <span class="comment">"string"</span> &#125;,<br>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">"count"</span>: &#123; <span class="comment">"kind"</span>: <span class="comment">"u32"</span> &#125;<br>
-&nbsp;&nbsp;&#125;<br>
+&nbsp;&nbsp;<span class="comment">"fields"</span>: [<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&#123; <span class="comment">"name"</span>: <span class="comment">"name"</span>, <span class="comment">"type"</span>: &#123; <span class="comment">"kind"</span>: <span class="comment">"string"</span> &#125; &#125;,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&#123; <span class="comment">"name"</span>: <span class="comment">"count"</span>, <span class="comment">"type"</span>: &#123; <span class="comment">"kind"</span>: <span class="comment">"u32"</span> &#125; &#125;<br>
+&nbsp;&nbsp;]<br>
 &#125;
     </div>
   </div>
@@ -111,42 +135,66 @@
     <div class="typedef">
 &#123;<br>
 &nbsp;&nbsp;<span class="comment">"kind"</span>: <span class="comment">"variant"</span>,<br>
-&nbsp;&nbsp;<span class="comment">"cases"</span>: &#123;<br>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">"Pending"</span>: <span class="ty">null</span>,<br>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">"Done"</span>: &#123; <span class="comment">"kind"</span>: <span class="comment">"string"</span> &#125;<br>
-&nbsp;&nbsp;&#125;<br>
+&nbsp;&nbsp;<span class="comment">"variants"</span>: [<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&#123; <span class="comment">"name"</span>: <span class="comment">"Pending"</span> &#125;,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&#123; <span class="comment">"name"</span>: <span class="comment">"Done"</span>, <span class="comment">"payload"</span>: &#123; <span class="comment">"kind"</span>: <span class="comment">"string"</span> &#125; &#125;<br>
+&nbsp;&nbsp;]<br>
 &#125;
     </div>
   </div>
 </div>
+<p style="margin-top:10px;">A third form, <span class="code">&#123; "kind": "alias", "target": &lt;type&gt; &#125;</span>, names an alias for another type.</p>
 </div>
 
 <div class="card gf">
 <h2>Methods</h2>
 <div class="typedef">
 &#123;<br>
-&nbsp;&nbsp;<span class="comment">"name"</span>: <span class="comment">"create_post"</span>,&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">// snake_case method name</span><br>
+&nbsp;&nbsp;<span class="comment">"name"</span>: <span class="comment">"create_post"</span>,&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">// snake_case method name</span><br>
 &nbsp;&nbsp;<span class="comment">"params"</span>: [<br>
 &nbsp;&nbsp;&nbsp;&nbsp;&#123; <span class="comment">"name"</span>: <span class="comment">"title"</span>, <span class="comment">"type"</span>: &#123; <span class="comment">"kind"</span>: <span class="comment">"string"</span> &#125; &#125;<br>
 &nbsp;&nbsp;],<br>
-&nbsp;&nbsp;<span class="comment">"returns"</span>: &#123; <span class="comment">"$ref"</span>: <span class="comment">"Post"</span> &#125;<br>
+&nbsp;&nbsp;<span class="comment">"returns"</span>: &#123; <span class="comment">"$ref"</span>: <span class="comment">"Post"</span> &#125;,<br>
+&nbsp;&nbsp;<span class="comment">"returns_nullable"</span>: <span class="kw">false</span>,&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">// optional: return may be null</span><br>
+&nbsp;&nbsp;<span class="comment">"intent"</span>: <span class="comment">"mutating"</span>,&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">// optional: read_only | mutating | unspecified</span><br>
+&nbsp;&nbsp;<span class="comment">"xcall_callable"</span>: <span class="kw">false</span>,&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">// optional: callable via cross-context call</span><br>
+&nbsp;&nbsp;<span class="comment">"errors"</span>: []&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">// optional: declared typed errors</span><br>
 &#125;
 </div>
-<p style="margin-top:10px;">Generated TypeScript method: <span class="code">createPost(title: string): Promise&lt;Post&gt;</span></p>
+<p style="margin-top:10px;">Only <span class="code">name</span> and <span class="code">params</span> are required. Generated TypeScript method: <span class="code">createPost(title: string): Promise&lt;Post&gt;</span>.</p>
 </div>
 
 <div class="card gg">
+<h2>Method Intent</h2>
+<p style="margin-bottom:10px;">A method's optional <span class="code">intent</span> declares whether it reads or writes state — analogous to SQL <span class="code">SELECT</span> vs <span class="code">INSERT/UPDATE</span>:</p>
+<div class="fr"><div class="fp">read_only</div><div class="fd">Reads state only; no mutation. Emitted for <span class="code">#[app::view]</span> methods.</div></div>
+<div class="fr"><div class="fp">mutating</div><div class="fd">Writes / changes state.</div></div>
+<div class="fr"><div class="fp">unspecified</div><div class="fd">Not declared; treated as potentially mutating.</div></div>
+<p style="margin-top:10px;">In practice only <span class="code">read_only</span> is emitted explicitly; methods without an <span class="code">intent</span> field default to write. The codegen surfaces a declared intent as a JSDoc tag on the generated method (e.g. <span class="code">@intent read_only</span>) — documentation only; it does not yet change how the method is called.</p>
+</div>
+
+<div class="card gh">
+<h2>State Versioning &amp; Migrations</h2>
+<p style="margin-bottom:10px;">When a contract's state schema evolves, the manifest records the current <span class="code">state_version</span> and the migration edges that reach it. Each edge names the migration <span class="code">method</span> and the <span class="code">fromVersion</span> it upgrades:</p>
+<div class="typedef">
+&nbsp;&nbsp;<span class="comment">"state_version"</span>: <span class="kw">3</span>,<br>
+&nbsp;&nbsp;<span class="comment">"migrations"</span>: [<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&#123; <span class="comment">"method"</span>: <span class="comment">"migrate_v1_to_v2"</span>, <span class="comment">"fromVersion"</span>: <span class="kw">1</span> &#125;,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&#123; <span class="comment">"method"</span>: <span class="comment">"migrate_v2_to_v3"</span>, <span class="comment">"fromVersion"</span>: <span class="kw">2</span> &#125;<br>
+&nbsp;&nbsp;]
+</div>
+<p style="margin-top:10px;">Modelled as <span class="code">AbiMigrationEdge &#123; method: string; fromVersion: number &#125;</span>. Both fields are top-level and optional on the manifest.</p>
+</div>
+
+<div class="card gi">
 <h2>Events</h2>
 <div class="typedef">
 &#123;<br>
 &nbsp;&nbsp;<span class="comment">"name"</span>: <span class="comment">"PostCreated"</span>,<br>
-&nbsp;&nbsp;<span class="comment">"fields"</span>: &#123;<br>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">"id"</span>: &#123; <span class="comment">"kind"</span>: <span class="comment">"string"</span> &#125;,<br>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">"title"</span>: &#123; <span class="comment">"kind"</span>: <span class="comment">"string"</span> &#125;<br>
-&nbsp;&nbsp;&#125;<br>
+&nbsp;&nbsp;<span class="comment">"payload"</span>: &#123; <span class="comment">"$ref"</span>: <span class="comment">"PostCreatedPayload"</span> &#125;<br>
 &#125;
 </div>
-<p style="margin-top:10px;">Events are emitted by the contract during execution and received via the SSE subscription. The codegen generates a typed payload interface: <span class="code">PostCreatedEvent</span>.</p>
+<p style="margin-top:10px;">An event has a <span class="code">name</span> and an optional <span class="code">payload</span> (a single type reference — typically a <span class="code">$ref</span> to a record, not inline fields). Events are emitted by the contract during execution and received via the SSE subscription. The codegen generates a typed payload interface: <span class="code">PostCreatedEvent</span>.</p>
 </div>
 
 </div>
