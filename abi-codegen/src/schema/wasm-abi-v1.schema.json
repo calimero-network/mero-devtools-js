@@ -354,6 +354,10 @@
         },
         "xcall_callable": {
           "type": "boolean"
+        },
+        "xcall_callers": {
+          "type": "string",
+          "enum": ["any_in_namespace", "same_app"]
         }
       }
     },

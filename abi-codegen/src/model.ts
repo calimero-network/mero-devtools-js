@@ -133,6 +133,11 @@ export interface AbiMethod {
   // Cross-context entry point declared via #[app::xcall]. Absent/false on
   // modules compiled before this field existed.
   xcall_callable?: boolean;
+  // Who may invoke this xcall entry point. 'any_in_namespace' (the default,
+  // and the value for modules compiled before this field existed) keeps the
+  // historical behaviour; 'same_app' (#[app::xcall(from_same_app)]) restricts
+  // callers to contexts running the same application id. Enforced by the node.
+  xcall_callers?: 'any_in_namespace' | 'same_app';
 }
 
 // Parameter definition
