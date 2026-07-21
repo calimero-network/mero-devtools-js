@@ -2,3 +2,6 @@ node_modules/
 dist/
 .astro/
 .DS_Store
+
+# Starlight docs needs its own lockfile committed (root .gitignore excludes package-lock.json)
+!package-lock.json
