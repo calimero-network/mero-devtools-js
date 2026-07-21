@@ -1,0 +1,161 @@
+---
+title: Programmatic API
+description: Use @calimero-network/abi-codegen as a library — parse and validate ABI manifests, generate TypeScript clients, and derive client names from your own build tooling.
+---
+
+Everything the CLI does is available as a library, so you can drive parsing and
+generation from a build script, a Vite/Rollup plugin, or a test. The package is
+ESM-only.
+
+## Entry points
+
+The main entry re-exports the model types and the parser. The generators and
+naming utilities are reached through sub-path exports:
+
+```ts
+// Main entry — parser + model types only
+import { parseAbiManifest, loadAbiManifestFromFile } from '@calimero-network/abi-codegen';
+import type { AbiManifest, AbiMethod } from '@calimero-network/abi-codegen';
+
+// Sub-path exports
+import { parseAbiManifest } from '@calimero-network/abi-codegen/parse';
+import { generateClient } from '@calimero-network/abi-codegen/generate/client';
+import { generateTypes } from '@calimero-network/abi-codegen/generate/types';
+import {
+  deriveClientNameFromPath,
+  sanitizeClassName,
+  mapRustTypeToTs,
+} from '@calimero-network/abi-codegen/generate/emit';
+```
+
+:::note
+`generateClient` is **not** exported from the main entry — import it from
+`@calimero-network/abi-codegen/generate/client`.
+:::
+
+## `parseAbiManifest(json)`
+
+```ts
+function parseAbiManifest(json: unknown): AbiManifest
+```
+
+Validates a raw JSON value against the WASM-ABI v1 schema, checks the
+invariants (schema version, `$ref` resolution, unique names, string map keys),
+and returns a **deeply frozen** `AbiManifest`. Throws a descriptive `Error` on
+any failure.
+
+```ts
+import { parseAbiManifest } from '@calimero-network/abi-codegen/parse';
+import fs from 'node:fs';
+
+const raw = JSON.parse(fs.readFileSync('abi.json', 'utf8'));
+const manifest = parseAbiManifest(raw);
+// manifest.methods, manifest.events, manifest.types
+```
+
+## `loadAbiManifestFromFile(path)`
+
+```ts
+function loadAbiManifestFromFile(path: string): AbiManifest
+```
+
+Reads a JSON file, parses it, and validates it — a convenience wrapper around
+`parseAbiManifest(JSON.parse(...))` with friendlier errors for missing files and
+malformed JSON.
+
+```ts
+import { loadAbiManifestFromFile } from '@calimero-network/abi-codegen/parse';
+
+const manifest = loadAbiManifestFromFile('./abi.json');
+console.log(`${manifest.methods.length} methods`);
+```
+
+## `generateClient(manifest, clientName?, importPath?)`
+
+```ts
+function generateClient(
+  manifest: AbiManifest,
+  clientName?: string,   // default: 'Client'
+  importPath?: string,   // default: '@calimero-network/mero-react'
+): string
+```
+
+Takes a validated `AbiManifest` and returns a TypeScript source string
+containing the type definitions **and** the client class. `clientName` is run
+through `sanitizeClassName` internally, so passing a raw string is safe.
+
+```ts
+import { loadAbiManifestFromFile } from '@calimero-network/abi-codegen/parse';
+import { generateClient } from '@calimero-network/abi-codegen/generate/client';
+import fs from 'node:fs';
+
+const manifest = loadAbiManifestFromFile('abi.json');
+const source = generateClient(manifest, 'KVStoreClient');
+fs.mkdirSync('src/generated', { recursive: true });
+fs.writeFileSync('src/generated/KVStoreClient.ts', source);
+```
+
+## `generateTypes(manifest)`
+
+```ts
+function generateTypes(manifest: AbiManifest): string
+```
+
+A types-only emitter (no client class). It is used to produce the type surface
+in isolation.
+
+:::caution
+`generateTypes` emits a hardcoded `import { CalimeroBytes } from "./AbiConformanceClient.js"`
+at the top of its output. It is tailored to the reference example rather than a
+general-purpose split-file emitter — for most integrations, prefer
+`generateClient`, which is self-contained.
+:::
+
+## Name utilities — `generate/emit`
+
+```ts
+import {
+  deriveClientNameFromPath,
+  sanitizeClassName,
+  mapRustTypeToTs,
+} from '@calimero-network/abi-codegen/generate/emit';
+
+// Derive a client name from a file path (1–2 char segments are upper-cased):
+deriveClientNameFromPath('kv_store.wasm');        // 'KVStoreClient'
+deriveClientNameFromPath('abi-conformance.json'); // 'AbiConformanceClient'
+deriveClientNameFromPath('plantr.wasm');          // 'PlantrClient'
+
+// Sanitize an arbitrary string into a valid identifier (preserving casing):
+sanitizeClassName('Task Board');                  // 'TaskBoard'
+sanitizeClassName('kv_store');                    // 'KvStore'
+
+// Map a raw Rust type string to its TypeScript equivalent:
+mapRustTypeToTs('Vec<u32>');                       // 'number[]'
+mapRustTypeToTs('Option<String>');                 // 'string | null'
+```
+
+## Build-plugin pattern
+
+The API composes cleanly into a build hook that regenerates a client whenever a
+manifest changes:
+
+```ts
+// vite-plugin-calimero-codegen.ts
+import { loadAbiManifestFromFile } from '@calimero-network/abi-codegen/parse';
+import { generateClient } from '@calimero-network/abi-codegen/generate/client';
+import { deriveClientNameFromPath } from '@calimero-network/abi-codegen/generate/emit';
+import fs from 'node:fs';
+
+export function calimeroCodegen(opts: { input: string; outDir: string }) {
+  return {
+    name: 'calimero-codegen',
+    buildStart() {
+      const manifest = loadAbiManifestFromFile(opts.input);
+      const name = deriveClientNameFromPath(opts.input);
+      const source = generateClient(manifest, name);
+      fs.mkdirSync(opts.outDir, { recursive: true });
+      fs.writeFileSync(`${opts.outDir}/${name}.ts`, source);
+    },
+  };
+}
+```

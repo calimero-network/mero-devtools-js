@@ -1,0 +1,88 @@
+---
+title: Overview
+description: What Mero DevTools is — a monorepo of JavaScript/TypeScript tooling for Calimero apps, with two CLIs (abi-codegen and create-mero-app) and a reference example.
+---
+
+import { Card, CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+**Mero DevTools** (`mero-devtools-js`) is a monorepo of JavaScript/TypeScript
+tooling for building [Calimero](https://calimero-network.github.io/core/) apps.
+It exists to remove the hand-written glue between a compiled WASM contract and
+the TypeScript frontend that calls it: given the contract's ABI, it generates a
+fully-typed client so every method call is checked by the compiler.
+
+## What's in the box
+
+The repository is a workspace with three packages:
+
+<CardGrid>
+  <Card title="@calimero-network/abi-codegen" icon="seti:typescript">
+    The published package. A WASM-ABI v1 parser plus a TypeScript client
+    generator, exposed both as the `calimero-abi-codegen` CLI and as a
+    programmatic library. This is the core of the toolset.
+  </Card>
+  <Card title="create-mero-app" icon="rocket">
+    A separate scaffolding CLI (`npx create-mero-app`) that clones a starter
+    template — a Rust or JavaScript kv-store with a React frontend — into a new
+    project directory.
+  </Card>
+  <Card title="codegen-example" icon="approve-check">
+    A private reference app (not published) showing the generated output for the
+    ABI conformance fixture, wired into a React UI with `@calimero-network/mero-react`.
+  </Card>
+</CardGrid>
+
+## The core idea: ABI in, typed client out
+
+A Calimero application is compiled to WASM. Alongside the module, the build
+emits a **WASM-ABI v1 manifest** — a JSON description of the contract's public
+surface: its methods, events, and named types. `abi-codegen` reads that manifest
+and emits a single TypeScript file containing:
+
+- an `interface` / `type` for every named type in the manifest,
+- payload and error types for events and fallible methods,
+- a client class with one typed `async` method per contract method.
+
+Each generated method wraps a single RPC call against the `MeroJs` runtime, so
+your frontend calls `await client.setValue({ key, value })` instead of
+assembling `contextId` / `method` / `argsJson` payloads by hand.
+
+:::note[One file, no separate types module]
+The CLI emits exactly one file, `<ClientName>.ts`, with the type definitions and
+the client class together — types are **not** written to a separate module.
+:::
+
+## A typical workflow
+
+1. **Build your contract** and obtain its `abi.json` manifest.
+2. **Generate the client:** `calimero-abi-codegen -i abi.json -o src/generated`.
+3. **Use it in your app:** construct the client with a `MeroJs` instance, a
+   `contextId`, and an executor public key, then call its methods.
+
+```ts
+import { KVStoreClient } from './generated/KVStoreClient';
+
+// `mero` comes from the MeroProvider / useMero() hook in @calimero-network/mero-react
+const client = new KVStoreClient(mero, contextId, executorPublicKey);
+
+await client.set({ key: 'greeting', value: 'hello' });
+const value = await client.get({ key: 'greeting' });
+```
+
+## Where to go next
+
+<LinkCard
+  title="Architecture"
+  href="/understand/architecture/"
+  description="Inside the codegen pipeline — parse, model, generate, emit — and the create-mero-app scaffolding flow."
+/>
+<LinkCard
+  title="CLI reference"
+  href="/reference/cli/"
+  description="Every command and flag for calimero-abi-codegen and create-mero-app."
+/>
+<LinkCard
+  title="ABI format"
+  href="/reference/abi-format/"
+  description="The WASM-ABI v1 manifest the generator reads."
+/>

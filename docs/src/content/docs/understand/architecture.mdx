@@ -1,0 +1,202 @@
+---
+title: Architecture
+description: Inside Mero DevTools — the abi-codegen pipeline (parse, model, generate, emit) and the create-mero-app scaffolding flow, mapped to the source.
+---
+
+import SeqDiagram from '../../../components/SeqDiagram.astro';
+
+This page walks the two tools end to end and maps each stage to the code that
+implements it, so you can jump straight to the source.
+
+## The abi-codegen pipeline
+
+`calimero-abi-codegen` is a straight-line pipeline: read the manifest, validate
+it, walk it, and print TypeScript. There is no intermediate build step and no
+config file — the CLI (`src/cli.ts`) orchestrates two library calls.
+
+<SeqDiagram
+  id="d-codegen"
+  title="ABI manifest → typed TypeScript client"
+  lanes={[
+    { label: 'calimero-abi-codegen', color: '#3fb950' },
+    { label: 'parse.ts', color: '#58a6ff' },
+    { label: 'generate/client.ts', color: '#a371f7' },
+    { label: '<ClientName>.ts', color: '#a5ff11' },
+  ]}
+  steps={[
+    { from: 0, to: 1, label: 'loadAbiManifestFromFile(input)' },
+    { from: 1, to: 1, label: 'AJV schema validation' },
+    { from: 1, to: 1, label: 'invariant + $ref checks' },
+    { from: 1, to: 0, label: 'frozen AbiManifest', dashed: true },
+    { from: 0, to: 2, label: 'generateClient(manifest, name, importPath)' },
+    { from: 2, to: 2, label: 'emit type defs, then client class' },
+    { from: 2, to: 0, label: 'TypeScript source string', dashed: true },
+    { from: 0, to: 3, label: 'writeFileSync(<ClientName>.ts)' },
+  ]}
+/>
+
+### 1. Parse & validate — `parse.ts`
+
+`loadAbiManifestFromFile(path)` reads the JSON and hands it to
+`parseAbiManifest(json)`, which:
+
+- validates it against the embedded JSON Schema (`schema/wasm-abi-v1.schema.json`)
+  using AJV, with all formats registered;
+- confirms `schema_version === 'wasm-abi/1'`;
+- enforces invariants beyond the schema — every `$ref` must resolve to a defined
+  type **or** a recognized raw Rust type, `state_root` must name a defined type,
+  and map keys must be `string`;
+- rejects duplicate method, event, or type names;
+- returns a **deeply frozen** `AbiManifest`, so downstream code cannot mutate it.
+
+Any failure throws a descriptive `Error` rather than returning a partial result.
+
+### 2. Model — `model.ts`
+
+`model.ts` is pure types: TypeScript interfaces that mirror the JSON schema 1:1
+— `AbiManifest`, `AbiMethod`, `AbiEvent`, `AbiParameter`, `AbiTypeRef`, and every
+type-definition variant (`AbiRecord`, `AbiVariantDef`, `AbiAlias`, bytes types).
+It carries no logic; it is the shared vocabulary the parser and generators speak.
+
+### 3. Generate — `generate/client.ts`
+
+`generateClient(manifest, clientName?, importPath?)` walks the manifest and
+returns a single TypeScript source string. In order, it emits:
+
+1. a generated-file banner and an `import { MeroJs } from '<importPath>'`;
+2. one declaration per named type — `interface` for records, a string-literal
+   union or a discriminated-union `Payload` type (plus a factory `const`) for
+   variants, `type` aliases for aliases;
+3. error-code / error-union types for any method that declares `errors`, and
+   `<Event>Payload` types plus an `AbiEvent` union for events;
+4. the `CalimeroBytes` helper class and byte-conversion helpers — **only if** the
+   manifest actually uses `bytes` types;
+5. the client class itself.
+
+### 4. Emit helpers — `generate/emit.ts`
+
+`emit.ts` holds the naming utilities the generator leans on: `formatIdentifier`
+(escapes reserved words and illegal characters), `toCamelCase` (method names),
+`sanitizeClassName` and `deriveClientNameFromPath` (client-class naming), and
+`mapRustTypeToTs` (maps raw Rust type strings like `Vec<u32>`, `Option<T>`,
+`Result<T, E>`, and tuples to TypeScript).
+
+## The generated client class
+
+The emitted class is thin. Its constructor takes a `MeroJs` runtime, a
+`contextId`, and an executor public key; each method wraps one
+`this._mero.rpc.execute(...)` call.
+
+```ts
+export class KVStoreClient {
+  private _mero: MeroJs;
+  private _contextId: string;
+  private _executorPublicKey: string;
+
+  constructor(mero: MeroJs, contextId: string, executorPublicKey: string) {
+    this._mero = mero;
+    this._contextId = contextId;
+    this._executorPublicKey = executorPublicKey;
+  }
+
+  /**
+   * set
+   *
+   * @intent mutating
+   */
+  public async set(params: { key: string; value: string }): Promise<void> {
+    const response = await this._mero.rpc.execute({
+      contextId: this._contextId,
+      method: 'set',
+      argsJson: params,
+      executorPublicKey: this._executorPublicKey,
+    });
+  }
+}
+```
+
+Note the shape, because it differs from older hand-written clients:
+
+- **All arguments go in a single `params` object** — a method with parameters
+  is `set(params: { key, value })`, never positional `set(key, value)`. A
+  method with no parameters takes no arguments.
+- The first constructor argument is the **`MeroJs` instance itself**, not
+  `mero.rpc`.
+- `rpc.execute` is called with a **named-field object** (`contextId`, `method`,
+  `argsJson`, `executorPublicKey`) and returns the result directly, throwing on
+  error — there is no `{ output }` wrapper to unwrap.
+- A declared method `intent` (e.g. `read_only`) is surfaced as a `@intent` JSDoc
+  tag only. It is documentation; there is no separate read transport yet, so
+  read and write methods are called identically.
+- `bytes`-typed values are represented by the generated `CalimeroBytes` class
+  (`CalimeroBytes.fromHex(...)`, `.toUint8Array()`), converted to/from plain
+  arrays at the RPC boundary.
+
+## The create-mero-app scaffolding flow
+
+`create-mero-app` is an independent CLI built on `commander` and `prompts`
+(`create-mero-app/src/index.ts`). It clones a starter template from GitHub into
+a new directory.
+
+<SeqDiagram
+  id="d-scaffold"
+  title="create-mero-app: template → new project"
+  lanes={[
+    { label: 'create-mero-app', color: '#3fb950' },
+    { label: 'prompts', color: '#a371f7' },
+    { label: 'git (temp clone)', color: '#58a6ff' },
+    { label: 'target dir', color: '#a5ff11' },
+  ]}
+  steps={[
+    { from: 0, to: 0, label: 'validate project name (npm rules)' },
+    { from: 0, to: 1, label: 'select template (if no --template)', dashed: true },
+    { from: 1, to: 0, label: 'rust | javascript', dashed: true },
+    { from: 0, to: 2, label: 'git clone --depth 1 <repoUrl>' },
+    { from: 2, to: 0, label: 'shallow checkout in os.tmpdir()', dashed: true },
+    { from: 0, to: 3, label: 'copy files (excluding .git, .github, …)' },
+    { from: 0, to: 3, label: 'write project name into package.json' },
+  ]}
+/>
+
+Step by step:
+
+1. Resolve the target directory from the optional `[project-name]` argument
+   (defaults to the current directory) and validate its basename with
+   `validate-npm-package-name`. A non-empty existing directory is rejected.
+2. Pick the template — from `-t, --template <name>` if given, otherwise via an
+   interactive `select` prompt. The two templates are `rust`
+   (`calimero-network/kv-store`) and `javascript` (`calimero-network/kv-store-js`).
+3. `git clone --depth 1` the template repo into a temporary directory
+   (`os.tmpdir()`).
+4. Copy the tree into the target directory, **excluding** `.git`, `.github`,
+   `.gitignore`, `.gitattributes`, `.gitmodules`, and `node_modules`; then delete
+   the temp clone.
+5. Rewrite the `name` field of the new project's `package.json` to the app name.
+6. Print next steps: `cd <dir>`, `pnpm install`, `pnpm dev`.
+
+:::caution[No git repo is initialised]
+`create-mero-app` does **not** run `git init` in the new project, and the clone
+is a shallow `--depth 1` clone (not a sparse checkout). The scaffolded directory
+starts with no `.git` — initialise version control yourself if you want it.
+:::
+
+## Package layout
+
+```
+abi-codegen/
+├── src/
+│   ├── cli.ts                     ← calimero-abi-codegen CLI entrypoint
+│   ├── parse.ts                   ← loadAbiManifestFromFile, parseAbiManifest
+│   ├── model.ts                   ← TypeScript model of the ABI manifest
+│   ├── index.ts                   ← package entry: re-exports model + parse
+│   ├── generate/
+│   │   ├── client.ts              ← generateClient() — full source emitter
+│   │   ├── types.ts               ← generateTypes() — types-only emitter (library)
+│   │   └── emit.ts                ← naming utilities, Rust→TS mapping
+│   ├── schema/
+│   │   └── wasm-abi-v1.schema.json  ← embedded JSON Schema (AJV)
+│   └── utils/                     ← deepFreeze, AJV error formatting
+create-mero-app/
+└── src/index.ts                   ← interactive scaffolding CLI
+codegen-example/                   ← reference React app (not published)
+```
