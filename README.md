@@ -2,6 +2,8 @@
 
 WASM-ABI v1 parser and code generator for Calimero applications. This tool generates TypeScript client code and type definitions from ABI manifest files.
 
+📚 **Documentation:** <https://calimero-network.github.io/mero-devtools-js/> — see the [CLI reference](https://calimero-network.github.io/mero-devtools-js/reference/cli/), [programmatic API](https://calimero-network.github.io/mero-devtools-js/reference/api/), and [ABI format](https://calimero-network.github.io/mero-devtools-js/reference/abi-format/).
+
 ## 📦 Packages
 
 - **`abi-codegen`**: The main package that generates TypeScript clients from ABI manifests

@@ -1,0 +1,43 @@
+---
+title: Mero DevTools
+description: JavaScript/TypeScript developer tools for Calimero — generate a fully-typed client from a WASM-ABI manifest, and scaffold a new app from a starter template.
+template: splash
+hero:
+  tagline: Two command-line tools for building Calimero apps in TypeScript. abi-codegen turns a WASM-ABI v1 manifest into a fully-typed client class; create-mero-app scaffolds a new project from a starter template. No hand-written RPC glue.
+  actions:
+    - text: Read the Overview
+      link: /understand/overview/
+      icon: right-arrow
+      variant: primary
+    - text: View on GitHub
+      link: https://github.com/calimero-network/mero-devtools-js
+      icon: external
+      variant: minimal
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+{/* Audience-routed landing — pick your track. */}
+
+<CardGrid>
+  <Card title="Understand" icon="open-book">
+    What Mero DevTools is, the two CLIs it ships, and how the codegen pipeline
+    turns an ABI manifest into TypeScript. [Start here →](/understand/overview/)
+  </Card>
+  <Card title="Generate a client" icon="seti:typescript">
+    Point `calimero-abi-codegen` at an `abi.json` and get a typed client class
+    with one method per contract method. [CLI reference →](/reference/cli/)
+  </Card>
+  <Card title="Use the API" icon="setting">
+    Drive the parser and generator programmatically from your own build tooling
+    or Vite/Rollup plugin. [Programmatic API →](/reference/api/)
+  </Card>
+  <Card title="ABI format" icon="document">
+    The WASM-ABI v1 manifest: types, methods, events, intent, and migrations —
+    the JSON the generator reads. [Read the format →](/reference/abi-format/)
+  </Card>
+</CardGrid>
+
+The generated client targets [`@calimero-network/mero-react`](https://github.com/calimero-network)
+(the `MeroJs` runtime). For the protocol these apps run on, see the
+[Calimero Core docs](https://calimero-network.github.io/core/).

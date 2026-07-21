@@ -1,0 +1,251 @@
+---
+title: ABI Format
+description: The WASM-ABI v1 manifest — the JSON abi-codegen reads. Types, methods, events, intent, xcall, and migrations, mirroring wasm-abi-v1.schema.json exactly.
+---
+
+The generator reads a **WASM-ABI v1 manifest**: a JSON file describing a
+Calimero contract's public surface. Every shape here mirrors the embedded
+`wasm-abi-v1.schema.json`; every example below passes `--validate`.
+
+## Manifest structure
+
+```ts
+interface AbiManifest {
+  schema_version: 'wasm-abi/1';          // must be exactly this string
+  types: Record<string, AbiTypeDef>;     // named type definitions
+  methods: AbiMethod[];                  // callable contract methods
+  events: AbiEvent[];                    // emitted events
+  state_root?: string;                   // type name backing contract state
+  state_version?: number;                // state schema version (≥ 1)
+  migrations?: AbiMigrationEdge[];       // declared migration edges
+}
+```
+
+`schema_version`, `types`, `methods`, and `events` are **required** — the schema
+rejects the manifest without all four (even when `types`/`methods`/`events` are
+empty). `state_root`, `state_version`, and `migrations` are optional.
+
+### Minimal example
+
+```json
+{
+  "schema_version": "wasm-abi/1",
+  "types": {
+    "SetEntryRequest": {
+      "kind": "record",
+      "fields": [
+        { "name": "key", "type": { "kind": "string" } },
+        { "name": "value", "type": { "kind": "string" } }
+      ]
+    }
+  },
+  "methods": [
+    {
+      "name": "get_value",
+      "params": [{ "name": "key", "type": { "kind": "string" } }],
+      "returns": { "kind": "string" },
+      "returns_nullable": true,
+      "intent": "read_only"
+    },
+    {
+      "name": "set_value",
+      "params": [{ "name": "req", "type": { "$ref": "SetEntryRequest" } }],
+      "returns": { "kind": "unit" },
+      "intent": "mutating"
+    }
+  ],
+  "events": []
+}
+```
+
+## Type references
+
+A type reference (`AbiTypeRef`) is one of: a scalar, a bytes type, a collection,
+or a `$ref` to a named type.
+
+### Scalar types
+
+Each is an object with a single `kind`:
+
+| Type | Meaning |
+| --- | --- |
+| `{ "kind": "bool" }` | Boolean |
+| `{ "kind": "string" }` | UTF-8 string |
+| `{ "kind": "unit" }` | Void / no value |
+| `{ "kind": "i32" }` / `{ "kind": "i64" }` | Signed 32- / 64-bit integer |
+| `{ "kind": "u32" }` / `{ "kind": "u64" }` | Unsigned 32- / 64-bit integer |
+| `{ "kind": "f32" }` / `{ "kind": "f64" }` | 32- / 64-bit float |
+
+### Bytes
+
+```json
+{ "kind": "bytes" }              // variable-length
+{ "kind": "bytes", "size": 32 }  // fixed-length (size ≥ 1)
+```
+
+`encoding` is an optional free-form hint (mirrors core's `BytesType`); current
+SDKs omit it. In generated code, bytes values are represented by the
+`CalimeroBytes` helper class.
+
+### Collections
+
+| Kind | Shape |
+| --- | --- |
+| `list` | `{ "kind": "list", "items": <type>, "crdt_type"?: <crdt> }` |
+| `map` | `{ "kind": "map", "key": <type>, "value": <type>, "crdt_type"?: <crdt> }` |
+| `record` | `{ "kind": "record", "fields": [<field>…], "crdt_type"?: <crdt>, "inner_type"?: <type> }` |
+| `tuple` | `{ "kind": "tuple", "elements": [<type>…] }` (at least one element) |
+| `$ref` | `{ "$ref": "TypeName" }` — reference to a named type |
+
+:::note[Map keys must be strings]
+The parser enforces that a `map`'s `key` is a `string` type; anything else is
+rejected during validation.
+:::
+
+A `$ref` normally names an entry in `types`, but it may also name a **raw Rust
+type** the generator recognizes (`String`, `bool`, `u8`…`u64`, `i8`…`i64`,
+`f32`/`f64`, and generic forms like `Vec<T>`, `Option<T>`, `Result<T, E>`, `()`,
+and tuples). Those are mapped straight to TypeScript instead of resolved against
+`types`.
+
+### CRDT-backed collections
+
+Any `list`, `map`, or `record` may carry a `crdt_type` marking it as a
+CRDT-backed state collection. The schema accepts exactly these 11 values:
+
+| | | |
+| --- | --- | --- |
+| `lww_register` | `counter` | `vector` |
+| `replicated_growable_array` | `authored_vector` | `shared_storage` |
+| `unordered_map` | `sorted_map` | `authored_map` |
+| `unordered_set` | `sorted_set` | |
+
+## Named type definitions
+
+The `types` map defines reusable named types. A named `AbiTypeDef` is one of
+four kinds: **record**, **variant**, **alias**, or **bytes**.
+
+```json
+// Record (struct) — fields is an array of { name, type, nullable? }
+{
+  "kind": "record",
+  "fields": [
+    { "name": "name",  "type": { "kind": "string" } },
+    { "name": "count", "type": { "kind": "u32" } }
+  ]
+}
+
+// Variant (enum) — variants is an array of { name, code?, payload? }
+{
+  "kind": "variant",
+  "variants": [
+    { "name": "Pending" },
+    { "name": "Done", "payload": { "kind": "string" } }
+  ]
+}
+
+// Alias — names another type
+{ "kind": "alias", "target": { "kind": "u64" } }
+
+// Bytes — a named bytes type (e.g. a fixed-size hash)
+{ "kind": "bytes", "size": 64 }
+```
+
+How variants are emitted depends on their payloads:
+
+- **All-unit** variants (no payloads) become a string-literal union, e.g.
+  `type Status = 'Pending' | 'Active'` — serde serializes these as bare strings.
+- **Mixed / payload-bearing** variants become a discriminated-union
+  `<Name>Payload` type plus a factory `const <Name>` with a constructor per
+  variant.
+
+## Methods
+
+```json
+{
+  "name": "create_post",
+  "params": [{ "name": "title", "type": { "kind": "string" } }],
+  "returns": { "$ref": "Post" },
+  "returns_nullable": false,
+  "intent": "mutating",
+  "errors": [{ "code": "TITLE_TOO_LONG" }],
+  "xcall_callable": false,
+  "xcall_callers": "any_in_namespace"
+}
+```
+
+Only `name` and `params` are required; everything else is optional. The example
+above generates `createPost(params: { title: string }): Promise<Post>`.
+
+### Method intent
+
+`intent` declares whether a method reads or writes state:
+
+| Value | Meaning |
+| --- | --- |
+| `read_only` | Reads state only; no mutation. |
+| `mutating` | Writes / changes state. |
+| `unspecified` | Not declared. |
+
+A method with no `intent` field is treated as potentially mutating (the node
+defaults an absent intent to write intent). The generator surfaces a declared
+intent as an `@intent` JSDoc tag on the method — documentation only; it does not
+yet change how the method is called.
+
+### Cross-context calls (xcall)
+
+Two optional fields describe cross-context invocation, declared by the app
+author:
+
+| Field | Values | Meaning |
+| --- | --- | --- |
+| `xcall_callable` | `boolean` | Whether the method is a cross-context entry point. Absent/`false` means it is not. |
+| `xcall_callers` | `any_in_namespace` \| `same_app` | Who may invoke it. `any_in_namespace` (the default) allows any context in the namespace; `same_app` restricts callers to contexts running the same application. Enforced by the node. |
+
+These are manifest metadata; the current generator does not emit anything
+special for them.
+
+## State versioning & migrations
+
+When a contract's state schema evolves, the manifest records the current
+`state_version` and the migration edges that reach it. Each edge names the
+migration `method` and the version it upgrades **from** (note the camelCase wire
+key `fromVersion`):
+
+```json
+{
+  "state_version": 3,
+  "migrations": [
+    { "method": "migrate_v1_to_v2", "fromVersion": 1 },
+    { "method": "migrate_v2_to_v3", "fromVersion": 2 }
+  ]
+}
+```
+
+Modelled as `AbiMigrationEdge { method: string; fromVersion: number }`. Both
+`state_version` and `migrations` are optional, top-level fields.
+
+## Events
+
+```json
+{
+  "name": "PostCreated",
+  "payload": { "$ref": "PostCreatedPayload" }
+}
+```
+
+An event has a `name` and an optional `payload` (a single type reference —
+typically a `$ref` to a record). For an event with a payload, the generator
+emits a `<EventName>Payload` type alias; it also emits a single `AbiEvent` union
+over all events, e.g.:
+
+```ts
+export type PostCreatedPayload = { /* … */ };
+
+export type AbiEvent =
+  | { name: "PostCreated"; payload: PostCreatedPayload }
+  | { name: "PostDeleted" };
+```
+
+Events whose payload is inline `unit` (or absent) omit the `payload` field in
+the union.

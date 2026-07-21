@@ -1,0 +1,178 @@
+---
+title: CLI Reference
+description: Every command and flag for the two Mero DevTools CLIs — calimero-abi-codegen (ABI → typed client) and create-mero-app (project scaffolding).
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+Mero DevTools ships two independent CLIs. `calimero-abi-codegen` (from
+`@calimero-network/abi-codegen`) generates a typed client from an ABI manifest;
+`create-mero-app` scaffolds a new project from a starter template.
+
+## `calimero-abi-codegen`
+
+Parses a WASM-ABI v1 manifest and generates a fully-typed TypeScript client. It
+runs in one of two modes: **code generation** (the default) or **validation**
+(`--validate`).
+
+```bash
+# Install
+npm install @calimero-network/abi-codegen
+
+# …or run without installing
+npx @calimero-network/abi-codegen -i abi.json -o src/generated
+```
+
+### Options
+
+| Flag | Description | Default |
+| --- | --- | --- |
+| `-i, --input <file>` | Input ABI JSON file. | `abi.json` |
+| `-o, --output <dir>` | Output directory for the generated file (created if missing). | `src` |
+| `--client-name <Name>` | Explicit client class name; sanitized to a valid identifier. | derived (see below) |
+| `--name-from <path>` | Derive the client name from a file path (e.g. the `.wasm` file). | — |
+| `--import-path <path>` | Import path for the runtime dependency in generated code. | `@calimero-network/mero-react` |
+| `--validate` | Validate the manifest only; generate nothing. Exits `0` on success. | — |
+| `-h, --help` | Print usage help. | — |
+
+:::note
+The generator writes exactly one file, `<ClientName>.ts`, into the output
+directory. Type definitions and the client class live in that single file.
+:::
+
+### Client name resolution
+
+When code-generating, the client class name is resolved in strict priority
+order:
+
+1. **`--client-name <Name>`** — highest priority. Passed through
+   `sanitizeClassName`: split on non-alphanumeric characters, capitalize the
+   first letter of each part, keep the rest. `"Task Board"` → `TaskBoard`,
+   `"kv-store"` → `KvStore`, an already-valid `TestClient` stays `TestClient`.
+2. **`--name-from <path>`** — derived with `deriveClientNameFromPath`: take the
+   file basename, strip its extension, split on non-alphanumerics, and append
+   `Client`. **Segments of one or two characters are upper-cased whole.**
+3. **Input basename** — falls back to deriving from the `-i` file name with the
+   same `deriveClientNameFromPath` rule.
+
+:::caution[`--name-from` and `--client-name` capitalize differently]
+The two paths use different functions, so short segments diverge:
+
+```bash
+--name-from kv_store.wasm     # → KVStoreClient   (kv → KV)
+--client-name kv-store        # → KvStore         (kv → Kv)
+--name-from abi-conformance.json  # → AbiConformanceClient
+--name-from plantr.wasm           # → PlantrClient
+```
+
+`--name-from` upper-cases one- and two-character segments (`kv` → `KV`), which
+is why `kv_store.wasm` becomes `KVStoreClient`, not `KvStoreClient`.
+:::
+
+### Examples
+
+<Tabs>
+  <TabItem label="Generate">
+    ```bash
+    # Generate into src/generated/ (name derived from abi.json → AbiClient)
+    calimero-abi-codegen -i abi.json -o src/generated
+
+    # Explicit client class name
+    calimero-abi-codegen -i abi.json -o src/generated --client-name TodoClient
+
+    # Derive the name from the WASM binary path
+    calimero-abi-codegen -i abi.json -o src/generated --name-from kv_store.wasm
+    ```
+  </TabItem>
+  <TabItem label="Validate only">
+    ```bash
+    calimero-abi-codegen --validate -i abi.json
+    ```
+    ```
+    ✅ ABI manifest validated successfully!
+    📊 Summary:
+       Methods: 5
+       Events: 2
+       Types: 8
+    ```
+  </TabItem>
+  <TabItem label="Custom import path">
+    ```bash
+    # Point generated imports at a different runtime package
+    calimero-abi-codegen -i abi.json -o src/generated \
+      --import-path @calimero-network/mero-js
+    ```
+  </TabItem>
+  <TabItem label="package.json script">
+    ```json
+    {
+      "scripts": {
+        "codegen": "calimero-abi-codegen -i abi.json -o src/generated",
+        "build": "npm run codegen && vite build"
+      }
+    }
+    ```
+  </TabItem>
+</Tabs>
+
+On a successful generation the tool prints a summary and the path it wrote:
+
+```
+✅ Code generation completed successfully!
+📊 Summary:
+   Methods: 5
+   Events: 2
+   Types: 8
+   Client: TodoClient
+📁 Generated files:
+   /abs/path/src/generated/TodoClient.ts
+```
+
+If the input file does not exist, or the manifest fails validation, the tool
+prints an error and exits with a non-zero status without writing anything.
+
+## `create-mero-app`
+
+Scaffolds a new Calimero application by cloning a starter template from GitHub.
+
+```bash
+# Interactive (prompts for the template)
+npx create-mero-app my-app
+
+# …or the npm-init form
+npm create mero-app my-app
+```
+
+### Usage
+
+```
+create-mero-app [project-name] [options]
+```
+
+| Argument / flag | Description |
+| --- | --- |
+| `[project-name]` | Directory to scaffold into. Omit to use the current directory; its basename must be a valid npm package name. |
+| `-t, --template <name>` | Template to use: `rust` or `javascript`. If omitted, you are prompted to choose. |
+
+### Templates
+
+| Name | Repository | Contents |
+| --- | --- | --- |
+| `rust` | `calimero-network/kv-store` | Rust WASM contract + React frontend |
+| `javascript` | `calimero-network/kv-store-js` | JavaScript contract + React frontend |
+
+### What it does
+
+1. Validates the project name as an npm package name; refuses a non-empty
+   existing directory.
+2. Resolves the template from `--template`, or prompts you to pick one.
+3. `git clone --depth 1` the template into a temp directory.
+4. Copies the files into your project, excluding `.git`, `.github`,
+   `.gitignore`, `.gitattributes`, `.gitmodules`, and `node_modules`.
+5. Writes your project name into the new `package.json`.
+6. Prints next steps: `cd`, `pnpm install`, `pnpm dev`.
+
+:::caution
+`create-mero-app` does **not** initialise a git repository — the scaffolded
+project has no `.git`. Run `git init` yourself if you want version control.
+:::
