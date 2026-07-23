@@ -1,13 +1,14 @@
-# Calimero ABI Codegen
+# Mero DevTools (`mero-devtools-js`)
 
-WASM-ABI v1 parser and code generator for Calimero applications. This tool generates TypeScript client code and type definitions from ABI manifest files.
+JavaScript/TypeScript developer tools for building [Calimero](https://calimero-network.github.io/core/) apps. This monorepo ships two CLIs: **abi-codegen** turns a WASM-ABI v1 manifest into a fully-typed TypeScript client class, and **create-mero-app** scaffolds a new project from a starter template — so there is no hand-written RPC glue.
 
 📚 **Documentation:** <https://calimero-network.github.io/mero-devtools-js/> — see the [CLI reference](https://calimero-network.github.io/mero-devtools-js/reference/cli/), [programmatic API](https://calimero-network.github.io/mero-devtools-js/reference/api/), and [ABI format](https://calimero-network.github.io/mero-devtools-js/reference/abi-format/).
 
 ## 📦 Packages
 
-- **`abi-codegen`**: The main package that generates TypeScript clients from ABI manifests
-- **`codegen-example`**: Example React application demonstrating the generated client
+- **`abi-codegen`** (`@calimero-network/abi-codegen`): The published package that parses a WASM-ABI v1 manifest and generates a TypeScript client — available as the `calimero-abi-codegen` CLI and as a programmatic library.
+- **`create-mero-app`** (`create-mero-app`): A published scaffolding CLI that clones a Rust or JavaScript starter template into a new project directory.
+- **`codegen-example`**: A private reference React app (not published) demonstrating the generated client with `@calimero-network/mero-react`.
 
 ## 🚀 Quick Start
 
@@ -22,6 +23,10 @@ npx calimero-abi-codegen -i abi.json -o src
 
 # Use programmatically
 import { loadAbiManifestFromFile } from '@calimero-network/abi-codegen/parse';
+
+# Scaffold a new app from a starter template
+npx create-mero-app my-app                     # interactive template picker
+npx create-mero-app my-app --template rust      # or: --template javascript
 ```
 
 ### For Developers
@@ -29,7 +34,7 @@ import { loadAbiManifestFromFile } from '@calimero-network/abi-codegen/parse';
 ```bash
 # Clone and setup
 git clone <repo-url>
-cd calimero-abi-codegen
+cd mero-devtools-js
 pnpm install
 
 # Generate example client from local code
