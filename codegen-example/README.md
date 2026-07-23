@@ -30,10 +30,13 @@ The `predev` script automatically regenerates the client code.
 
 ## Generated Code
 
-Located in `src/generated/abi-conformance/`:
-- `AbiConformanceClient.ts` - Client class with ABI methods
-- `types.ts` - TypeScript type definitions
-- `index.ts` - Barrel exports
+The generator writes a single file to `src/generated/abi-conformance/`:
+- `AbiConformanceClient.ts` — the client class plus all TypeScript type
+  definitions (types are embedded in this one file; there is no separate
+  `types.ts` or barrel `index.ts`).
+
+The client name `AbiConformanceClient` is derived from the input fixture
+filename (`abi_conformance.json`).
 
 ## ABI Conformance Tests
 
