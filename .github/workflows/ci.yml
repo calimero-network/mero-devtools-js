@@ -23,9 +23,9 @@ jobs:
     name: Build & Test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@v7
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'pnpm'
@@ -54,7 +54,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout abi-codegen
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: Resolve latest core release tag
         id: coretag
@@ -70,7 +70,7 @@ jobs:
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
 
       - name: Checkout core reference files at release tag (no build)
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
         with:
           repository: calimero-network/core
           ref: ${{ steps.coretag.outputs.tag }}
@@ -84,7 +84,7 @@ jobs:
         uses: pnpm/action-setup@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v7
         with:
           node-version: "20"
           cache: "pnpm"
@@ -126,12 +126,12 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
       - name: Setup Node.js
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v7
         with:
           node-version: "24"
           registry-url: "https://registry.npmjs.org"
