@@ -4,8 +4,9 @@ import {
   AbiTypeRef,
   AbiTypeDef,
   AbiEvent,
+  CodegenOptions,
 } from '../model.js';
-import { formatIdentifier, generateFileBanner, mapRustTypeToTs, sanitizeClassName, toCamelCase } from './emit.js';
+import { brandBaseType, formatIdentifier, generateFileBanner, mapRustTypeToTs, sanitizeClassName, toCamelCase } from './emit.js';
 
 /**
  * Utility class for handling byte conversions in Calimero
@@ -113,7 +114,9 @@ export function generateClient(
   manifest: AbiManifest,
   clientName: string = 'Client',
   importPath: string = '@calimero-network/mero-react',
+  options: CodegenOptions = {},
 ): string {
+  const brandNewtypes = options.brandNewtypes ?? true;
   // Sanitize clientName: remove spaces/special chars, preserve existing casing
   clientName = sanitizeClassName(clientName);
 
@@ -150,7 +153,12 @@ export function generateClient(
   // Generate type definitions
   for (const [typeName, typeDef] of Object.entries(manifest.types)) {
     lines.push(
-      ...generateTypeDefinition(typeName, typeDef as AbiTypeDef, manifest),
+      ...generateTypeDefinition(
+        typeName,
+        typeDef as AbiTypeDef,
+        manifest,
+        brandNewtypes,
+      ),
     );
     lines.push('');
   }
@@ -413,6 +421,7 @@ function generateTypeDefinition(
   typeName: string,
   typeDef: AbiTypeDef,
   manifest: AbiManifest,
+  brandNewtypes: boolean,
 ): string[] {
   const lines: string[] = [];
   const safeName = formatIdentifier(typeName);
@@ -465,8 +474,18 @@ function generateTypeDefinition(
       lines.push('} as const;');
     }
   } else if (typeDef.kind === 'alias') {
-    const targetType = generateTypeRef(typeDef.target, manifest, false);
-    lines.push(`export type ${safeName} = ${targetType};`);
+    const brandBase = brandNewtypes ? brandBaseType(typeDef, manifest) : null;
+    if (brandBase) {
+      lines.push(
+        `export type ${safeName} = ${brandBase} & { readonly __brand: '${safeName}' };`,
+      );
+      lines.push(
+        `export const ${safeName} = (value: ${brandBase}): ${safeName} => value as ${safeName};`,
+      );
+    } else {
+      const targetType = generateTypeRef(typeDef.target, manifest, false);
+      lines.push(`export type ${safeName} = ${targetType};`);
+    }
   }
 
   return lines;

@@ -60,13 +60,15 @@ It carries no logic; it is the shared vocabulary the parser and generators speak
 
 ### 3. Generate — `generate/client.ts`
 
-`generateClient(manifest, clientName?, importPath?)` walks the manifest and
+`generateClient(manifest, clientName?, importPath?, options?)` walks the manifest and
 returns a single TypeScript source string. In order, it emits:
 
 1. a generated-file banner and an `import { MeroJs } from '<importPath>'`;
 2. one declaration per named type — `interface` for records, a string-literal
    union or a discriminated-union `Payload` type (plus a factory `const`) for
-   variants, `type` aliases for aliases;
+   variants, and for aliases either a branded type plus a constructor (over a
+   string or numeric primitive) or a plain `type` alias — see
+   [Aliases are newtypes](/reference/abi-format/#aliases-are-newtypes-and-they-are-branded);
 3. error-code / error-union types for any method that declares `errors`, and
    `<Event>Payload` types plus an `AbiEvent` union for events;
 4. the `CalimeroBytes` helper class and byte-conversion helpers — **only if** the

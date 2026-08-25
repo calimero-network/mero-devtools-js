@@ -978,7 +978,7 @@ describe('Codegen', () => {
 // Test stub to verify parameter structure
 const mero = { rpc: { execute: async (p: any) => p } } as any;
 const client = new Client(mero, 'ctx-1');
-await client.roundtripId({ x: "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef" });
+await client.roundtripId({ x: CalimeroBytes.fromHex("1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef") });
 await client.makePerson({ p: { id: "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef" as any, name: "test", age: 25 } });
 await client.act({ a: Action.Ping() });
 `;
@@ -1002,9 +1002,10 @@ await client.act({ a: Action.Ping() });
       };
       fs.writeFileSync(tsconfigPath, JSON.stringify(tsconfig, null, 2));
 
-      // Run tsc --strict --noEmit using the local TypeScript installation
+      // `-p` with an explicit path is required: without it tsc walks up and
+      // picks abi-codegen's own tsconfig, compiling src/ instead of this file.
       try {
-        execSync('npx tsc --strict --noEmit', {
+        execSync(`npx tsc --noEmit -p ${tsconfigPath}`, {
           cwd: tmpDir,
           stdio: 'pipe',
           encoding: 'utf-8',

@@ -4,15 +4,20 @@ import {
   AbiTypeDef,
   AbiMethod,
   AbiEvent,
+  CodegenOptions,
 } from '../model.js';
-import { formatIdentifier, generateFileBanner, mapRustTypeToTs } from './emit.js';
+import { brandBaseType, formatIdentifier, generateFileBanner, mapRustTypeToTs } from './emit.js';
 
 /**
  * Generate TypeScript types from a WASM-ABI v1 manifest
  * @param manifest - The parsed ABI manifest
  * @returns Generated TypeScript types as a string
  */
-export function generateTypes(manifest: AbiManifest): string {
+export function generateTypes(
+  manifest: AbiManifest,
+  options: CodegenOptions = {},
+): string {
+  const brandNewtypes = options.brandNewtypes ?? true;
   const lines: string[] = [];
 
   // Add file banner
@@ -26,7 +31,12 @@ export function generateTypes(manifest: AbiManifest): string {
   // Generate type definitions
   for (const [typeName, typeDef] of Object.entries(manifest.types)) {
     lines.push(
-      ...generateTypeDefinition(typeName, typeDef as AbiTypeDef, manifest),
+      ...generateTypeDefinition(
+        typeName,
+        typeDef as AbiTypeDef,
+        manifest,
+        brandNewtypes,
+      ),
     );
     lines.push('');
   }
@@ -61,6 +71,7 @@ function generateTypeDefinition(
   typeName: string,
   typeDef: AbiTypeDef,
   manifest: AbiManifest,
+  brandNewtypes: boolean,
 ): string[] {
   const lines: string[] = [];
   const safeName = formatIdentifier(typeName);
@@ -119,8 +130,18 @@ function generateTypeDefinition(
       lines.push(`export type ${safeName} = Uint8Array;`);
     }
   } else if (typeDef.kind === 'alias') {
-    const targetType = generateTypeRef(typeDef.target, manifest, true);
-    lines.push(`export type ${safeName} = ${targetType};`);
+    const brandBase = brandNewtypes ? brandBaseType(typeDef, manifest) : null;
+    if (brandBase) {
+      lines.push(
+        `export type ${safeName} = ${brandBase} & { readonly __brand: '${safeName}' };`,
+      );
+      lines.push(
+        `export const ${safeName} = (value: ${brandBase}): ${safeName} => value as ${safeName};`,
+      );
+    } else {
+      const targetType = generateTypeRef(typeDef.target, manifest, true);
+      lines.push(`export type ${safeName} = ${targetType};`);
+    }
   }
 
   return lines;

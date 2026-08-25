@@ -70,14 +70,21 @@ const manifest = loadAbiManifestFromFile('./abi.json');
 console.log(`${manifest.methods.length} methods`);
 ```
 
-## `generateClient(manifest, clientName?, importPath?)`
+## `generateClient(manifest, clientName?, importPath?, options?)`
 
 ```ts
 function generateClient(
   manifest: AbiManifest,
   clientName?: string,   // default: 'Client'
   importPath?: string,   // default: '@calimero-network/mero-react'
+  options?: CodegenOptions,
 ): string
+
+interface CodegenOptions {
+  // Emit branded types + constructors for newtypes over a string or numeric
+  // primitive. Default: true.
+  brandNewtypes?: boolean;
+}
 ```
 
 Takes a validated `AbiManifest` and returns a TypeScript source string
@@ -95,10 +102,13 @@ fs.mkdirSync('src/generated', { recursive: true });
 fs.writeFileSync('src/generated/KVStoreClient.ts', source);
 ```
 
-## `generateTypes(manifest)`
+## `generateTypes(manifest, options?)`
 
 ```ts
-function generateTypes(manifest: AbiManifest): string
+function generateTypes(
+  manifest: AbiManifest,
+  options?: CodegenOptions,
+): string
 ```
 
 A types-only emitter (no client class). It is used to produce the type surface
