@@ -57,13 +57,13 @@ the client class together — types are **not** written to a separate module.
 1. **Build your contract** and obtain its `abi.json` manifest.
 2. **Generate the client:** `calimero-abi-codegen -i abi.json -o src/generated`.
 3. **Use it in your app:** construct the client with a `MeroJs` instance, a
-   `contextId`, and an executor public key, then call its methods.
+   `contextId`, then call its methods.
 
 ```ts
 import { KVStoreClient } from './generated/KVStoreClient';
 
 // `mero` comes from the MeroProvider / useMero() hook in @calimero-network/mero-react
-const client = new KVStoreClient(mero, contextId, executorPublicKey);
+const client = new KVStoreClient(mero, contextId);
 
 await client.set({ key: 'greeting', value: 'hello' });
 const value = await client.get({ key: 'greeting' });
