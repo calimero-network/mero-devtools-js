@@ -128,6 +128,9 @@ Note the shape, because it differs from older hand-written clients:
 - A declared method `intent` (e.g. `read_only`) is surfaced as a `@intent` JSDoc
   tag only. It is documentation; there is no separate read transport yet, so
   read and write methods are called identically.
+- A cross-context entry point is tagged `@xcall <callers>`, and a declared
+  migration entrypoint `@migration from state version N to N+1`. Both are
+  documentation; the node enforces the caller policy and drives migrations.
 - `bytes`-typed values are represented by the generated `CalimeroBytes` class
   (`CalimeroBytes.fromHex(...)`, `.toUint8Array()`), converted to/from plain
   arrays at the RPC boundary.
