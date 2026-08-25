@@ -1,0 +1,45 @@
+{
+  "schema_version": "wasm-abi/1",
+  "types": {
+    "FolderId": { "kind": "alias", "target": { "kind": "string" } },
+    "ContextId": { "kind": "alias", "target": { "kind": "string" } },
+    "Height": { "kind": "alias", "target": { "kind": "u64" } },
+    "Ratio": { "kind": "alias", "target": { "kind": "f64" } },
+    "Flag": { "kind": "alias", "target": { "kind": "bool" } },
+    "Hash32": { "kind": "alias", "target": { "kind": "bytes", "size": 32 } },
+    "Tags": { "kind": "alias", "target": { "kind": "list", "items": { "kind": "string" } } },
+    "Index": { "kind": "alias", "target": { "kind": "map", "key": { "kind": "string" }, "value": { "kind": "string" } } },
+    "AliasOfFolderId": { "kind": "alias", "target": { "$ref": "FolderId" } },
+    "Role": { "kind": "variant", "variants": [{ "name": "Viewer" }, { "name": "Editor" }] },
+    "AliasOfRecord": { "kind": "alias", "target": { "$ref": "FolderEntry" } },
+    "FolderEntry": {
+      "kind": "record",
+      "fields": [
+        { "name": "id", "type": { "$ref": "FolderId" } },
+        { "name": "member", "type": { "kind": "string" } },
+        { "name": "height", "type": { "$ref": "Height" } },
+        { "name": "role", "type": { "$ref": "Role" } }
+      ]
+    }
+  },
+  "methods": [
+    {
+      "name": "get_folder",
+      "params": [{ "name": "id", "type": { "$ref": "FolderId" } }],
+      "returns": { "$ref": "FolderEntry" }
+    },
+    {
+      "name": "bind_context",
+      "params": [
+        { "name": "folder_id", "type": { "$ref": "FolderId" } },
+        { "name": "context_id", "type": { "$ref": "ContextId" } }
+      ]
+    },
+    {
+      "name": "current_height",
+      "params": [],
+      "returns": { "$ref": "Height" }
+    }
+  ],
+  "events": []
+}

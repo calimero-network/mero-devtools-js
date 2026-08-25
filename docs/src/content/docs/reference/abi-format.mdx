@@ -151,6 +151,50 @@ four kinds: **record**, **variant**, **alias**, or **bytes**.
 { "kind": "bytes", "size": 64 }
 ```
 
+### Aliases are newtypes, and they are branded
+
+`kind: "alias"` is emitted only for a Rust one-field tuple struct — a newtype
+such as `pub struct FolderId(pub String);`.
+A plain `type FolderId = String` cannot derive `AbiType`, so it never reaches
+the manifest as a named type.
+Every alias in a manifest is therefore a distinction the ABI author declared
+deliberately.
+
+Emitting `export type FolderId = string` would throw that distinction away:
+`FolderId`, `ContextId` and any bare string would all be mutually assignable.
+Aliases over a **string** or **numeric** primitive are instead emitted as a
+branded type plus a constructor:
+
+```ts
+export type FolderId = string & { readonly __brand: 'FolderId' };
+export const FolderId = (value: string): FolderId => value as FolderId;
+```
+
+The brand exists only in the type system — at runtime a `FolderId` is the
+string it always was, and the JSON on the wire is unchanged.
+
+Branding stops there, and deliberately:
+
+| Alias target | Emitted as | Why |
+| --- | --- | --- |
+| `string`, `i32`/`i64`/`u32`/`u64`/`f32`/`f64` | branded | TypeScript would otherwise erase the distinction entirely |
+| `bool` | plain alias | two inhabitants; nothing to confuse |
+| `bytes` | plain alias (`CalimeroBytes`) | already a class; an intersection would reject real instances |
+| `list`, `map`, `tuple`, inline `record` | plain alias | structurally distinct already, and branding would force a cast on every literal |
+| `$ref` to a record or variant | unchanged | records emit an `interface` and variants a discriminated union, both of which already carry their own shape |
+| `$ref` to another alias | branded under **its own** name | `struct A(B)` and `B` are distinct types in Rust, so they are distinct here |
+
+A newtype over a type the manifest does not define is left as a plain alias.
+
+Note what branding cannot do: a field declared as a bare `{"kind": "string"}`
+stays a bare `string`.
+Branding recovers a distinction the ABI made; it cannot invent one the app
+never declared.
+Guarding such a field means giving it a newtype in the Rust source first.
+
+`--no-brand-newtypes` restores the pre-2.0 aliasing for one release to ease
+migration; the flag is scheduled for removal in the next major.
+
 How variants are emitted depends on their payloads:
 
 - **All-unit** variants (no payloads) become a string-literal union, e.g.

@@ -32,6 +32,7 @@ npx @calimero-network/abi-codegen -i abi.json -o src/generated
 | `--client-name <Name>` | Explicit client class name; sanitized to a valid identifier. | derived (see below) |
 | `--name-from <path>` | Derive the client name from a file path (e.g. the `.wasm` file). | — |
 | `--import-path <path>` | Import path for the runtime dependency in generated code. | `@calimero-network/mero-react` |
+| `--no-brand-newtypes` | Emit newtypes as plain aliases instead of branded types. Migration aid, removed next major. | off |
 | `--validate` | Validate the manifest only; generate nothing. Exits `0` on success. | — |
 | `-h, --help` | Print usage help. | — |
 

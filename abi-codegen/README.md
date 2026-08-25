@@ -31,7 +31,8 @@ npx calimero-abi-codegen --validate -i abi.json
 
 Flags: `-i, --input <file>` (default `abi.json`), `-o, --output <dir>` (default `src`),
 `--client-name <Name>`, `--name-from <path>`, `--import-path <path>` (default
-`@calimero-network/mero-react`), `--validate`, `-h, --help`. Full details in the
+`@calimero-network/mero-react`), `--no-brand-newtypes`, `--validate`,
+`-h, --help`. Full details in the
 [CLI reference](https://calimero-network.github.io/mero-devtools-js/reference/cli/).
 
 ### Programmatic
