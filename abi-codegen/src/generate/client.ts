@@ -300,12 +300,10 @@ export function generateClient(
   lines.push(`export class ${clientName} {`);
   lines.push(`  private _mero: MeroJs;`);
   lines.push(`  private _contextId: string;`);
-  lines.push(`  private _executorPublicKey: string;`);
   lines.push('');
-  lines.push(`  constructor(mero: MeroJs, contextId: string, executorPublicKey: string) {`);
+  lines.push(`  constructor(mero: MeroJs, contextId: string) {`);
   lines.push(`    this._mero = mero;`);
   lines.push(`    this._contextId = contextId;`);
-  lines.push(`    this._executorPublicKey = executorPublicKey;`);
   lines.push(`  }`);
   lines.push('');
 
@@ -622,7 +620,7 @@ function generateMethod(
       `  public async ${methodName}(): Promise<${nullableReturnType}> {`,
     );
     lines.push(
-      `    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: '${method.name}', argsJson: {}, executorPublicKey: this._executorPublicKey });`,
+      `    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: '${method.name}', argsJson: {} });`,
     );
   } else {
     // 1+ parameters - build object type and expose single params argument
@@ -670,22 +668,22 @@ function generateMethod(
         // Only apply CalimeroBytes conversion if needed
         if (hasCalimeroBytesParams(method, manifest)) {
           lines.push(
-            `    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: '${method.name}', argsJson: convertCalimeroBytesForWasm(convertedParams), executorPublicKey: this._executorPublicKey });`,
+            `    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: '${method.name}', argsJson: convertCalimeroBytesForWasm(convertedParams) });`,
           );
         } else {
           lines.push(
-            `    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: '${method.name}', argsJson: convertedParams, executorPublicKey: this._executorPublicKey });`,
+            `    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: '${method.name}', argsJson: convertedParams });`,
           );
         }
       } else {
         // Only apply CalimeroBytes conversion if needed
         if (hasCalimeroBytesParams(method, manifest)) {
           lines.push(
-            `    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: '${method.name}', argsJson: convertCalimeroBytesForWasm(params), executorPublicKey: this._executorPublicKey });`,
+            `    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: '${method.name}', argsJson: convertCalimeroBytesForWasm(params) });`,
           );
         } else {
           lines.push(
-            `    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: '${method.name}', argsJson: params, executorPublicKey: this._executorPublicKey });`,
+            `    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: '${method.name}', argsJson: params });`,
           );
         }
       }
@@ -693,11 +691,11 @@ function generateMethod(
       // For multiple parameters, only apply CalimeroBytes conversion if needed
       if (hasCalimeroBytesParams(method, manifest)) {
         lines.push(
-          `    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: '${method.name}', argsJson: convertCalimeroBytesForWasm(params), executorPublicKey: this._executorPublicKey });`,
+          `    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: '${method.name}', argsJson: convertCalimeroBytesForWasm(params) });`,
         );
       } else {
         lines.push(
-          `    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: '${method.name}', argsJson: params, executorPublicKey: this._executorPublicKey });`,
+          `    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: '${method.name}', argsJson: params });`,
         );
       }
     }

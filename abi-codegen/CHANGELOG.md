@@ -1,5 +1,17 @@
 ## Unreleased
 
+### BREAKING CHANGES
+
+- **abi-codegen:** the generated client no longer takes an executor public key.
+  Drop the third constructor argument: `new FooClient(mero, contextId,
+  executorPublicKey)` becomes `new FooClient(mero, contextId)`. The node has
+  always resolved the executor from its own owned identity for the context, and
+  `ExecutionRequest` carries only `contextId`/`method`/`argsJson`, so the key
+  was silently discarded by serde rather than rejected. Requires
+  `@calimero-network/mero-js` >= 1.4.0 or `@calimero-network/mero-react` >=
+  1.1.0, the first releases where `ExecuteParams.executorPublicKey` is optional;
+  against anything older the emitted call no longer typechecks.
+
 ### Bug Fixes
 
 - **abi-codegen:** sync the bundled `wasm-abi-v1.schema.json` with calimero core
