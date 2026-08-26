@@ -67,9 +67,6 @@ function showHelp() {
     '  --import-path <path>      Custom import path for mero-react (default: @calimero-network/mero-react)',
   );
   console.log(
-    '  --no-brand-newtypes       Emit newtypes as plain aliases (pre-2.0 behaviour)',
-  );
-  console.log(
     '  --validate                Validate ABI manifest only (no code generation)',
   );
   console.log('  -h, --help                Show this help message');
@@ -156,9 +153,7 @@ function main() {
       // Generate client.ts with derived filename (types are embedded)
       const importPath =
         args['import-path'] || '@calimero-network/mero-react';
-      const clientContent = generateClient(manifest, clientName, importPath, {
-        brandNewtypes: !flags.includes('no-brand-newtypes'),
-      });
+      const clientContent = generateClient(manifest, clientName, importPath);
       const clientPath = path.join(outputDir, `${clientName}.ts`);
       fs.writeFileSync(clientPath, clientContent);
 

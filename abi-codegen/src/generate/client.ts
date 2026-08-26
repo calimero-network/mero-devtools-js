@@ -4,7 +4,6 @@ import {
   AbiTypeRef,
   AbiTypeDef,
   AbiEvent,
-  CodegenOptions,
 } from '../model.js';
 import { brandBaseType, formatIdentifier, generateFileBanner, mapRustTypeToTs, sanitizeClassName, toCamelCase } from './emit.js';
 
@@ -114,9 +113,7 @@ export function generateClient(
   manifest: AbiManifest,
   clientName: string = 'Client',
   importPath: string = '@calimero-network/mero-react',
-  options: CodegenOptions = {},
 ): string {
-  const brandNewtypes = options.brandNewtypes ?? true;
   // Sanitize clientName: remove spaces/special chars, preserve existing casing
   clientName = sanitizeClassName(clientName);
 
@@ -157,7 +154,6 @@ export function generateClient(
         typeName,
         typeDef as AbiTypeDef,
         manifest,
-        brandNewtypes,
       ),
     );
     lines.push('');
@@ -421,7 +417,6 @@ function generateTypeDefinition(
   typeName: string,
   typeDef: AbiTypeDef,
   manifest: AbiManifest,
-  brandNewtypes: boolean,
 ): string[] {
   const lines: string[] = [];
   const safeName = formatIdentifier(typeName);
@@ -474,7 +469,7 @@ function generateTypeDefinition(
       lines.push('} as const;');
     }
   } else if (typeDef.kind === 'alias') {
-    const brandBase = brandNewtypes ? brandBaseType(typeDef, manifest) : null;
+    const brandBase = brandBaseType(typeDef, manifest);
     if (brandBase) {
       lines.push(
         `export type ${safeName} = ${brandBase} & { readonly __brand: '${safeName}' };`,
