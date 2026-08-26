@@ -132,15 +132,6 @@ describe('newtype branding', () => {
     );
   });
 
-  it('restores plain aliases under --no-brand-newtypes', () => {
-    const out = generateClient(manifest, 'NT', undefined, {
-      brandNewtypes: false,
-    });
-    expect(out).toContain('export type FolderId = string;');
-    expect(out).toContain('export type Height = number;');
-    expect(out).not.toMatch(/__brand/);
-  });
-
   it('leaves a self-referential alias alone instead of looping', () => {
     const cyclic = parseAbiManifest({
       schema_version: 'wasm-abi/1',

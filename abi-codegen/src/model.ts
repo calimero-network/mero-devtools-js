@@ -158,11 +158,3 @@ export interface AbiEvent {
   name: string;
   payload?: AbiTypeRef;
 }
-
-// Emitter options shared by generateClient/generateTypes.
-export interface CodegenOptions {
-  // Emit a branded type + constructor for newtypes over a string or numeric
-  // primitive instead of a bare alias. Defaults to true; `--no-brand-newtypes`
-  // restores the old aliasing for one release to ease migration.
-  brandNewtypes?: boolean;
-}
