@@ -12,6 +12,21 @@
   1.1.0, the first releases where `ExecuteParams.executorPublicKey` is optional;
   against anything older the emitted call no longer typechecks.
 
+- **abi-codegen:** newtypes over a string or numeric primitive are emitted as
+  branded types instead of bare aliases. `export type FolderId = string` becomes
+  `export type FolderId = string & { readonly __brand: 'FolderId' }`, alongside a
+  `FolderId(value)` constructor. Call sites currently passing bare strings or
+  numbers no longer compile — wrap them in the generated constructor. A
+  `kind: "alias"` typedef is emitted only for a Rust one-field tuple struct, so
+  every alias is a distinction the ABI declared and a plain alias discarded;
+  `FolderId`, `ContextId` and any bare string used to be mutually assignable.
+  Branding is confined to string and numeric targets: `bool`, `bytes`,
+  collections and `$ref`s to records or variants are unchanged, because those
+  already emit types that will not silently accept a foreign value. Branding is
+  a compile-time construct only; the JSON on the wire is identical.
+  `--no-brand-newtypes` restores the old behaviour for one release and is
+  scheduled for removal in the next major.
+
 ### Bug Fixes
 
 - **abi-codegen:** sync the bundled `wasm-abi-v1.schema.json` with calimero core
