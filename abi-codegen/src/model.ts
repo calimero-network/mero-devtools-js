@@ -105,6 +105,9 @@ export interface AbiVariant {
 export interface AbiAlias {
   kind: 'alias';
   target: AbiTypeRef;
+  // ECMA-262 source text describing what the newtype accepts. Descriptive only:
+  // the node does not enforce it, so it constrains the client boundary alone.
+  pattern?: string;
 }
 
 // Type definitions (what goes in the types object)
