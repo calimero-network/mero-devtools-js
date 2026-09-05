@@ -44,6 +44,15 @@
   generated client JSDoc (`@intent read_only`). Documentation only — there is no
   read transport yet.
 
+- **abi-codegen:** surface cross-context and migration metadata in the generated
+  client JSDoc. An `xcall_callable` method is tagged `@xcall <callers>` (an
+  absent `xcall_callers` reports `any_in_namespace`, the value the node applies),
+  and a method named by a `migrations` edge is tagged `@migration from state
+  version N to N+1`. Both fields already parsed but never reached the output, so
+  a caller could not tell a node-enforced `same_app` entry point, or a
+  node-driven migrate entrypoint, from ordinary app API. Documentation only —
+  the node remains the enforcement point.
+
 ### Tests / CI
 
 - Add cross-repo guards that run on every PR: a corpus parse test over a

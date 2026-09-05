@@ -246,8 +246,22 @@ author:
 | `xcall_callable` | `boolean` | Whether the method is a cross-context entry point. Absent/`false` means it is not. |
 | `xcall_callers` | `any_in_namespace` \| `same_app` | Who may invoke it. `any_in_namespace` (the default) allows any context in the namespace; `same_app` restricts callers to contexts running the same application. Enforced by the node. |
 
-These are manifest metadata; the current generator does not emit anything
-special for them.
+The generator surfaces both on the method as an `@xcall` JSDoc tag, because
+nothing in the emitted signature distinguishes a cross-context entry point from
+an ordinary method:
+
+```ts
+/**
+ * transfer
+ *
+ * @xcall same_app (callers must run the same application id)
+ */
+public async transfer(params: { to: string }): Promise<void>
+```
+
+An `xcall_callable` method with no declared `xcall_callers` is tagged
+`any_in_namespace`, since that is the value the node applies. The tag is
+documentation: the policy is enforced by the node, not by the generated client.
 
 ## State versioning & migrations
 
@@ -268,6 +282,20 @@ key `fromVersion`):
 
 Modelled as `AbiMigrationEdge { method: string; fromVersion: number }`. Both
 `state_version` and `migrations` are optional, top-level fields.
+
+A method named by a migration edge is tagged on the emitted client, so it is not
+mistaken for ordinary app API:
+
+```ts
+/**
+ * migrate_v1_to_v2
+ *
+ * @migration from state version 1 to 2 — invoked by the node during upgrade, not by app code
+ */
+```
+
+`state_version` itself is not emitted: it describes the deployed state, not the
+client's call surface.
 
 ## Events
 

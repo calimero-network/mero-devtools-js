@@ -596,6 +596,29 @@ function generateMethod(
     lines.push(`   * @intent ${method.intent}`);
   }
 
+  // Cross-context entry point. The node enforces the caller policy, and an
+  // absent `xcall_callers` means `any_in_namespace`, so state it either way —
+  // nothing else in the emitted signature distinguishes these methods.
+  if (method.xcall_callable) {
+    const callers = method.xcall_callers ?? 'any_in_namespace';
+    const note =
+      callers === 'same_app'
+        ? 'callers must run the same application id'
+        : 'callable by any context in the namespace';
+    lines.push('   *');
+    lines.push(`   * @xcall ${callers} (${note})`);
+  }
+
+  // Declared migration edge. The node drives these during an upgrade; app code
+  // calling one directly is almost always a mistake.
+  const migration = manifest.migrations?.find((m) => m.method === method.name);
+  if (migration) {
+    lines.push('   *');
+    lines.push(
+      `   * @migration from state version ${migration.fromVersion} to ${migration.fromVersion + 1} — invoked by the node during upgrade, not by app code`,
+    );
+  }
+
   // Add error documentation if method has errors
   if (method.errors && method.errors.length > 0) {
     lines.push('   *');
