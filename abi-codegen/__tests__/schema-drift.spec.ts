@@ -7,7 +7,7 @@ import { fileURLToPath } from 'url';
 // wasm-abi.schema.json. The bundled schema is shipped data; if core relaxes a
 // constraint or adds a field and this copy lags, every new manifest is rejected
 // at parse time. This test fails loudly on any semantic divergence except the
-// two known, intentional ones documented below.
+// intentional ones listed in KNOWN_DEVIATIONS.
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const bundledSchemaPath = join(
@@ -19,37 +19,17 @@ const vendoredCoreSchemaPath = join(
   '../__fixtures__/corpus/wasm-abi.schema.json',
 );
 
-// The two intentional divergences between abi-codegen's bundled schema and
-// core's, matched by CONTENT rather than array position — a positional allowlist
+// Intentional divergences between abi-codegen's bundled schema and core's,
+// matched by CONTENT rather than array position — a positional allowlist
 // (e.g. `.../oneOf/3`) silently breaks when core reorders a `oneOf`. Each branch
 // is removed from whichever schema carries it before the comparison, so the
-// remainder must match exactly.
+// remainder must match exactly. Empty while the two schemas agree everywhere.
 const KNOWN_DEVIATIONS: {
   label: string;
   location: string[];
   match: (branch: any) => boolean;
   reason: string;
-}[] = [
-  {
-    label: 'abi-codegen-only `tuple` CollectionType branch',
-    location: ['definitions', 'CollectionType', 'oneOf'],
-    match: (b) => b?.properties?.kind?.const === 'tuple',
-    reason:
-      'abi-codegen extension: a `tuple` collection branch. Core rejects tuples ' +
-      'during normalization so never emits one; the extra branch only widens ' +
-      'what abi-codegen accepts and cannot reject a valid core ABI.',
-  },
-  {
-    label: 'core-only VariableBytesType $ref in TypeDef',
-    location: ['definitions', 'TypeDef', 'oneOf'],
-    match: (b) => b?.['$ref'] === '#/definitions/VariableBytesType',
-    reason:
-      "core-only dangling $ref to #/definitions/VariableBytesType, which core's " +
-      'schema never defines and whose Rust enum has no counterpart. Variable ' +
-      'bytes are already covered by the BytesType branch (optional size). AJV ' +
-      'would fail to compile the missing ref, so abi-codegen omits the branch.',
-  },
-];
+}[] = [];
 
 const STRIP_KEYS = new Set(['description', 'title', '$comment']);
 // JSON-Schema combinators whose element order carries no meaning.
