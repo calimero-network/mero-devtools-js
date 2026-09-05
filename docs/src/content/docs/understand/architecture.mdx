@@ -83,20 +83,17 @@ returns a single TypeScript source string. In order, it emits:
 
 ## The generated client class
 
-The emitted class is thin. Its constructor takes a `MeroJs` runtime, a
-`contextId`, and an executor public key; each method wraps one
-`this._mero.rpc.execute(...)` call.
+The emitted class is thin. Its constructor takes a `MeroJs` runtime and a
+`contextId`; each method wraps one `this._mero.rpc.execute(...)` call.
 
 ```ts
 export class KVStoreClient {
   private _mero: MeroJs;
   private _contextId: string;
-  private _executorPublicKey: string;
 
-  constructor(mero: MeroJs, contextId: string, executorPublicKey: string) {
+  constructor(mero: MeroJs, contextId: string) {
     this._mero = mero;
     this._contextId = contextId;
-    this._executorPublicKey = executorPublicKey;
   }
 
   /**
@@ -109,7 +106,6 @@ export class KVStoreClient {
       contextId: this._contextId,
       method: 'set',
       argsJson: params,
-      executorPublicKey: this._executorPublicKey,
     });
   }
 }
@@ -123,8 +119,10 @@ Note the shape, because it differs from older hand-written clients:
 - The first constructor argument is the **`MeroJs` instance itself**, not
   `mero.rpc`.
 - `rpc.execute` is called with a **named-field object** (`contextId`, `method`,
-  `argsJson`, `executorPublicKey`) and returns the result directly, throwing on
-  error — there is no `{ output }` wrapper to unwrap.
+  `argsJson`) and returns the result directly, throwing on error — there is no
+  `{ output }` wrapper to unwrap.
+- There is no executor argument. The node resolves the executor from its own
+  owned identity for the context, so a client-supplied key was always ignored.
 - A declared method `intent` (e.g. `read_only`) is surfaced as a `@intent` JSDoc
   tag only. It is documentation; there is no separate read transport yet, so
   read and write methods are called identically.

@@ -130,19 +130,19 @@ describe('Codegen', () => {
         "} from '@calimero-network/mero-react';",
       );
       expect(clientContent).toContain(
-        'constructor(mero: MeroJs, contextId: string, executorPublicKey: string) {',
+        'constructor(mero: MeroJs, contextId: string) {',
       );
       expect(clientContent).toContain(
         'async optU32(params: { x: number | null }): Promise<number | null> {',
       );
       expect(clientContent).toContain(
-        "const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'opt_u32', argsJson: params, executorPublicKey: this._executorPublicKey });",
+        "const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'opt_u32', argsJson: params });",
       );
       expect(clientContent).toContain(
         'async makePerson(params: { p: Person }): Promise<Person> {',
       );
       expect(clientContent).toContain(
-        "const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'make_person', argsJson: convertCalimeroBytesForWasm(params), executorPublicKey: this._executorPublicKey });",
+        "const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'make_person', argsJson: convertCalimeroBytesForWasm(params) });",
       );
       // Error documentation is now handled through standard error response pattern
     });
@@ -162,13 +162,13 @@ describe('Codegen', () => {
         'async roundtripId(params: { x: UserId32 }): Promise<UserId32> {',
       );
       expect(clientContent).toContain(
-        "const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'roundtrip_id', argsJson: convertCalimeroBytesForWasm(params), executorPublicKey: this._executorPublicKey });",
+        "const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'roundtrip_id', argsJson: convertCalimeroBytesForWasm(params) });",
       );
       expect(clientContent).toContain(
         'async optU32(params: { x: number | null }): Promise<number | null> {',
       );
       expect(clientContent).toContain(
-        "const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'opt_u32', argsJson: params, executorPublicKey: this._executorPublicKey });",
+        "const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'opt_u32', argsJson: params });",
       );
     });
 
@@ -180,7 +180,7 @@ describe('Codegen', () => {
         'async makePerson(params: { p: Person }): Promise<Person> {',
       );
       expect(clientContent).toContain(
-        "const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'make_person', argsJson: convertCalimeroBytesForWasm(params), executorPublicKey: this._executorPublicKey });",
+        "const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'make_person', argsJson: convertCalimeroBytesForWasm(params) });",
       );
     });
 
@@ -225,7 +225,7 @@ describe('Codegen', () => {
         'async makePerson(params: { p: Person }): Promise<Person> {',
       );
       expect(clientContent).toContain(
-        "const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'make_person', argsJson: convertCalimeroBytesForWasm(params), executorPublicKey: this._executorPublicKey });",
+        "const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'make_person', argsJson: convertCalimeroBytesForWasm(params) });",
       );
     });
 
@@ -290,11 +290,10 @@ describe('Codegen', () => {
 
       expect(clientContent).toContain('export class KVStoreClient {');
       expect(clientContent).toContain(
-        'constructor(mero: MeroJs, contextId: string, executorPublicKey: string) {',
+        'constructor(mero: MeroJs, contextId: string) {',
       );
       expect(clientContent).toContain('private _mero: MeroJs;');
       expect(clientContent).toContain('private _contextId: string;');
-      expect(clientContent).toContain('private _executorPublicKey: string;');
       expect(clientContent).toContain('import {');
       expect(clientContent).toContain('  MeroJs,');
 
@@ -567,21 +566,18 @@ describe('Codegen', () => {
       const clientContent = generateClient(manifest, 'TestClient');
       expect(clientContent).toContain('private _mero: MeroJs;');
       expect(clientContent).toContain('private _contextId: string;');
-      expect(clientContent).toContain('private _executorPublicKey: string;');
     });
 
     it('should not have un-prefixed private fields', () => {
       const clientContent = generateClient(manifest, 'TestClient');
       expect(clientContent).not.toMatch(/private mero: MeroJs/);
       expect(clientContent).not.toMatch(/private contextId: string/);
-      expect(clientContent).not.toMatch(/private executorPublicKey: string/);
     });
 
     it('should use underscore-prefixed fields in method bodies', () => {
       const clientContent = generateClient(manifest, 'TestClient');
       expect(clientContent).toContain('this._mero.rpc.execute');
       expect(clientContent).toContain('contextId: this._contextId');
-      expect(clientContent).toContain('executorPublicKey: this._executorPublicKey');
       expect(clientContent).not.toMatch(/this\.mero\.rpc/);
     });
 
@@ -981,7 +977,7 @@ describe('Codegen', () => {
       const testStub = `
 // Test stub to verify parameter structure
 const mero = { rpc: { execute: async (p: any) => p } } as any;
-const client = new Client(mero, 'ctx-1', 'exec-key-1');
+const client = new Client(mero, 'ctx-1');
 await client.roundtripId({ x: "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef" });
 await client.makePerson({ p: { id: "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef" as any, name: "test", age: 25 } });
 await client.act({ a: Action.Ping() });
@@ -1020,5 +1016,34 @@ await client.act({ a: Action.Ping() });
         throw error;
       }
     });
+  });
+});
+
+// The node resolves the executor from its own owned identity for the context
+// (core: crates/server/src/execute.rs) and ExecutionRequest carries only
+// contextId/method/argsJson. An emitted executorPublicKey is dropped by serde
+// without error, so only a grep over the output catches a regression.
+describe('executorPublicKey is never emitted', () => {
+  const fixtures = ['abi_conformance.json', 'ludo_crdt_abi.json'];
+
+  for (const fixture of fixtures) {
+    it(`is absent from every emitter for ${fixture}`, () => {
+      const m = loadAbiManifestFromFile(
+        path.join(__dirname, '../__fixtures__', fixture),
+      );
+      for (const output of [generateClient(m, 'TestClient'), generateTypes(m)]) {
+        expect(output).not.toMatch(/executorPublicKey/i);
+      }
+    });
+  }
+
+  it('takes exactly two constructor arguments', () => {
+    const m = loadAbiManifestFromFile(
+      path.join(__dirname, '../__fixtures__/abi_conformance.json'),
+    );
+    const clientContent = generateClient(m, 'TestClient');
+    expect(clientContent).toContain(
+      'constructor(mero: MeroJs, contextId: string) {',
+    );
   });
 });

@@ -32,8 +32,12 @@ jobs:
       - run: pnpm test
       - name: Validate ABI
         run: cd abi-codegen && pnpm run validate:abi
-      - name: Test code generation
-        run: cd abi-codegen && pnpm run generate:example
+      # Proves in one step that the generator runs, that its output matches what
+      # is committed, and that it writes nothing unexpected.
+      - name: Generated example is in sync
+        run: |
+          cd abi-codegen && pnpm run generate:example
+          cd .. && git diff --exit-code && test -z "$(git status --porcelain)"
 
   # Validate the bundled schema + parser against the LATEST CORE RELEASE, not a
   # vendored snapshot — so the tool can't silently drift from what consumers
