@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { parseAbiManifest, loadAbiManifestFromFile } from '../src/parse.js';
+import { generateClient } from '../src/generate/client.js';
 import { readFileSync, existsSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -416,6 +417,60 @@ describe('WASM-ABI v1 Parser', () => {
 
       expect(existsSync(cliPath)).toBe(true);
       expect(existsSync(fixturePath)).toBe(true);
+    });
+  });
+
+  describe('unsafe pattern rejection', () => {
+    const withPattern = (pattern: string) => ({
+      schema_version: 'wasm-abi/1' as const,
+      types: {
+        Risky: {
+          kind: 'alias' as const,
+          target: { kind: 'string' as const },
+          pattern,
+        },
+      },
+      methods: [],
+      events: [],
+    });
+
+    it('drops a catastrophically-backtracking pattern and warns on stderr', () => {
+      const stderr = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const manifest = parseAbiManifest(withPattern('^(a+)+$'));
+
+      expect(manifest.types.Risky).not.toHaveProperty('pattern');
+      expect(stderr).toHaveBeenCalledTimes(1);
+      expect(stderr.mock.calls[0][0]).toContain('Risky');
+      expect(stderr.mock.calls[0][0]).toContain('^(a+)+$');
+      stderr.mockRestore();
+      expect(generateClient(manifest, 'Risky')).not.toContain('new RegExp');
+    });
+
+    it('keeps a safe pattern and its validating constructor unchanged', () => {
+      const stderr = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const manifest = parseAbiManifest(withPattern('^[0-9a-f]{64}$'));
+
+      expect(manifest.types.Risky).toHaveProperty(
+        'pattern',
+        '^[0-9a-f]{64}$',
+      );
+      expect(stderr).not.toHaveBeenCalled();
+      stderr.mockRestore();
+      expect(generateClient(manifest, 'Risky')).toContain(
+        'new RegExp("^[0-9a-f]{64}$")',
+      );
+    });
+
+    // Pins the library choice: a star-height heuristic (e.g. safe-regex) false-positives
+    // on this real path pattern, so swapping detectors would turn this test red.
+    it('does not drop the RoutePath fixture pattern', () => {
+      const manifest = loadAbiManifestFromFile(
+        resolve(__dirname, '../__fixtures__/newtypes_abi.json'),
+      );
+      expect(manifest.types.RoutePath).toHaveProperty(
+        'pattern',
+        '^/[a-z]+(/[a-z]+)*$',
+      );
     });
   });
 });
