@@ -862,6 +862,28 @@ describe('Codegen', () => {
       expect(clientContent).toContain('function convertCalimeroBytesForWasm');
       expect(clientContent).toContain('function convertWasmResultToCalimeroBytes');
     });
+
+    it('converts bytes for a record type merely named Action (name match, not variant check)', () => {
+      // The Action-variant branch matches on the ref name alone, so a record
+      // named Action with a bytes field must still go through convertCalimeroBytesForWasm.
+      const abi = {
+        schema_version: 'wasm-abi/1',
+        types: {
+          Action: { kind: 'record', fields: [{ name: 'hash', type: { $ref: 'Hash32' } }] },
+          Hash32: { kind: 'alias', target: { kind: 'bytes', size: 32 } },
+        },
+        methods: [
+          { name: 'apply', params: [{ name: 'action', type: { $ref: 'Action' } }] },
+        ],
+        events: [],
+      };
+      const parsed = parseAbiManifest(abi);
+      const clientContent = generateClient(parsed, 'TestClient');
+      expect(clientContent).not.toContain('const response = await this._mero.rpc.execute');
+      expect(clientContent).toContain(
+        "await this._mero.rpc.execute({ contextId: this._contextId, method: 'apply', argsJson: convertCalimeroBytesForWasm(convertedParams) });",
+      );
+    });
   });
 
   describe('types.ts threads manifest through error/event generation', () => {
