@@ -200,6 +200,12 @@ How variants are emitted depends on their payloads:
   `<Name>Payload` type plus a factory `const <Name>` with a constructor per
   variant.
 
+A payload-bearing variant passed as a method parameter is rewritten to serde's
+`{ Variant: payload }` shape before the call, and a unit member of such a variant
+to the bare string `"Variant"`, so the ergonomic `{ name, payload }` form never
+reaches the node.
+A newtype over a variant is rewritten the same way as the variant it wraps.
+
 ## Methods
 
 ```json

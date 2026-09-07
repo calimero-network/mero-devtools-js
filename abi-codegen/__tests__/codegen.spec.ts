@@ -762,6 +762,113 @@ describe('Codegen', () => {
     });
   });
 
+  describe('variant params are rewritten to the serde wire shape', () => {
+    const commandVariant = {
+      kind: 'variant',
+      variants: [{ name: 'Stop' }, { name: 'Rename', payload: { kind: 'string' } }],
+    };
+
+    it('converts a payload-bearing variant param whatever its type is named', () => {
+      const parsed = parseAbiManifest({
+        schema_version: 'wasm-abi/1',
+        types: { Command: commandVariant },
+        methods: [
+          { name: 'run', params: [{ name: 'cmd', type: { $ref: 'Command' } }] },
+        ],
+        events: [],
+      });
+      const clientContent = generateClient(parsed, 'TestClient');
+      expect(clientContent).toContain(
+        'convertedParams.cmd = { [convertedParams.cmd.name]: convertedParams.cmd.payload };',
+      );
+      expect(clientContent).toContain(
+        "method: 'run', argsJson: convertedParams });",
+      );
+    });
+
+    it('leaves a record merely named Action unconverted', () => {
+      const parsed = parseAbiManifest({
+        schema_version: 'wasm-abi/1',
+        types: {
+          Action: { kind: 'record', fields: [{ name: 'hash', type: { $ref: 'Hash32' } }] },
+          Hash32: { kind: 'alias', target: { kind: 'bytes', size: 32 } },
+        },
+        methods: [
+          { name: 'apply', params: [{ name: 'action', type: { $ref: 'Action' } }] },
+        ],
+        events: [],
+      });
+      const clientContent = generateClient(parsed, 'TestClient');
+      expect(clientContent).not.toContain('convertedParams');
+      expect(clientContent).toContain(
+        "method: 'apply', argsJson: convertCalimeroBytesForWasm(params) });",
+      );
+    });
+
+    it('converts a variant param in a multi-param method', () => {
+      const parsed = parseAbiManifest({
+        schema_version: 'wasm-abi/1',
+        types: { Command: commandVariant },
+        methods: [
+          {
+            name: 'run',
+            params: [
+              { name: 'cmd', type: { $ref: 'Command' } },
+              { name: 'label', type: { kind: 'string' } },
+            ],
+          },
+        ],
+        events: [],
+      });
+      const clientContent = generateClient(parsed, 'TestClient');
+      expect(clientContent).toContain(
+        'convertedParams.cmd = { [convertedParams.cmd.name]: convertedParams.cmd.payload };',
+      );
+      expect(clientContent).toContain(
+        "method: 'run', argsJson: convertedParams });",
+      );
+    });
+
+    it('converts a param whose newtype aliases a variant', () => {
+      const parsed = parseAbiManifest({
+        schema_version: 'wasm-abi/1',
+        types: {
+          Cmd: { kind: 'alias', target: { $ref: 'Command' } },
+          Command: commandVariant,
+        },
+        methods: [
+          { name: 'run', params: [{ name: 'cmd', type: { $ref: 'Cmd' } }] },
+        ],
+        events: [],
+      });
+      const clientContent = generateClient(parsed, 'TestClient');
+      expect(clientContent).toContain(
+        'convertedParams.cmd = { [convertedParams.cmd.name]: convertedParams.cmd.payload };',
+      );
+      expect(clientContent).toContain(
+        "method: 'run', argsJson: convertedParams });",
+      );
+    });
+
+    it('leaves an all-unit variant param unconverted', () => {
+      const parsed = parseAbiManifest({
+        schema_version: 'wasm-abi/1',
+        types: {
+          Role: { kind: 'variant', variants: [{ name: 'Viewer' }, { name: 'Editor' }] },
+        },
+        methods: [
+          { name: 'set_role', params: [{ name: 'role', type: { $ref: 'Role' } }] },
+        ],
+        events: [],
+      });
+      const clientContent = generateClient(parsed, 'TestClient');
+      expect(clientContent).not.toContain('convertedParams');
+      expect(clientContent).toContain(
+        "method: 'set_role', argsJson: params });",
+      );
+    });
+  });
+
   describe('conditional emission of CalimeroBytes helpers', () => {
     it('should NOT emit CalimeroBytes class when no type uses bytes', () => {
       const abiNoBytes = {
@@ -863,27 +970,88 @@ describe('Codegen', () => {
       expect(clientContent).toContain('function convertWasmResultToCalimeroBytes');
     });
 
-    it('converts bytes for a record type merely named Action (name match, not variant check)', () => {
-      // The Action-variant branch matches on the ref name alone, so a record
-      // named Action with a bytes field must still go through convertCalimeroBytesForWasm.
-      // Known defect: this should match on shape, not name; fixing it should delete this test.
+    it('should flag a variant param whose payload carries bytes', () => {
       const abi = {
         schema_version: 'wasm-abi/1',
         types: {
-          Action: { kind: 'record', fields: [{ name: 'hash', type: { $ref: 'Hash32' } }] },
+          Command: {
+            kind: 'variant',
+            variants: [{ name: 'Stop' }, { name: 'Store', payload: { $ref: 'Hash32' } }],
+          },
           Hash32: { kind: 'alias', target: { kind: 'bytes', size: 32 } },
         },
         methods: [
-          { name: 'apply', params: [{ name: 'action', type: { $ref: 'Action' } }] },
+          { name: 'run', params: [{ name: 'cmd', type: { $ref: 'Command' } }] },
         ],
         events: [],
       };
       const parsed = parseAbiManifest(abi);
       const clientContent = generateClient(parsed, 'TestClient');
-      expect(clientContent).not.toContain('const response = await this._mero.rpc.execute');
+      expect(clientContent).toContain('function convertCalimeroBytesForWasm');
       expect(clientContent).toContain(
-        "await this._mero.rpc.execute({ contextId: this._contextId, method: 'apply', argsJson: convertCalimeroBytesForWasm(convertedParams) });",
+        "method: 'run', argsJson: convertCalimeroBytesForWasm(convertedParams) });",
       );
+    });
+
+    it('should flag a variant RETURN whose payload carries bytes', () => {
+      // Flagging the return runs it through convertWasmResultToCalimeroBytes,
+      // which rebuilds any all-number array as CalimeroBytes: a sibling
+      // list<u32> member comes back mangled against its declared number[].
+      const abi = {
+        schema_version: 'wasm-abi/1',
+        types: {
+          Result: {
+            kind: 'variant',
+            variants: [
+              { name: 'Digest', payload: { kind: 'bytes' } },
+              { name: 'Scores', payload: { kind: 'list', items: { kind: 'u32' } } },
+            ],
+          },
+        },
+        methods: [{ name: 'tally', params: [], returns: { $ref: 'Result' } }],
+        events: [],
+      };
+      const parsed = parseAbiManifest(abi);
+      const clientContent = generateClient(parsed, 'TestClient');
+      expect(clientContent).toContain('function convertWasmResultToCalimeroBytes');
+      expect(clientContent).toContain(
+        'return convertWasmResultToCalimeroBytes(response) as ResultPayload;',
+      );
+    });
+
+    it('should flag an alias chain that ends in bytes', () => {
+      const abi = {
+        schema_version: 'wasm-abi/1',
+        types: {
+          Digest: { kind: 'alias', target: { $ref: 'Hash32' } },
+          Hash32: { kind: 'alias', target: { kind: 'bytes', size: 32 } },
+        },
+        methods: [
+          { name: 'store', params: [{ name: 'd', type: { $ref: 'Digest' } }] },
+        ],
+        events: [],
+      };
+      const parsed = parseAbiManifest(abi);
+      const clientContent = generateClient(parsed, 'TestClient');
+      expect(clientContent).toContain(
+        "method: 'store', argsJson: convertCalimeroBytesForWasm(params) });",
+      );
+    });
+
+    it('should terminate on a self-referential manifest instead of looping', () => {
+      const parsed = parseAbiManifest({
+        schema_version: 'wasm-abi/1',
+        types: {
+          A: { kind: 'alias', target: { $ref: 'B' } },
+          B: { kind: 'alias', target: { $ref: 'A' } },
+        },
+        methods: [
+          { name: 'ping', params: [{ name: 'a', type: { $ref: 'A' } }] },
+        ],
+        events: [],
+      });
+      const clientContent = generateClient(parsed, 'TestClient');
+      expect(clientContent).not.toContain('convertCalimeroBytesForWasm');
     });
   });
 

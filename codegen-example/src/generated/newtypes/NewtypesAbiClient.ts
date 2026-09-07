@@ -22,6 +22,8 @@ export type Flag = boolean;
 
 export type Hash32 = CalimeroBytes;
 
+export type Digest = Hash32;
+
 export type Tags = string[];
 
 export type Index = Record<string, string>;
@@ -41,6 +43,17 @@ export const Action = {
   Noop: (): ActionPayload => ({ name: 'Noop' }),
   Rename: (rename: string): ActionPayload => ({ name: 'Rename', payload: rename }),
 } as const;
+
+export type CommandPayload =
+  | { name: 'Cancel' }
+  | { name: 'Store'; payload: Digest }
+
+export const Command = {
+  Cancel: (): CommandPayload => ({ name: 'Cancel' }),
+  Store: (store: Digest): CommandPayload => ({ name: 'Store', payload: store }),
+} as const;
+
+export type AliasOfCommand = CommandPayload;
 
 export interface FolderEntry {
   id: FolderId;
@@ -181,7 +194,7 @@ export class NewtypesAbiClient {
    * dispatch_action
    */
   public async dispatchAction(params: { action: ActionPayload }): Promise<void> {
-    // Convert Action variant to WASM format
+    // Serde tags a payload-bearing variant as { Variant: payload }
     const convertedParams = { ...params } as any;
     if (convertedParams.action && typeof convertedParams.action === 'object' && 'name' in convertedParams.action) {
       if ('payload' in convertedParams.action) {
@@ -212,6 +225,52 @@ export class NewtypesAbiClient {
    */
   public async tagHash(params: { hash: Hash32; label: string }): Promise<void> {
     await this._mero.rpc.execute({ contextId: this._contextId, method: 'tag_hash', argsJson: convertCalimeroBytesForWasm(params) });
+  }
+
+  /**
+   * run_command
+   */
+  public async runCommand(params: { cmd: CommandPayload; label: string }): Promise<void> {
+    // Serde tags a payload-bearing variant as { Variant: payload }
+    const convertedParams = { ...params } as any;
+    if (convertedParams.cmd && typeof convertedParams.cmd === 'object' && 'name' in convertedParams.cmd) {
+      if ('payload' in convertedParams.cmd) {
+        convertedParams.cmd = { [convertedParams.cmd.name]: convertedParams.cmd.payload };
+      } else {
+        convertedParams.cmd = convertedParams.cmd.name;
+      }
+    }
+    await this._mero.rpc.execute({ contextId: this._contextId, method: 'run_command', argsJson: convertCalimeroBytesForWasm(convertedParams) });
+  }
+
+  /**
+   * set_role
+   */
+  public async setRole(params: { role: Role }): Promise<void> {
+    await this._mero.rpc.execute({ contextId: this._contextId, method: 'set_role', argsJson: params });
+  }
+
+  /**
+   * store_digest
+   */
+  public async storeDigest(params: { d: Digest }): Promise<void> {
+    await this._mero.rpc.execute({ contextId: this._contextId, method: 'store_digest', argsJson: convertCalimeroBytesForWasm(params) });
+  }
+
+  /**
+   * run_aliased_command
+   */
+  public async runAliasedCommand(params: { cmd: AliasOfCommand }): Promise<void> {
+    // Serde tags a payload-bearing variant as { Variant: payload }
+    const convertedParams = { ...params } as any;
+    if (convertedParams.cmd && typeof convertedParams.cmd === 'object' && 'name' in convertedParams.cmd) {
+      if ('payload' in convertedParams.cmd) {
+        convertedParams.cmd = { [convertedParams.cmd.name]: convertedParams.cmd.payload };
+      } else {
+        convertedParams.cmd = convertedParams.cmd.name;
+      }
+    }
+    await this._mero.rpc.execute({ contextId: this._contextId, method: 'run_aliased_command', argsJson: convertCalimeroBytesForWasm(convertedParams) });
   }
 
 }
