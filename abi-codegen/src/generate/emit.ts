@@ -7,7 +7,7 @@ import { AbiManifest, AbiTypeDef } from '../model.js';
 // collections and records already emit types that will not silently accept a
 // foreign value, so they stay plain aliases.
 // A hand-written or malformed manifest can point an alias at itself.
-const MAX_ALIAS_DEPTH = 16;
+export const MAX_ALIAS_DEPTH = 16;
 const BRANDABLE_SCALARS: Record<string, 'string' | 'number'> = {
   string: 'string',
   i32: 'number',

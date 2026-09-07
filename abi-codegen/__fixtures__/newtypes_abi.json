@@ -38,6 +38,12 @@
         "size": 32
       }
     },
+    "Digest": {
+      "kind": "alias",
+      "target": {
+        "$ref": "Hash32"
+      }
+    },
     "Tags": {
       "kind": "alias",
       "target": {
@@ -95,6 +101,26 @@
           }
         }
       ]
+    },
+    "Command": {
+      "kind": "variant",
+      "variants": [
+        {
+          "name": "Cancel"
+        },
+        {
+          "name": "Store",
+          "payload": {
+            "$ref": "Digest"
+          }
+        }
+      ]
+    },
+    "AliasOfCommand": {
+      "kind": "alias",
+      "target": {
+        "$ref": "Command"
+      }
     },
     "FolderEntry": {
       "kind": "record",
@@ -236,6 +262,56 @@
           "name": "label",
           "type": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "run_command",
+      "params": [
+        {
+          "name": "cmd",
+          "type": {
+            "$ref": "Command"
+          }
+        },
+        {
+          "name": "label",
+          "type": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "set_role",
+      "params": [
+        {
+          "name": "role",
+          "type": {
+            "$ref": "Role"
+          }
+        }
+      ]
+    },
+    {
+      "name": "store_digest",
+      "params": [
+        {
+          "name": "d",
+          "type": {
+            "$ref": "Digest"
+          }
+        }
+      ]
+    },
+    {
+      "name": "run_aliased_command",
+      "params": [
+        {
+          "name": "cmd",
+          "type": {
+            "$ref": "AliasOfCommand"
           }
         }
       ]
