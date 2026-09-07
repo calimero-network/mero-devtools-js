@@ -82,6 +82,20 @@
         "$ref": "FolderEntry"
       }
     },
+    "Action": {
+      "kind": "variant",
+      "variants": [
+        {
+          "name": "Noop"
+        },
+        {
+          "name": "Rename",
+          "payload": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
     "FolderEntry": {
       "kind": "record",
       "fields": [
@@ -171,6 +185,60 @@
       "returns": {
         "$ref": "Height"
       }
+    },
+    {
+      "name": "reset_index",
+      "params": []
+    },
+    {
+      "name": "dispatch_action",
+      "params": [
+        {
+          "name": "action",
+          "type": {
+            "$ref": "Action"
+          }
+        }
+      ]
+    },
+    {
+      "name": "store_hash",
+      "params": [
+        {
+          "name": "hash",
+          "type": {
+            "$ref": "Hash32"
+          }
+        }
+      ]
+    },
+    {
+      "name": "rename_folder",
+      "params": [
+        {
+          "name": "id",
+          "type": {
+            "$ref": "FolderId"
+          }
+        }
+      ]
+    },
+    {
+      "name": "tag_hash",
+      "params": [
+        {
+          "name": "hash",
+          "type": {
+            "$ref": "Hash32"
+          }
+        },
+        {
+          "name": "label",
+          "type": {
+            "kind": "string"
+          }
+        }
+      ]
     }
   ],
   "events": []
