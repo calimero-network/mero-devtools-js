@@ -33,6 +33,15 @@ export type Role = 'Viewer' | 'Editor';
 
 export type AliasOfRecord = FolderEntry;
 
+export type ActionPayload =
+  | { name: 'Noop' }
+  | { name: 'Rename'; payload: string }
+
+export const Action = {
+  Noop: (): ActionPayload => ({ name: 'Noop' }),
+  Rename: (rename: string): ActionPayload => ({ name: 'Rename', payload: rename }),
+} as const;
+
 export interface FolderEntry {
   id: FolderId;
   member: string;
@@ -102,6 +111,33 @@ export class CalimeroBytes {
   }
 }
 
+/**
+ * Convert CalimeroBytes instances to arrays for WASM compatibility
+ */
+function convertCalimeroBytesForWasm(obj: any): any {
+  if (obj === null || obj === undefined) {
+    return obj;
+  }
+
+  if (obj instanceof CalimeroBytes) {
+    return obj.toArray();
+  }
+
+  if (Array.isArray(obj)) {
+    return obj.map(item => convertCalimeroBytesForWasm(item));
+  }
+
+  if (typeof obj === "object") {
+    const result: any = {};
+    for (const [key, value] of Object.entries(obj)) {
+      result[key] = convertCalimeroBytesForWasm(value);
+    }
+    return result;
+  }
+
+  return obj;
+}
+
 export class NewtypesAbiClient {
   private _mero: MeroJs;
   private _contextId: string;
@@ -132,6 +168,50 @@ export class NewtypesAbiClient {
   public async currentHeight(): Promise<Height> {
     const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'current_height', argsJson: {} });
     return response as Height;
+  }
+
+  /**
+   * reset_index
+   */
+  public async resetIndex(): Promise<void> {
+    await this._mero.rpc.execute({ contextId: this._contextId, method: 'reset_index', argsJson: {} });
+  }
+
+  /**
+   * dispatch_action
+   */
+  public async dispatchAction(params: { action: ActionPayload }): Promise<void> {
+    // Convert Action variant to WASM format
+    const convertedParams = { ...params } as any;
+    if (convertedParams.action && typeof convertedParams.action === 'object' && 'name' in convertedParams.action) {
+      if ('payload' in convertedParams.action) {
+        convertedParams.action = { [convertedParams.action.name]: convertedParams.action.payload };
+      } else {
+        convertedParams.action = convertedParams.action.name;
+      }
+    }
+    await this._mero.rpc.execute({ contextId: this._contextId, method: 'dispatch_action', argsJson: convertedParams });
+  }
+
+  /**
+   * store_hash
+   */
+  public async storeHash(params: { hash: Hash32 }): Promise<void> {
+    await this._mero.rpc.execute({ contextId: this._contextId, method: 'store_hash', argsJson: convertCalimeroBytesForWasm(params) });
+  }
+
+  /**
+   * rename_folder
+   */
+  public async renameFolder(params: { id: FolderId }): Promise<void> {
+    await this._mero.rpc.execute({ contextId: this._contextId, method: 'rename_folder', argsJson: params });
+  }
+
+  /**
+   * tag_hash
+   */
+  public async tagHash(params: { hash: Hash32; label: string }): Promise<void> {
+    await this._mero.rpc.execute({ contextId: this._contextId, method: 'tag_hash', argsJson: convertCalimeroBytesForWasm(params) });
   }
 
 }
