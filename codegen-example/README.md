@@ -30,13 +30,13 @@ The `predev` script automatically regenerates the client code.
 
 ## Generated Code
 
-The generator writes a single file to `src/generated/abi-conformance/`:
-- `AbiConformanceClient.ts` — the client class plus all TypeScript type
-  definitions (types are embedded in this one file; there is no separate
-  `types.ts` or barrel `index.ts`).
+The generator writes one file per fixture, each the client class plus all
+TypeScript type definitions (no separate `types.ts` or barrel `index.ts`):
+- `src/generated/abi-conformance/AbiConformanceClient.ts`
+- `src/generated/newtypes/NewtypesAbiClient.ts`
 
-The client name `AbiConformanceClient` is derived from the input fixture
-filename (`abi_conformance.json`).
+Each client name is derived from its input fixture filename
+(`abi_conformance.json`, `newtypes_abi.json`).
 
 ## ABI Conformance Tests
 

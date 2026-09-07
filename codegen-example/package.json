@@ -8,7 +8,7 @@
     "e2e": "node scripts/e2e.mjs",
     "dev": "vite",
     "build": "tsc -p tsconfig.json --noEmit",
-    "regenerate:abi-conformance": "cd ../abi-codegen && npm run build && mkdir -p ../codegen-example/src/generated && node dist/cli.js -i __fixtures__/abi_conformance.json -o ../codegen-example/src/generated/abi-conformance"
+    "regenerate:abi-conformance": "cd ../abi-codegen && npm run build && npm run generate:example"
   },
   "dependencies": {
     "@calimero-network/mero-react": "^6.0.3",

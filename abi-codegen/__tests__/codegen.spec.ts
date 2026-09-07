@@ -866,6 +866,7 @@ describe('Codegen', () => {
     it('converts bytes for a record type merely named Action (name match, not variant check)', () => {
       // The Action-variant branch matches on the ref name alone, so a record
       // named Action with a bytes field must still go through convertCalimeroBytesForWasm.
+      // Known defect: this should match on shape, not name; fixing it should delete this test.
       const abi = {
         schema_version: 'wasm-abi/1',
         types: {
