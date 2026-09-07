@@ -344,9 +344,24 @@ async function check(label, fn) {
   }
 }
 
+// Recursively sorts object keys so comparison order doesn't matter - kv.entries()
+// is backed by an unordered_map CRDT, so key order is not a guarantee.
+function sortKeys(value) {
+  if (Array.isArray(value)) return value.map(sortKeys);
+  if (value && typeof value === 'object') {
+    return Object.keys(value)
+      .sort()
+      .reduce((acc, key) => {
+        acc[key] = sortKeys(value[key]);
+        return acc;
+      }, {});
+  }
+  return value;
+}
+
 function eq(actual, expected, what) {
-  const a = JSON.stringify(actual);
-  const e = JSON.stringify(expected);
+  const a = JSON.stringify(sortKeys(actual));
+  const e = JSON.stringify(sortKeys(expected));
   if (a !== e) {
     throw new Error(`${what}\nexpected: ${e}\nactual:   ${a}`);
   }
@@ -361,7 +376,7 @@ function appError(err) {
   if (!bytes) {
     throw new Error(`no guest error payload in: ${JSON.stringify(err.data)}`);
   }
-  return JSON.parse(String.fromCharCode(...bytes[1].split(',').map(Number)));
+  return JSON.parse(Buffer.from(bytes[1].split(',').map(Number)).toString());
 }
 
 async function rejection(fn, what) {

@@ -115,8 +115,8 @@ function typecheckGeneratedClient(clientContent: string, dirName: string): void 
         strict: true,
         noEmit: true,
         skipLibCheck: true,
-        // matches codegen-example's real tsconfig, so an unused `response`
-        // binding on a void-returning method fails here too
+        // codegen-example's tsconfig sets noUnusedLocals, so an unused `response`
+        // binding on a void-returning method must fail here too
         noUnusedLocals: true,
       },
       include: ['*.ts'],
