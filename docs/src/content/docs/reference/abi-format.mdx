@@ -192,9 +192,6 @@ Branding recovers a distinction the ABI made; it cannot invent one the app
 never declared.
 Guarding such a field means giving it a newtype in the Rust source first.
 
-`--no-brand-newtypes` restores the pre-2.0 aliasing for one release to ease
-migration; the flag is scheduled for removal in the next major.
-
 How variants are emitted depends on their payloads:
 
 - **All-unit** variants (no payloads) become a string-literal union, e.g.

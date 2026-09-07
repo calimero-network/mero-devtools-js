@@ -20,7 +20,6 @@ import type { AbiManifest, AbiMethod } from '@calimero-network/abi-codegen';
 // Sub-path exports
 import { parseAbiManifest } from '@calimero-network/abi-codegen/parse';
 import { generateClient } from '@calimero-network/abi-codegen/generate/client';
-import { generateTypes } from '@calimero-network/abi-codegen/generate/types';
 import {
   deriveClientNameFromPath,
   sanitizeClassName,
@@ -77,14 +76,7 @@ function generateClient(
   manifest: AbiManifest,
   clientName?: string,   // default: 'Client'
   importPath?: string,   // default: '@calimero-network/mero-react'
-  options?: CodegenOptions,
 ): string
-
-interface CodegenOptions {
-  // Emit branded types + constructors for newtypes over a string or numeric
-  // primitive. Default: true.
-  brandNewtypes?: boolean;
-}
 ```
 
 Takes a validated `AbiManifest` and returns a TypeScript source string
@@ -101,25 +93,6 @@ const source = generateClient(manifest, 'KVStoreClient');
 fs.mkdirSync('src/generated', { recursive: true });
 fs.writeFileSync('src/generated/KVStoreClient.ts', source);
 ```
-
-## `generateTypes(manifest, options?)`
-
-```ts
-function generateTypes(
-  manifest: AbiManifest,
-  options?: CodegenOptions,
-): string
-```
-
-A types-only emitter (no client class). It is used to produce the type surface
-in isolation.
-
-:::caution
-`generateTypes` emits a hardcoded `import { CalimeroBytes } from "./AbiConformanceClient.js"`
-at the top of its output. It is tailored to the reference example rather than a
-general-purpose split-file emitter — for most integrations, prefer
-`generateClient`, which is self-contained.
-:::
 
 ## Name utilities — `generate/emit`
 

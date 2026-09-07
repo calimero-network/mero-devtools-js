@@ -24,8 +24,6 @@
   collections and `$ref`s to records or variants are unchanged, because those
   already emit types that will not silently accept a foreign value. Branding is
   a compile-time construct only; the JSON on the wire is identical.
-  `--no-brand-newtypes` restores the old behaviour for one release and is
-  scheduled for removal in the next major.
 
 ### Bug Fixes
 

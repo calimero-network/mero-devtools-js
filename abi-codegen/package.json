@@ -22,10 +22,6 @@
       "import": "./dist/parse.js",
       "types": "./dist/parse.d.ts"
     },
-    "./generate/types": {
-      "import": "./dist/generate/types.js",
-      "types": "./dist/generate/types.d.ts"
-    },
     "./generate/client": {
       "import": "./dist/generate/client.js",
       "types": "./dist/generate/client.d.ts"
