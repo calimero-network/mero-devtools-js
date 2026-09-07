@@ -17,6 +17,7 @@ import {
   openSync,
   rmSync,
   writeFileSync,
+  writeSync,
 } from 'fs';
 import { tmpdir } from 'os';
 import { dirname, join, resolve } from 'path';
@@ -351,6 +352,18 @@ function eq(actual, expected, what) {
   }
 }
 
+/**
+ * The guest's own serialized error, which core renders into the message as a
+ * byte-array literal. Absent for a call that failed before reaching the app.
+ */
+function appError(err) {
+  const bytes = /\[([\d, ]+)\]/.exec(String(err.data));
+  if (!bytes) {
+    throw new Error(`no guest error payload in: ${JSON.stringify(err.data)}`);
+  }
+  return JSON.parse(String.fromCharCode(...bytes[1].split(',').map(Number)));
+}
+
 async function rejection(fn, what) {
   try {
     await fn();
@@ -444,12 +457,19 @@ async function main() {
     await check('an absent key reads as null', async () =>
       eq(await kv.get({ key: 'ghost' }), null, 'get(ghost)'),
     );
-    await check('an app error surfaces as a typed rejection', async () => {
+    await check('an app error surfaces with the app payload', async () => {
       const err = await rejection(
         () => kv.getResult({ key: 'ghost' }),
         'getResult(ghost)',
       );
       eq(err.type, 'FunctionCallError', 'rejection type');
+      // core reports every guest-side failure as FunctionCallError, so the type
+      // alone would also pass for params the generator serialized wrong.
+      eq(
+        appError(err),
+        { data: 'ghost', kind: 'NotFound' },
+        'app error payload',
+      );
     });
     await check('remove returns the value it took out', async () =>
       eq(await kv.remove({ key: 'beta' }), 'first', 'remove(beta)'),
@@ -467,8 +487,16 @@ async function main() {
   }
 
   const passed = checked - failures.length;
-  console.log(`\n${passed} passed, ${failures.length} failed, 0 skipped`);
-  for (const label of failures) console.log(`  FAILED: ${label}`);
+  // Synchronous: stdout is async when piped, and process.exit would drop the
+  // very line the CI guard greps for.
+  writeSync(
+    1,
+    [
+      `\n${passed} passed, ${failures.length} failed, 0 skipped`,
+      ...failures.map((label) => `  FAILED: ${label}`),
+      '',
+    ].join('\n'),
+  );
   process.exit(failures.length ? 1 : 0);
 }
 
