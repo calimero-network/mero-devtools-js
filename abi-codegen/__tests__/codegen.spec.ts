@@ -6,6 +6,7 @@ import { loadAbiManifestFromFile } from '../src/parse.js';
 import { generateClient } from '../src/generate/client.js';
 import { deriveClientNameFromPath, sanitizeClassName, mapRustTypeToTs } from '../src/generate/emit.js';
 import { parseAbiManifest } from '../src/parse.js';
+import { AbiManifest } from '../src/model.js';
 
 describe('Codegen', () => {
   const conformanceAbiPath = path.join(
@@ -141,7 +142,7 @@ describe('Codegen', () => {
         'async makePerson(params: { p: Person }): Promise<Person> {',
       );
       expect(clientContent).toContain(
-        "const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'make_person', argsJson: convertCalimeroBytesForWasm(params) });",
+        "const response: any = await this._mero.rpc.execute({ contextId: this._contextId, method: 'make_person', argsJson: convertCalimeroBytesForWasm(params) });",
       );
       // Error documentation is now handled through standard error response pattern
     });
@@ -161,7 +162,7 @@ describe('Codegen', () => {
         'async roundtripId(params: { x: UserId32 }): Promise<UserId32> {',
       );
       expect(clientContent).toContain(
-        "const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'roundtrip_id', argsJson: convertCalimeroBytesForWasm(params) });",
+        "const response: any = await this._mero.rpc.execute({ contextId: this._contextId, method: 'roundtrip_id', argsJson: convertCalimeroBytesForWasm(params) });",
       );
       expect(clientContent).toContain(
         'async optU32(params: { x: number | null }): Promise<number | null> {',
@@ -179,7 +180,7 @@ describe('Codegen', () => {
         'async makePerson(params: { p: Person }): Promise<Person> {',
       );
       expect(clientContent).toContain(
-        "const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'make_person', argsJson: convertCalimeroBytesForWasm(params) });",
+        "const response: any = await this._mero.rpc.execute({ contextId: this._contextId, method: 'make_person', argsJson: convertCalimeroBytesForWasm(params) });",
       );
     });
 
@@ -224,7 +225,7 @@ describe('Codegen', () => {
         'async makePerson(params: { p: Person }): Promise<Person> {',
       );
       expect(clientContent).toContain(
-        "const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'make_person', argsJson: convertCalimeroBytesForWasm(params) });",
+        "const response: any = await this._mero.rpc.execute({ contextId: this._contextId, method: 'make_person', argsJson: convertCalimeroBytesForWasm(params) });",
       );
     });
 
@@ -892,9 +893,7 @@ describe('Codegen', () => {
       const clientContent = generateClient(parsed, 'TestClient');
       expect(clientContent).not.toContain('export class CalimeroBytes');
       expect(clientContent).not.toContain('function convertCalimeroBytesForWasm');
-      expect(clientContent).not.toContain(
-        'function convertWasmResultToCalimeroBytes',
-      );
+      expect(clientContent).not.toContain('new CalimeroBytes(');
     });
 
     it('should NOT emit conversion helpers when no method has bytes params/returns', () => {
@@ -915,9 +914,7 @@ describe('Codegen', () => {
       expect(clientContent).toContain('export class CalimeroBytes');
       // But helpers are not needed
       expect(clientContent).not.toContain('function convertCalimeroBytesForWasm');
-      expect(clientContent).not.toContain(
-        'function convertWasmResultToCalimeroBytes',
-      );
+      expect(clientContent).not.toContain('new CalimeroBytes(response)');
     });
 
     it('should emit convertCalimeroBytesForWasm when a method has bytes params', () => {
@@ -938,13 +935,11 @@ describe('Codegen', () => {
       const parsed = parseAbiManifest(abi);
       const clientContent = generateClient(parsed, 'TestClient');
       expect(clientContent).toContain('function convertCalimeroBytesForWasm');
-      // Result helper not needed since no bytes return
-      expect(clientContent).not.toContain(
-        'function convertWasmResultToCalimeroBytes',
-      );
+      // Nothing to decode on the way back since no method returns bytes
+      expect(clientContent).not.toContain('new CalimeroBytes(response)');
     });
 
-    it('should emit convertWasmResultToCalimeroBytes when a method returns bytes', () => {
+    it('should decode a declared bytes return into CalimeroBytes', () => {
       const abi = {
         schema_version: 'wasm-abi/1',
         types: {
@@ -957,17 +952,21 @@ describe('Codegen', () => {
       };
       const parsed = parseAbiManifest(abi);
       const clientContent = generateClient(parsed, 'TestClient');
-      expect(clientContent).toContain('function convertWasmResultToCalimeroBytes');
+      expect(clientContent).toContain(
+        'return (response == null ? null : new CalimeroBytes(response)) as CalimeroBytes;',
+      );
       // No bytes params → no for-wasm helper
       expect(clientContent).not.toContain('function convertCalimeroBytesForWasm');
     });
 
-    it('should still emit both helpers when conformance ABI uses bytes (regression)', () => {
+    it('should emit the request helper and a bytes decode for the conformance ABI (regression)', () => {
       // The fixture conformance ABI uses bytes in both params and returns
       const clientContent = generateClient(manifest, 'TestClient');
       expect(clientContent).toContain('export class CalimeroBytes');
       expect(clientContent).toContain('function convertCalimeroBytesForWasm');
-      expect(clientContent).toContain('function convertWasmResultToCalimeroBytes');
+      expect(clientContent).toContain(
+        'return (response == null ? null : new CalimeroBytes(response)) as Hash64;',
+      );
     });
 
     it('should flag a variant param whose payload carries bytes', () => {
@@ -993,10 +992,7 @@ describe('Codegen', () => {
       );
     });
 
-    it('should flag a variant RETURN whose payload carries bytes', () => {
-      // Flagging the return runs it through convertWasmResultToCalimeroBytes,
-      // which rebuilds any all-number array as CalimeroBytes: a sibling
-      // list<u32> member comes back mangled against its declared number[].
+    it('should decode a variant RETURN per member, leaving a sibling list<u32> alone', () => {
       const abi = {
         schema_version: 'wasm-abi/1',
         types: {
@@ -1013,10 +1009,10 @@ describe('Codegen', () => {
       };
       const parsed = parseAbiManifest(abi);
       const clientContent = generateClient(parsed, 'TestClient');
-      expect(clientContent).toContain('function convertWasmResultToCalimeroBytes');
       expect(clientContent).toContain(
-        'return convertWasmResultToCalimeroBytes(response) as ResultPayload;',
+        "'Digest' in response ? { name: 'Digest', payload: new CalimeroBytes(response['Digest']) }",
       );
+      expect(clientContent).not.toContain("new CalimeroBytes(response['Scores']");
     });
 
     it('should flag an alias chain that ends in bytes', () => {
@@ -1052,6 +1048,94 @@ describe('Codegen', () => {
       });
       const clientContent = generateClient(parsed, 'TestClient');
       expect(clientContent).not.toContain('convertCalimeroBytesForWasm');
+    });
+
+    it('should decode the outer level of a self-referential return type', () => {
+      const parsed = parseAbiManifest({
+        schema_version: 'wasm-abi/1',
+        types: {
+          Node: {
+            kind: 'record',
+            fields: [
+              { name: 'hash', type: { kind: 'bytes' } },
+              { name: 'child', type: { $ref: 'Node' }, nullable: true },
+            ],
+          },
+        },
+        methods: [{ name: 'root', params: [], returns: { $ref: 'Node' } }],
+        events: [],
+      });
+      const clientContent = generateClient(parsed, 'TestClient');
+      expect(clientContent).toContain(
+        "({ ...response, hash: new CalimeroBytes(response['hash']) })",
+      );
+    });
+
+    it('should decode a field whose name is a TypeScript keyword at its wire key', () => {
+      const parsed = parseAbiManifest({
+        schema_version: 'wasm-abi/1',
+        types: {
+          Rec: {
+            kind: 'record',
+            fields: [{ name: 'default', type: { kind: 'bytes' } }],
+          },
+        },
+        methods: [{ name: 'peek', params: [], returns: { $ref: 'Rec' } }],
+        events: [],
+      });
+      const clientContent = generateClient(parsed, 'TestClient');
+      // The interface declares `default_`, but the node sends `default`.
+      expect(clientContent).toContain('default_: CalimeroBytes;');
+      expect(clientContent).toContain(
+        "default_: new CalimeroBytes(response['default'])",
+      );
+    });
+
+    it('should copy a sanitised field to its declared name even with nothing to decode', () => {
+      const parsed = parseAbiManifest({
+        schema_version: 'wasm-abi/1',
+        types: {
+          Rec: {
+            kind: 'record',
+            fields: [
+              { name: 'my-field', type: { kind: 'string' } },
+              { name: 'plain', type: { kind: 'u32' } },
+            ],
+          },
+        },
+        methods: [{ name: 'peek', params: [], returns: { $ref: 'Rec' } }],
+        events: [],
+      });
+      const clientContent = generateClient(parsed, 'TestClient');
+      // Without the copy, `rec.my_field` reads undefined: the value only ever
+      // arrives under the wire key the interface does not declare.
+      expect(clientContent).toContain('my_field: string;');
+      expect(clientContent).toContain(
+        "({ ...response, my_field: response['my-field'] })",
+      );
+      // A field needing neither sanitising nor decoding stays on the spread.
+      expect(clientContent).not.toContain("plain: response['plain']");
+    });
+
+    // The bundled schema rejects crdt_type on a named typedef, but `AbiRecord`
+    // in model.ts declares it, so the published generateClient still accepts one.
+    it('should emit CalimeroBytes for a named CRDT record built against the model type', () => {
+      const manifest: AbiManifest = {
+        schema_version: 'wasm-abi/1',
+        types: {
+          Counter: {
+            kind: 'record',
+            fields: [],
+            crdt_type: 'lww_register',
+            inner_type: { kind: 'bytes' },
+          },
+        },
+        methods: [{ name: 'peek', params: [], returns: { $ref: 'Counter' } }],
+        events: [],
+      };
+      const clientContent = generateClient(manifest, 'TestClient');
+      expect(clientContent).toContain('new CalimeroBytes(response)');
+      expect(clientContent).toContain('export class CalimeroBytes');
     });
   });
 

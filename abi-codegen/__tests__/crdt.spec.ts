@@ -5,6 +5,14 @@ import { generateClient } from '../src/generate/client.js';
 import { AbiManifest } from '../src/model.js';
 
 const __dirname = path.dirname(new URL(import.meta.url).pathname);
+// A CRDT register wrapping bytes: the wrapper carries no fields of its own, so
+// only inner_type says the value is bytes.
+const CRDT_BYTES = {
+  kind: 'record',
+  fields: [],
+  crdt_type: 'lww_register',
+  inner_type: { kind: 'bytes' },
+};
 
 describe('CRDT type annotations', () => {
   const ludoAbiPath = path.join(
@@ -323,12 +331,23 @@ describe('CRDT type annotations', () => {
 
   describe('isBytesType with CRDT wrappers', () => {
     it('should detect bytes inside CRDT inner_type', () => {
-      const client = generateClient(manifest);
-      // CRDT-wrapped bytes fields should trigger CalimeroBytes conversion
-      // If isBytesType works correctly, the generated code will include
-      // convertCalimeroBytesForWasm / convertWasmResultToCalimeroBytes
-      // for methods that take/return CRDT-wrapped bytes types
-      expect(client).toBeTruthy();
+      const parsed = parseAbiManifest({
+        schema_version: 'wasm-abi/1',
+        types: {},
+        methods: [
+          {
+            name: 'peek',
+            params: [{ name: 'h', type: CRDT_BYTES }],
+            returns: CRDT_BYTES,
+          },
+        ],
+        events: [],
+      });
+      const client = generateClient(parsed);
+      expect(client).toContain(
+        "argsJson: convertCalimeroBytesForWasm(params) });",
+      );
+      expect(client).toContain('new CalimeroBytes(response)');
     });
 
     it('should NOT follow inner_type without crdt_type', () => {
