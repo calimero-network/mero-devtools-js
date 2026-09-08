@@ -120,8 +120,8 @@ jobs:
   # jobs stop at "the emitted TypeScript typechecks", which a client that answers
   # every call with garbage would also pass. Needs no Rust toolchain - merod and
   # the app bundle are both binary assets on the same release the schema-parity
-  # job resolves. Deliberately outside `release`'s `needs`: publishing a
-  # library must not gate on a daemon boot.
+  # job resolves. In `release`'s `needs`: a generator whose client cannot drive
+  # a real node must not publish.
   e2e-generated-client:
     name: E2E (generated client vs released merod)
     runs-on: ubuntu-latest
@@ -177,7 +177,7 @@ jobs:
         run: pkill -f 'merod .*codegen-e2e' || true
 
   release:
-    needs: [build-and-test, schema-parity-released-core]
+    needs: [build-and-test, schema-parity-released-core, e2e-generated-client]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     permissions:
