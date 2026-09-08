@@ -206,6 +206,25 @@ to the bare string `"Variant"`, so the ergonomic `{ name, payload }` form never
 reaches the node.
 A newtype over a variant is rewritten the same way as the variant it wraps.
 
+A response is decoded the other way, from the declared return type rather than
+from the shape the JSON happens to have.
+So a returned payload-bearing variant is untagged back to `{ name, payload }`,
+a returned `bytes` becomes a `CalimeroBytes`, and a returned `list<u32>` stays
+plain numbers even where it sits beside bytes.
+Methods whose return type reaches neither bytes nor a payload-bearing variant
+emit no conversion at all.
+A `null` response is passed through untouched whether or not the method declares
+`returns_nullable`.
+
+One limit is worth knowing: a type that reaches itself is decoded only down to
+the first cycle, so below that point values arrive as raw JSON and the declared
+type is not honoured.
+For a self-referential `Node { hash: bytes, child: Node }`, `node.hash` is a
+`CalimeroBytes` but `node.child.hash` is still a plain array, and calling
+`.toArray()` on it throws even though the type checker accepted it.
+Decoding a map value also requires `Object.fromEntries`, so a consumer's
+`tsconfig` needs `lib` at ES2019 or newer.
+
 ## Methods
 
 ```json
