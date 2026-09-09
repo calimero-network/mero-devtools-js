@@ -38,6 +38,12 @@
         "size": 32
       }
     },
+    "Digest": {
+      "kind": "alias",
+      "target": {
+        "$ref": "Hash32"
+      }
+    },
     "Tags": {
       "kind": "alias",
       "target": {
@@ -80,6 +86,49 @@
       "kind": "alias",
       "target": {
         "$ref": "FolderEntry"
+      }
+    },
+    "Action": {
+      "kind": "variant",
+      "variants": [
+        {
+          "name": "Noop"
+        },
+        {
+          "name": "Rename",
+          "payload": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    "Command": {
+      "kind": "variant",
+      "variants": [
+        {
+          "name": "Cancel"
+        },
+        {
+          "name": "Store",
+          "payload": {
+            "$ref": "Digest"
+          }
+        },
+        {
+          "name": "Scores",
+          "payload": {
+            "kind": "list",
+            "items": {
+              "kind": "u32"
+            }
+          }
+        }
+      ]
+    },
+    "AliasOfCommand": {
+      "kind": "alias",
+      "target": {
+        "$ref": "Command"
       }
     },
     "FolderEntry": {
@@ -170,6 +219,124 @@
       "params": [],
       "returns": {
         "$ref": "Height"
+      }
+    },
+    {
+      "name": "reset_index",
+      "params": []
+    },
+    {
+      "name": "dispatch_action",
+      "params": [
+        {
+          "name": "action",
+          "type": {
+            "$ref": "Action"
+          }
+        }
+      ]
+    },
+    {
+      "name": "store_hash",
+      "params": [
+        {
+          "name": "hash",
+          "type": {
+            "$ref": "Hash32"
+          }
+        }
+      ]
+    },
+    {
+      "name": "rename_folder",
+      "params": [
+        {
+          "name": "id",
+          "type": {
+            "$ref": "FolderId"
+          }
+        }
+      ]
+    },
+    {
+      "name": "tag_hash",
+      "params": [
+        {
+          "name": "hash",
+          "type": {
+            "$ref": "Hash32"
+          }
+        },
+        {
+          "name": "label",
+          "type": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "run_command",
+      "params": [
+        {
+          "name": "cmd",
+          "type": {
+            "$ref": "Command"
+          }
+        },
+        {
+          "name": "label",
+          "type": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "set_role",
+      "params": [
+        {
+          "name": "role",
+          "type": {
+            "$ref": "Role"
+          }
+        }
+      ]
+    },
+    {
+      "name": "store_digest",
+      "params": [
+        {
+          "name": "d",
+          "type": {
+            "$ref": "Digest"
+          }
+        }
+      ]
+    },
+    {
+      "name": "run_aliased_command",
+      "params": [
+        {
+          "name": "cmd",
+          "type": {
+            "$ref": "AliasOfCommand"
+          }
+        }
+      ]
+    },
+    {
+      "name": "get_role",
+      "params": [],
+      "returns": {
+        "$ref": "Role"
+      }
+    },
+    {
+      "name": "last_command",
+      "params": [],
+      "returns": {
+        "$ref": "Command"
       }
     }
   ],

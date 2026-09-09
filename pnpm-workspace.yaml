@@ -1,4 +1,4 @@
 packages:
   - 'abi-codegen'
-  - 'codegen-example' 
+  - 'codegen-example'
   - 'create-mero-app'

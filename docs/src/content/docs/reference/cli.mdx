@@ -25,15 +25,15 @@ npx @calimero-network/abi-codegen -i abi.json -o src/generated
 
 ### Options
 
-| Flag | Description | Default |
-| --- | --- | --- |
-| `-i, --input <file>` | Input ABI JSON file. | `abi.json` |
-| `-o, --output <dir>` | Output directory for the generated file (created if missing). | `src` |
-| `--client-name <Name>` | Explicit client class name; sanitized to a valid identifier. | derived (see below) |
-| `--name-from <path>` | Derive the client name from a file path (e.g. the `.wasm` file). | — |
-| `--import-path <path>` | Import path for the runtime dependency in generated code. | `@calimero-network/mero-react` |
-| `--validate` | Validate the manifest only; generate nothing. Exits `0` on success. | — |
-| `-h, --help` | Print usage help. | — |
+| Flag                   | Description                                                         | Default                        |
+| ---------------------- | ------------------------------------------------------------------- | ------------------------------ |
+| `-i, --input <file>`   | Input ABI JSON file.                                                | `abi.json`                     |
+| `-o, --output <dir>`   | Output directory for the generated file (created if missing).       | `src`                          |
+| `--client-name <Name>` | Explicit client class name; sanitized to a valid identifier.        | derived (see below)            |
+| `--name-from <path>`   | Derive the client name from a file path (e.g. the `.wasm` file).    | —                              |
+| `--import-path <path>` | Import path for the runtime dependency in generated code.           | `@calimero-network/mero-react` |
+| `--validate`           | Validate the manifest only; generate nothing. Exits `0` on success. | —                              |
+| `-h, --help`           | Print usage help.                                                   | —                              |
 
 :::note
 The generator writes exactly one file, `<ClientName>.ts`, into the output
@@ -83,6 +83,7 @@ is why `kv_store.wasm` becomes `KVStoreClient`, not `KvStoreClient`.
     # Derive the name from the WASM binary path
     calimero-abi-codegen -i abi.json -o src/generated --name-from kv_store.wasm
     ```
+
   </TabItem>
   <TabItem label="Validate only">
     ```bash
@@ -149,16 +150,16 @@ npm create mero-app my-app
 create-mero-app [project-name] [options]
 ```
 
-| Argument / flag | Description |
-| --- | --- |
-| `[project-name]` | Directory to scaffold into. Omit to use the current directory; its basename must be a valid npm package name. |
-| `-t, --template <name>` | Template to use: `rust` or `javascript`. If omitted, you are prompted to choose. |
+| Argument / flag         | Description                                                                                                   |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `[project-name]`        | Directory to scaffold into. Omit to use the current directory; its basename must be a valid npm package name. |
+| `-t, --template <name>` | Template to use: `rust` or `javascript`. If omitted, you are prompted to choose.                              |
 
 ### Templates
 
-| Name | Repository | Contents |
-| --- | --- | --- |
-| `rust` | `calimero-network/kv-store` | Rust WASM contract + React frontend |
+| Name         | Repository                     | Contents                             |
+| ------------ | ------------------------------ | ------------------------------------ |
+| `rust`       | `calimero-network/kv-store`    | Rust WASM contract + React frontend  |
 | `javascript` | `calimero-network/kv-store-js` | JavaScript contract + React frontend |
 
 ### What it does

@@ -39,14 +39,15 @@
     "test": "vitest run --reporter=dot",
     "codegen:test": "vitest run --reporter=dot __tests__/codegen.spec.ts",
     "sync:corpus": "node scripts/sync-corpus.mjs",
-    "validate:abi": "node dist/cli.js --validate -i __fixtures__/abi_conformance.json",
+    "validate:abi": "node dist/cli.js --validate -i __fixtures__/abi_conformance.json && node dist/cli.js --validate -i __fixtures__/newtypes_abi.json",
     "prepack": "tsc -p tsconfig.json && mkdir -p dist/schema && cp src/schema/wasm-abi-v1.schema.json dist/schema/",
-    "generate:example": "node dist/cli.js -i __fixtures__/abi_conformance.json -o ../codegen-example/src/generated/abi-conformance",
+    "generate:example": "node dist/cli.js -i __fixtures__/abi_conformance.json -o ../codegen-example/src/generated/abi-conformance && node dist/cli.js -i __fixtures__/newtypes_abi.json -o ../codegen-example/src/generated/newtypes",
     "release": "semantic-release"
   },
   "dependencies": {
     "ajv": "^8.12.0",
-    "ajv-formats": "^2.1.1"
+    "ajv-formats": "^2.1.1",
+    "redos-detector": "^6.1.4"
   },
   "devDependencies": {
     "@semantic-release/exec": "^7.1.0",

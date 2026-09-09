@@ -17,4 +17,3 @@ await fs.writeFile(destPath, content, 'utf8');
 await fs.chmod(destPath, 0o755);
 
 console.log('Built CLI to', destPath);
-

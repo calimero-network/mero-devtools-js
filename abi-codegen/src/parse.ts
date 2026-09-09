@@ -1,5 +1,6 @@
 import Ajv from 'ajv';
 import addFormats from 'ajv-formats';
+import { isSafePattern } from 'redos-detector';
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
@@ -66,8 +67,29 @@ export function parseAbiManifest(json: unknown): AbiManifest {
   // Step 4: Check for duplicate names
   assertUniqueNames(manifest);
 
-  // Step 5: Return deeply frozen manifest to prevent mutation
+  // Step 5: Drop alias patterns that risk catastrophic backtracking
+  dropUnsafePatterns(manifest);
+
+  // Step 6: Return deeply frozen manifest to prevent mutation
   return deepFreeze(manifest);
+}
+
+/**
+ * A pattern is descriptive only (core does not enforce it), so an unsafe one is
+ * dropped rather than failing the build; the emitter then falls back to a plain cast.
+ */
+function dropUnsafePatterns(manifest: AbiManifest): void {
+  for (const [name, typeDef] of Object.entries(manifest.types)) {
+    if (typeDef.kind !== 'alias' || !typeDef.pattern) continue;
+    const result = isSafePattern(typeDef.pattern);
+    if (!result.safe) {
+      console.error(
+        `Warning: type "${name}" declares unsafe pattern ${JSON.stringify(typeDef.pattern)} ` +
+          `(catastrophic backtracking risk); dropping it, generated client will not validate it.`,
+      );
+      delete typeDef.pattern;
+    }
+  }
 }
 
 /**
@@ -194,7 +216,9 @@ function validateInvariants(manifest: AbiManifest): void {
 
   // Check state_root reference
   if (manifest.state_root && !definedTypes.has(manifest.state_root)) {
-    throw new Error(`Dangling state_root reference: type "${manifest.state_root}" is not defined`);
+    throw new Error(
+      `Dangling state_root reference: type "${manifest.state_root}" is not defined`,
+    );
   }
 
   // Check all events

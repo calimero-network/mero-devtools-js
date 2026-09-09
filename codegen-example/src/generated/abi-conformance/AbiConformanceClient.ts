@@ -193,33 +193,6 @@ function convertCalimeroBytesForWasm(obj: any): any {
   return obj;
 }
 
-/**
- * Convert arrays back to CalimeroBytes instances from WASM responses
- */
-function convertWasmResultToCalimeroBytes(obj: any): any {
-  if (obj === null || obj === undefined) {
-    return obj;
-  }
-
-  if (Array.isArray(obj) && obj.every(item => typeof item === "number")) {
-    return new CalimeroBytes(obj);
-  }
-
-  if (Array.isArray(obj)) {
-    return obj.map(item => convertWasmResultToCalimeroBytes(item));
-  }
-
-  if (typeof obj === "object") {
-    const result: any = {};
-    for (const [key, value] of Object.entries(obj)) {
-      result[key] = convertWasmResultToCalimeroBytes(value);
-    }
-    return result;
-  }
-
-  return obj;
-}
-
 export class AbiConformanceClient {
   private _mero: MeroJs;
   private _contextId: string;
@@ -233,7 +206,7 @@ export class AbiConformanceClient {
    * act
    */
   public async act(params: { a: ActionPayload }): Promise<number> {
-    // Convert Action variant to WASM format
+    // Serde tags a payload-bearing variant as { Variant: payload }
     const convertedParams = { ...params } as any;
     if (convertedParams.a && typeof convertedParams.a === 'object' && 'name' in convertedParams.a) {
       if ('payload' in convertedParams.a) {
@@ -266,8 +239,8 @@ export class AbiConformanceClient {
    * echo_bytes
    */
   public async echoBytes(params: { b: CalimeroBytes }): Promise<CalimeroBytes> {
-    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'echo_bytes', argsJson: convertCalimeroBytesForWasm(params) });
-    return convertWasmResultToCalimeroBytes(response) as CalimeroBytes;
+    const response: any = await this._mero.rpc.execute({ contextId: this._contextId, method: 'echo_bytes', argsJson: convertCalimeroBytesForWasm(params) });
+    return (response == null ? null : new CalimeroBytes(response)) as CalimeroBytes;
   }
 
   /**
@@ -330,8 +303,8 @@ export class AbiConformanceClient {
    * find_person
    */
   public async findPerson(params: { name: string }): Promise<Person> {
-    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'find_person', argsJson: params });
-    return convertWasmResultToCalimeroBytes(response) as Person;
+    const response: any = await this._mero.rpc.execute({ contextId: this._contextId, method: 'find_person', argsJson: params });
+    return (response == null ? null : ({ ...response, id: new CalimeroBytes(response['id']) })) as Person;
   }
 
   /**
@@ -354,15 +327,15 @@ export class AbiConformanceClient {
    * get_status
    */
   public async getStatus(params: { timestamp: number }): Promise<StatusPayload> {
-    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'get_status', argsJson: params });
-    return response as StatusPayload;
+    const response: any = await this._mero.rpc.execute({ contextId: this._contextId, method: 'get_status', argsJson: params });
+    return (response == null ? null : (typeof response === 'string' ? { name: response } : { name: Object.keys(response)[0], payload: Object.values(response)[0] })) as StatusPayload;
   }
 
   /**
    * handle_multi_struct
    */
   public async handleMultiStruct(params: { a: ActionPayload }): Promise<number> {
-    // Convert Action variant to WASM format
+    // Serde tags a payload-bearing variant as { Variant: payload }
     const convertedParams = { ...params } as any;
     if (convertedParams.a && typeof convertedParams.a === 'object' && 'name' in convertedParams.a) {
       if ('payload' in convertedParams.a) {
@@ -379,7 +352,7 @@ export class AbiConformanceClient {
    * handle_multi_tuple
    */
   public async handleMultiTuple(params: { a: ActionPayload }): Promise<string> {
-    // Convert Action variant to WASM format
+    // Serde tags a payload-bearing variant as { Variant: payload }
     const convertedParams = { ...params } as any;
     if (convertedParams.a && typeof convertedParams.a === 'object' && 'name' in convertedParams.a) {
       if ('payload' in convertedParams.a) {
@@ -404,16 +377,16 @@ export class AbiConformanceClient {
    * list_ids
    */
   public async listIds(params: { xs: UserId32[] }): Promise<UserId32[]> {
-    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'list_ids', argsJson: convertCalimeroBytesForWasm(params) });
-    return convertWasmResultToCalimeroBytes(response) as UserId32[];
+    const response: any = await this._mero.rpc.execute({ contextId: this._contextId, method: 'list_ids', argsJson: convertCalimeroBytesForWasm(params) });
+    return (response == null ? null : response.map((item: any) => new CalimeroBytes(item))) as UserId32[];
   }
 
   /**
    * list_records
    */
   public async listRecords(params: { ps: Person[] }): Promise<Person[]> {
-    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'list_records', argsJson: convertCalimeroBytesForWasm(params) });
-    return convertWasmResultToCalimeroBytes(response) as Person[];
+    const response: any = await this._mero.rpc.execute({ contextId: this._contextId, method: 'list_records', argsJson: convertCalimeroBytesForWasm(params) });
+    return (response == null ? null : response.map((item: any) => ({ ...item, id: new CalimeroBytes(item['id']) }))) as Person[];
   }
 
   /**
@@ -444,8 +417,8 @@ export class AbiConformanceClient {
    * make_person
    */
   public async makePerson(params: { p: Person }): Promise<Person> {
-    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'make_person', argsJson: convertCalimeroBytesForWasm(params) });
-    return convertWasmResultToCalimeroBytes(response) as Person;
+    const response: any = await this._mero.rpc.execute({ contextId: this._contextId, method: 'make_person', argsJson: convertCalimeroBytesForWasm(params) });
+    return (response == null ? null : ({ ...response, id: new CalimeroBytes(response['id']) })) as Person;
   }
 
   /**
@@ -460,8 +433,8 @@ export class AbiConformanceClient {
    * map_record
    */
   public async mapRecord(params: { m: Record<string, Person> }): Promise<Record<string, Person>> {
-    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'map_record', argsJson: convertCalimeroBytesForWasm(params) });
-    return convertWasmResultToCalimeroBytes(response) as Record<string, Person>;
+    const response: any = await this._mero.rpc.execute({ contextId: this._contextId, method: 'map_record', argsJson: convertCalimeroBytesForWasm(params) });
+    return (response == null ? null : Object.fromEntries(Object.entries(response).map(([k, v]: [string, any]) => [k, ({ ...v, id: new CalimeroBytes(v['id']) })]))) as Record<string, Person>;
   }
 
   /**
@@ -492,16 +465,16 @@ export class AbiConformanceClient {
    * opt_id
    */
   public async optId(params: { x: UserId32 | null }): Promise<UserId32 | null> {
-    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'opt_id', argsJson: convertCalimeroBytesForWasm(params) });
-    return convertWasmResultToCalimeroBytes(response) as UserId32 | null;
+    const response: any = await this._mero.rpc.execute({ contextId: this._contextId, method: 'opt_id', argsJson: convertCalimeroBytesForWasm(params) });
+    return (response == null ? null : new CalimeroBytes(response)) as UserId32 | null;
   }
 
   /**
    * opt_record
    */
   public async optRecord(params: { p: Person | null }): Promise<Person | null> {
-    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'opt_record', argsJson: convertCalimeroBytesForWasm(params) });
-    return convertWasmResultToCalimeroBytes(response) as Person | null;
+    const response: any = await this._mero.rpc.execute({ contextId: this._contextId, method: 'opt_record', argsJson: convertCalimeroBytesForWasm(params) });
+    return (response == null ? null : ({ ...response, id: new CalimeroBytes(response['id']) })) as Person | null;
   }
 
   /**
@@ -524,8 +497,8 @@ export class AbiConformanceClient {
    * profile_roundtrip
    */
   public async profileRoundtrip(params: { p: Profile }): Promise<Profile> {
-    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'profile_roundtrip', argsJson: convertCalimeroBytesForWasm(params) });
-    return convertWasmResultToCalimeroBytes(response) as Profile;
+    const response: any = await this._mero.rpc.execute({ contextId: this._contextId, method: 'profile_roundtrip', argsJson: convertCalimeroBytesForWasm(params) });
+    return (response == null ? null : ({ ...response, avatar: response['avatar'] == null ? null : new CalimeroBytes(response['avatar']) })) as Profile;
   }
 
   /**
@@ -540,16 +513,16 @@ export class AbiConformanceClient {
    * roundtrip_hash
    */
   public async roundtripHash(params: { h: Hash64 }): Promise<Hash64> {
-    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'roundtrip_hash', argsJson: convertCalimeroBytesForWasm(params) });
-    return convertWasmResultToCalimeroBytes(response) as Hash64;
+    const response: any = await this._mero.rpc.execute({ contextId: this._contextId, method: 'roundtrip_hash', argsJson: convertCalimeroBytesForWasm(params) });
+    return (response == null ? null : new CalimeroBytes(response)) as Hash64;
   }
 
   /**
    * roundtrip_id
    */
   public async roundtripId(params: { x: UserId32 }): Promise<UserId32> {
-    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'roundtrip_id', argsJson: convertCalimeroBytesForWasm(params) });
-    return convertWasmResultToCalimeroBytes(response) as UserId32;
+    const response: any = await this._mero.rpc.execute({ contextId: this._contextId, method: 'roundtrip_id', argsJson: convertCalimeroBytesForWasm(params) });
+    return (response == null ? null : new CalimeroBytes(response)) as UserId32;
   }
 
   /**

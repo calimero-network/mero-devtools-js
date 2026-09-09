@@ -173,4 +173,4 @@ The tool expects a WASM-ABI v1 manifest in JSON format. See the schema at `abi-c
 
 ## 📄 License
 
-MIT 
+MIT

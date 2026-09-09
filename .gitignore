@@ -15,7 +15,6 @@ build/
 *.tsbuildinfo
 
 # Generated files
-codegen-example/src/generated/
 tmp/
 
 # Environment files
