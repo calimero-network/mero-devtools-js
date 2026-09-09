@@ -10,8 +10,18 @@ const manifest = parseAbiManifest({
   schema_version: 'wasm-abi/1',
   types: {},
   methods: [
-    { name: 'open_call', params: [], xcall_callable: true, xcall_callers: 'any_in_namespace' },
-    { name: 'closed_call', params: [], xcall_callable: true, xcall_callers: 'same_app' },
+    {
+      name: 'open_call',
+      params: [],
+      xcall_callable: true,
+      xcall_callers: 'any_in_namespace',
+    },
+    {
+      name: 'closed_call',
+      params: [],
+      xcall_callable: true,
+      xcall_callers: 'same_app',
+    },
     { name: 'defaulted_call', params: [], xcall_callable: true },
     { name: 'plain_call', params: [] },
     { name: 'migrate_v1', params: [], intent: 'mutating' },
@@ -31,7 +41,9 @@ describe('method metadata in JSDoc', () => {
 
   it('defaults an xcall method with no declared policy to any_in_namespace', () => {
     const block = out.slice(0, out.indexOf('public async defaultedCall'));
-    expect(block.slice(block.lastIndexOf('/**'))).toContain('@xcall any_in_namespace');
+    expect(block.slice(block.lastIndexOf('/**'))).toContain(
+      '@xcall any_in_namespace',
+    );
   });
 
   it('leaves a non-xcall method unmarked', () => {

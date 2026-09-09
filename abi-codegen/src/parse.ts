@@ -216,7 +216,9 @@ function validateInvariants(manifest: AbiManifest): void {
 
   // Check state_root reference
   if (manifest.state_root && !definedTypes.has(manifest.state_root)) {
-    throw new Error(`Dangling state_root reference: type "${manifest.state_root}" is not defined`);
+    throw new Error(
+      `Dangling state_root reference: type "${manifest.state_root}" is not defined`,
+    );
   }
 
   // Check all events

@@ -86,7 +86,9 @@ describe('rpc.execute payload', () => {
   });
 
   it('sends a payload-bearing variant param as { Variant: payload }', async () => {
-    const payload = await callAndCapture('act', { a: { name: 'SetName', payload: 'ada' } });
+    const payload = await callAndCapture('act', {
+      a: { name: 'SetName', payload: 'ada' },
+    });
     expect(payload.argsJson).toEqual({ a: { SetName: 'ada' } });
   });
 
@@ -98,7 +100,10 @@ describe('rpc.execute payload', () => {
   it('converts bytes carried inside a rewritten variant param', async () => {
     const payload = await callAndCapture(
       'runCommand',
-      { cmd: newtypes.Command.Store(newtypes.CalimeroBytes.fromHex('00ff')), label: 'x' },
+      {
+        cmd: newtypes.Command.Store(newtypes.CalimeroBytes.fromHex('00ff')),
+        label: 'x',
+      },
       newtypes.NT,
     );
     expect(payload.argsJson).toEqual({ cmd: { Store: [0, 255] }, label: 'x' });

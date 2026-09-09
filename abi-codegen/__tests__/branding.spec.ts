@@ -7,7 +7,10 @@ import { generateClient } from '../src/generate/client.js';
 import { parseAbiManifest } from '../src/parse.js';
 import { brandBaseType } from '../src/generate/emit.js';
 
-const newtypesAbiPath = path.join(__dirname, '../__fixtures__/newtypes_abi.json');
+const newtypesAbiPath = path.join(
+  __dirname,
+  '../__fixtures__/newtypes_abi.json',
+);
 
 // A `@ts-expect-error` is an inverted assertion: tsc fails when the next line
 // does NOT error. Against a plain `type FolderId = string` every one of these
@@ -97,7 +100,10 @@ async function importGeneratedClient(
   return import(/* @vite-ignore */ file);
 }
 
-function typecheckGeneratedClient(clientContent: string, dirName: string): void {
+function typecheckGeneratedClient(
+  clientContent: string,
+  dirName: string,
+): void {
   const tmpDir = path.join(__dirname, '../tmp', dirName);
   fs.mkdirSync(tmpDir, { recursive: true });
 
@@ -133,7 +139,9 @@ function typecheckGeneratedClient(clientContent: string, dirName: string): void 
       encoding: 'utf-8',
     });
   } catch (error: any) {
-    throw new Error(`tsc rejected the branded client:\n${error.stdout || error.stderr}`);
+    throw new Error(
+      `tsc rejected the branded client:\n${error.stdout || error.stderr}`,
+    );
   }
 }
 
@@ -150,13 +158,13 @@ describe('newtype branding', () => {
       "export type FolderId = string & { readonly __brand: 'FolderId' };",
     );
     expect(out).toContain(
-      "export const FolderId = (value: string): FolderId => value as FolderId;",
+      'export const FolderId = (value: string): FolderId => value as FolderId;',
     );
     expect(out).toContain(
       "export type Height = number & { readonly __brand: 'Height' };",
     );
     expect(out).toContain(
-      "export const Height = (value: number): Height => value as Height;",
+      'export const Height = (value: number): Height => value as Height;',
     );
   });
 

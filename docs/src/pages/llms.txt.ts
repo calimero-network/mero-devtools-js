@@ -10,8 +10,10 @@ const SITE = 'https://calimero-network.github.io';
 const BASE = '/mero-devtools-js';
 
 const TRACKS: Record<string, string> = {
-  understand: 'Understand — what Mero DevTools is, and how the codegen pipeline fits together',
-  reference: 'Reference — the CLI tools, the programmatic API, and the WASM-ABI v1 manifest format',
+  understand:
+    'Understand — what Mero DevTools is, and how the codegen pipeline fits together',
+  reference:
+    'Reference — the CLI tools, the programmatic API, and the WASM-ABI v1 manifest format',
 };
 
 export const GET: APIRoute = async () => {

@@ -110,10 +110,12 @@ describe('WASM-ABI v1 Parser', () => {
 
       // Check Status is a mixed variant: a unit arm and a payload-bearing arm
       const status = manifest.types.Status as any;
-      expect(status.variants.find((v: any) => v.name === 'Pending').payload).
-        toBeUndefined();
-      expect(status.variants.find((v: any) => v.name === 'Active').payload).
-        toBeDefined();
+      expect(
+        status.variants.find((v: any) => v.name === 'Pending').payload,
+      ).toBeUndefined();
+      expect(
+        status.variants.find((v: any) => v.name === 'Active').payload,
+      ).toBeDefined();
 
       // tuple_pair carries a positional tuple both ways
       const tuplePair = manifest.methods.find((m) => m.name === 'tuple_pair');
@@ -450,10 +452,7 @@ describe('WASM-ABI v1 Parser', () => {
       const stderr = vi.spyOn(console, 'error').mockImplementation(() => {});
       const manifest = parseAbiManifest(withPattern('^[0-9a-f]{64}$'));
 
-      expect(manifest.types.Risky).toHaveProperty(
-        'pattern',
-        '^[0-9a-f]{64}$',
-      );
+      expect(manifest.types.Risky).toHaveProperty('pattern', '^[0-9a-f]{64}$');
       expect(stderr).not.toHaveBeenCalled();
       stderr.mockRestore();
       expect(generateClient(manifest, 'Risky')).toContain(

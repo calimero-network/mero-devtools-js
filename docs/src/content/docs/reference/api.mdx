@@ -14,7 +14,10 @@ naming utilities are reached through sub-path exports:
 
 ```ts
 // Main entry — parser + model types only
-import { parseAbiManifest, loadAbiManifestFromFile } from '@calimero-network/abi-codegen';
+import {
+  parseAbiManifest,
+  loadAbiManifestFromFile,
+} from '@calimero-network/abi-codegen';
 import type { AbiManifest, AbiMethod } from '@calimero-network/abi-codegen';
 
 // Sub-path exports
@@ -35,7 +38,7 @@ import {
 ## `parseAbiManifest(json)`
 
 ```ts
-function parseAbiManifest(json: unknown): AbiManifest
+function parseAbiManifest(json: unknown): AbiManifest;
 ```
 
 Validates a raw JSON value against the WASM-ABI v1 schema, checks the
@@ -55,7 +58,7 @@ const manifest = parseAbiManifest(raw);
 ## `loadAbiManifestFromFile(path)`
 
 ```ts
-function loadAbiManifestFromFile(path: string): AbiManifest
+function loadAbiManifestFromFile(path: string): AbiManifest;
 ```
 
 Reads a JSON file, parses it, and validates it — a convenience wrapper around
@@ -74,9 +77,9 @@ console.log(`${manifest.methods.length} methods`);
 ```ts
 function generateClient(
   manifest: AbiManifest,
-  clientName?: string,   // default: 'Client'
-  importPath?: string,   // default: '@calimero-network/mero-react'
-): string
+  clientName?: string, // default: 'Client'
+  importPath?: string, // default: '@calimero-network/mero-react'
+): string;
 ```
 
 Takes a validated `AbiManifest` and returns a TypeScript source string
@@ -104,17 +107,17 @@ import {
 } from '@calimero-network/abi-codegen/generate/emit';
 
 // Derive a client name from a file path (1–2 char segments are upper-cased):
-deriveClientNameFromPath('kv_store.wasm');        // 'KVStoreClient'
+deriveClientNameFromPath('kv_store.wasm'); // 'KVStoreClient'
 deriveClientNameFromPath('abi-conformance.json'); // 'AbiConformanceClient'
-deriveClientNameFromPath('plantr.wasm');          // 'PlantrClient'
+deriveClientNameFromPath('plantr.wasm'); // 'PlantrClient'
 
 // Sanitize an arbitrary string into a valid identifier (preserving casing):
-sanitizeClassName('Task Board');                  // 'TaskBoard'
-sanitizeClassName('kv_store');                    // 'KvStore'
+sanitizeClassName('Task Board'); // 'TaskBoard'
+sanitizeClassName('kv_store'); // 'KvStore'
 
 // Map a raw Rust type string to its TypeScript equivalent:
-mapRustTypeToTs('Vec<u32>');                       // 'number[]'
-mapRustTypeToTs('Option<String>');                 // 'string | null'
+mapRustTypeToTs('Vec<u32>'); // 'number[]'
+mapRustTypeToTs('Option<String>'); // 'string | null'
 ```
 
 ## Build-plugin pattern

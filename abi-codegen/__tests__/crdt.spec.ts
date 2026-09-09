@@ -345,7 +345,7 @@ describe('CRDT type annotations', () => {
       });
       const client = generateClient(parsed);
       expect(client).toContain(
-        "argsJson: convertCalimeroBytesForWasm(params) });",
+        'argsJson: convertCalimeroBytesForWasm(params) });',
       );
       expect(client).toContain('new CalimeroBytes(response)');
     });

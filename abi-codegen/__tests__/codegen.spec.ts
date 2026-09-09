@@ -4,7 +4,11 @@ import path from 'path';
 import { execSync } from 'child_process';
 import { loadAbiManifestFromFile } from '../src/parse.js';
 import { generateClient } from '../src/generate/client.js';
-import { deriveClientNameFromPath, sanitizeClassName, mapRustTypeToTs } from '../src/generate/emit.js';
+import {
+  deriveClientNameFromPath,
+  sanitizeClassName,
+  mapRustTypeToTs,
+} from '../src/generate/emit.js';
 import { parseAbiManifest } from '../src/parse.js';
 import { AbiManifest } from '../src/model.js';
 
@@ -126,9 +130,7 @@ describe('Codegen', () => {
       expect(clientContent).toContain('  MeroJs,');
 
       // ExecutionResponse is no longer imported
-      expect(clientContent).toContain(
-        "} from '@calimero-network/mero-react';",
-      );
+      expect(clientContent).toContain("} from '@calimero-network/mero-react';");
       expect(clientContent).toContain(
         'constructor(mero: MeroJs, contextId: string) {',
       );
@@ -297,9 +299,7 @@ describe('Codegen', () => {
       expect(clientContent).toContain('import {');
       expect(clientContent).toContain('  MeroJs,');
 
-      expect(clientContent).toContain(
-        "} from '@calimero-network/mero-react';",
-      );
+      expect(clientContent).toContain("} from '@calimero-network/mero-react';");
     });
   });
 
@@ -731,9 +731,7 @@ describe('Codegen', () => {
           fields: [{ name: 'action', type: { $ref: 'Action' } }],
         },
       },
-      methods: [
-        { name: 'do_it', params: [], returns: { $ref: 'Action' } },
-      ],
+      methods: [{ name: 'do_it', params: [], returns: { $ref: 'Action' } }],
       events: [],
     };
 
@@ -766,7 +764,10 @@ describe('Codegen', () => {
   describe('variant params are rewritten to the serde wire shape', () => {
     const commandVariant = {
       kind: 'variant',
-      variants: [{ name: 'Stop' }, { name: 'Rename', payload: { kind: 'string' } }],
+      variants: [
+        { name: 'Stop' },
+        { name: 'Rename', payload: { kind: 'string' } },
+      ],
     };
 
     it('converts a payload-bearing variant param whatever its type is named', () => {
@@ -791,11 +792,17 @@ describe('Codegen', () => {
       const parsed = parseAbiManifest({
         schema_version: 'wasm-abi/1',
         types: {
-          Action: { kind: 'record', fields: [{ name: 'hash', type: { $ref: 'Hash32' } }] },
+          Action: {
+            kind: 'record',
+            fields: [{ name: 'hash', type: { $ref: 'Hash32' } }],
+          },
           Hash32: { kind: 'alias', target: { kind: 'bytes', size: 32 } },
         },
         methods: [
-          { name: 'apply', params: [{ name: 'action', type: { $ref: 'Action' } }] },
+          {
+            name: 'apply',
+            params: [{ name: 'action', type: { $ref: 'Action' } }],
+          },
         ],
         events: [],
       });
@@ -855,10 +862,16 @@ describe('Codegen', () => {
       const parsed = parseAbiManifest({
         schema_version: 'wasm-abi/1',
         types: {
-          Role: { kind: 'variant', variants: [{ name: 'Viewer' }, { name: 'Editor' }] },
+          Role: {
+            kind: 'variant',
+            variants: [{ name: 'Viewer' }, { name: 'Editor' }],
+          },
         },
         methods: [
-          { name: 'set_role', params: [{ name: 'role', type: { $ref: 'Role' } }] },
+          {
+            name: 'set_role',
+            params: [{ name: 'role', type: { $ref: 'Role' } }],
+          },
         ],
         events: [],
       });
@@ -892,7 +905,9 @@ describe('Codegen', () => {
       const parsed = parseAbiManifest(abiNoBytes);
       const clientContent = generateClient(parsed, 'TestClient');
       expect(clientContent).not.toContain('export class CalimeroBytes');
-      expect(clientContent).not.toContain('function convertCalimeroBytesForWasm');
+      expect(clientContent).not.toContain(
+        'function convertCalimeroBytesForWasm',
+      );
       expect(clientContent).not.toContain('new CalimeroBytes(');
     });
 
@@ -903,9 +918,7 @@ describe('Codegen', () => {
         types: {
           Hash: { kind: 'bytes', size: 32, encoding: 'hex' },
         },
-        methods: [
-          { name: 'noop', params: [], returns: { kind: 'string' } },
-        ],
+        methods: [{ name: 'noop', params: [], returns: { kind: 'string' } }],
         events: [],
       };
       const parsed = parseAbiManifest(abi);
@@ -913,7 +926,9 @@ describe('Codegen', () => {
       // CalimeroBytes class is needed (Hash is referenced as a type alias)
       expect(clientContent).toContain('export class CalimeroBytes');
       // But helpers are not needed
-      expect(clientContent).not.toContain('function convertCalimeroBytesForWasm');
+      expect(clientContent).not.toContain(
+        'function convertCalimeroBytesForWasm',
+      );
       expect(clientContent).not.toContain('new CalimeroBytes(response)');
     });
 
@@ -945,9 +960,7 @@ describe('Codegen', () => {
         types: {
           Hash: { kind: 'bytes', size: 32, encoding: 'hex' },
         },
-        methods: [
-          { name: 'compute', params: [], returns: { $ref: 'Hash' } },
-        ],
+        methods: [{ name: 'compute', params: [], returns: { $ref: 'Hash' } }],
         events: [],
       };
       const parsed = parseAbiManifest(abi);
@@ -956,7 +969,9 @@ describe('Codegen', () => {
         'return (response == null ? null : new CalimeroBytes(response)) as CalimeroBytes;',
       );
       // No bytes params → no for-wasm helper
-      expect(clientContent).not.toContain('function convertCalimeroBytesForWasm');
+      expect(clientContent).not.toContain(
+        'function convertCalimeroBytesForWasm',
+      );
     });
 
     it('should emit the request helper and a bytes decode for the conformance ABI (regression)', () => {
@@ -975,7 +990,10 @@ describe('Codegen', () => {
         types: {
           Command: {
             kind: 'variant',
-            variants: [{ name: 'Stop' }, { name: 'Store', payload: { $ref: 'Hash32' } }],
+            variants: [
+              { name: 'Stop' },
+              { name: 'Store', payload: { $ref: 'Hash32' } },
+            ],
           },
           Hash32: { kind: 'alias', target: { kind: 'bytes', size: 32 } },
         },
@@ -1000,7 +1018,10 @@ describe('Codegen', () => {
             kind: 'variant',
             variants: [
               { name: 'Digest', payload: { kind: 'bytes' } },
-              { name: 'Scores', payload: { kind: 'list', items: { kind: 'u32' } } },
+              {
+                name: 'Scores',
+                payload: { kind: 'list', items: { kind: 'u32' } },
+              },
             ],
           },
         },
@@ -1012,7 +1033,9 @@ describe('Codegen', () => {
       expect(clientContent).toContain(
         "'Digest' in response ? { name: 'Digest', payload: new CalimeroBytes(response['Digest']) }",
       );
-      expect(clientContent).not.toContain("new CalimeroBytes(response['Scores']");
+      expect(clientContent).not.toContain(
+        "new CalimeroBytes(response['Scores']",
+      );
     });
 
     it('should flag an alias chain that ends in bytes', () => {
@@ -1159,9 +1182,7 @@ describe('Codegen', () => {
             name: 'doThing',
             params: [],
             returns: { kind: 'string' },
-            errors: [
-              { code: 'BadInput', payload: { $ref: 'ErrorDetails' } },
-            ],
+            errors: [{ code: 'BadInput', payload: { $ref: 'ErrorDetails' } }],
           },
         ],
         events: [],
@@ -1187,16 +1208,12 @@ describe('Codegen', () => {
           },
         },
         methods: [],
-        events: [
-          { name: 'Notified', payload: { $ref: 'NotificationData' } },
-        ],
+        events: [{ name: 'Notified', payload: { $ref: 'NotificationData' } }],
       };
       const parsed = parseAbiManifest(abi);
       expect(() => generateClient(parsed, 'Types')).not.toThrow();
       const typesContent = generateClient(parsed, 'Types');
-      expect(typesContent).toContain(
-        'export type AbiEvent =',
-      );
+      expect(typesContent).toContain('export type AbiEvent =');
       expect(typesContent).toContain(
         '| { name: "Notified"; payload: NotificationData }',
       );
@@ -1306,7 +1323,10 @@ describe('executorPublicKey is never emitted', () => {
       const m = loadAbiManifestFromFile(
         path.join(__dirname, '../__fixtures__', fixture),
       );
-      for (const output of [generateClient(m, 'TestClient'), generateClient(m, 'Types')]) {
+      for (const output of [
+        generateClient(m, 'TestClient'),
+        generateClient(m, 'Types'),
+      ]) {
         expect(output).not.toMatch(/executorPublicKey/i);
       }
     });
