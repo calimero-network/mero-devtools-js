@@ -35,7 +35,7 @@ const EXCLUDED_NAMES = new Set<string>([
   '.gitignore',
   '.gitattributes',
   '.gitmodules',
-  'node_modules'
+  'node_modules',
 ]);
 
 async function pathExists(p: string): Promise<boolean> {
@@ -62,7 +62,10 @@ async function copyDir(srcDir: string, destDir: string): Promise<void> {
   }
 }
 
-async function writePackageName(targetDir: string, appName: string): Promise<void> {
+async function writePackageName(
+  targetDir: string,
+  appName: string,
+): Promise<void> {
   const pkgPath = path.join(targetDir, 'package.json');
   const exists = await pathExists(pkgPath);
   if (!exists) return;
@@ -96,99 +99,110 @@ async function main() {
     .description('Scaffold a new Mero app')
     .argument('[project-name]', 'Name of the project directory')
     .option('-t, --template <name>', 'Template to use (rust, javascript)')
-    .action(async (projectName: string | undefined, options: { template?: string }) => {
-      const cwd = process.cwd();
-      const targetDir = projectName ? path.resolve(cwd, projectName) : cwd;
-      const appName = path.basename(targetDir);
+    .action(
+      async (
+        projectName: string | undefined,
+        options: { template?: string },
+      ) => {
+        const cwd = process.cwd();
+        const targetDir = projectName ? path.resolve(cwd, projectName) : cwd;
+        const appName = path.basename(targetDir);
 
-      const validation = validate(appName);
-      if (!validation.validForNewPackages) {
-        console.error(red('Invalid project name: ' + appName));
-        for (const err of validation.errors ?? []) console.error(red('  - ' + err));
-        process.exit(1);
-      }
-
-      if (await pathExists(targetDir)) {
-        const empty = (await fs.readdir(targetDir)).length === 0;
-        if (!empty) {
-          console.error(red(`Target directory ${targetDir} is not empty.`));
+        const validation = validate(appName);
+        if (!validation.validForNewPackages) {
+          console.error(red('Invalid project name: ' + appName));
+          for (const err of validation.errors ?? [])
+            console.error(red('  - ' + err));
           process.exit(1);
         }
-      } else {
-        await fs.mkdir(targetDir, { recursive: true });
-      }
 
-      // Determine template
-      let template: Template | undefined;
-
-      if (options.template) {
-        template = TEMPLATES.find((t) => t.name === options.template);
-        if (!template) {
-          console.error(red(`Invalid template: ${options.template}`));
-          console.error(dim('Available templates: ' + TEMPLATES.map((t) => t.name).join(', ')));
-          process.exit(1);
-          return;
+        if (await pathExists(targetDir)) {
+          const empty = (await fs.readdir(targetDir)).length === 0;
+          if (!empty) {
+            console.error(red(`Target directory ${targetDir} is not empty.`));
+            process.exit(1);
+          }
+        } else {
+          await fs.mkdir(targetDir, { recursive: true });
         }
-      } else {
-        // Interactive selection
-        const response = await prompts(
-          {
-            type: 'select',
-            name: 'template',
-            message: 'Select backend template',
-            choices: TEMPLATES.map((t) => ({
-              title: t.display,
-              value: t.name,
-            })),
-            initial: 0,
-          },
-          {
-            onCancel: () => {
-              console.log(red('Operation cancelled.'));
-              process.exit(1);
+
+        // Determine template
+        let template: Template | undefined;
+
+        if (options.template) {
+          template = TEMPLATES.find((t) => t.name === options.template);
+          if (!template) {
+            console.error(red(`Invalid template: ${options.template}`));
+            console.error(
+              dim(
+                'Available templates: ' +
+                  TEMPLATES.map((t) => t.name).join(', '),
+              ),
+            );
+            process.exit(1);
+            return;
+          }
+        } else {
+          // Interactive selection
+          const response = await prompts(
+            {
+              type: 'select',
+              name: 'template',
+              message: 'Select backend template',
+              choices: TEMPLATES.map((t) => ({
+                title: t.display,
+                value: t.name,
+              })),
+              initial: 0,
             },
-          }
-        );
+            {
+              onCancel: () => {
+                console.log(red('Operation cancelled.'));
+                process.exit(1);
+              },
+            },
+          );
 
-        template = TEMPLATES.find((t) => t.name === response.template);
-        if (!template) {
-          process.exit(1);
-          return;
-        }
-      }
-
-      console.log();
-      console.log(dim('Scaffolding project in ') + cyan(targetDir));
-      console.log(dim('Using template: ') + cyan(template.display));
-
-      const tempRepo = await cloneToTemp(template.repoUrl);
-      try {
-        const entries = await fs.readdir(tempRepo, { withFileTypes: true });
-        for (const entry of entries) {
-          const name = entry.name;
-          if (EXCLUDED_NAMES.has(name)) continue;
-          const srcPath = path.join(tempRepo, name);
-          const destPath = path.join(targetDir, name);
-          if (entry.isDirectory()) {
-            await copyDir(srcPath, destPath);
-          } else if (entry.isFile()) {
-            await fs.copyFile(srcPath, destPath);
+          template = TEMPLATES.find((t) => t.name === response.template);
+          if (!template) {
+            process.exit(1);
+            return;
           }
         }
-      } finally {
-        await fs.rm(path.dirname(tempRepo), { recursive: true, force: true });
-      }
 
-      await writePackageName(targetDir, appName);
+        console.log();
+        console.log(dim('Scaffolding project in ') + cyan(targetDir));
+        console.log(dim('Using template: ') + cyan(template.display));
 
-      console.log(green('Done.'));
-      console.log();
-      console.log(dim('Next steps:'));
-      const rel = path.relative(cwd, targetDir);
-      if (rel) console.log(`  cd ${rel}`);
-      console.log('  pnpm install');
-      console.log('  pnpm dev');
-    });
+        const tempRepo = await cloneToTemp(template.repoUrl);
+        try {
+          const entries = await fs.readdir(tempRepo, { withFileTypes: true });
+          for (const entry of entries) {
+            const name = entry.name;
+            if (EXCLUDED_NAMES.has(name)) continue;
+            const srcPath = path.join(tempRepo, name);
+            const destPath = path.join(targetDir, name);
+            if (entry.isDirectory()) {
+              await copyDir(srcPath, destPath);
+            } else if (entry.isFile()) {
+              await fs.copyFile(srcPath, destPath);
+            }
+          }
+        } finally {
+          await fs.rm(path.dirname(tempRepo), { recursive: true, force: true });
+        }
+
+        await writePackageName(targetDir, appName);
+
+        console.log(green('Done.'));
+        console.log();
+        console.log(dim('Next steps:'));
+        const rel = path.relative(cwd, targetDir);
+        if (rel) console.log(`  cd ${rel}`);
+        console.log('  pnpm install');
+        console.log('  pnpm dev');
+      },
+    );
 
   await program.parseAsync(process.argv);
 }
@@ -197,5 +211,3 @@ main().catch((err) => {
   console.error(red(String(err?.stack || err)));
   process.exit(1);
 });
-
-

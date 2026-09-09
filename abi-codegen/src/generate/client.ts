@@ -7,7 +7,15 @@ import {
   AbiField,
   AbiVariantDef,
 } from '../model.js';
-import { brandBaseType, formatIdentifier, generateFileBanner, mapRustTypeToTs, MAX_ALIAS_DEPTH, sanitizeClassName, toCamelCase } from './emit.js';
+import {
+  brandBaseType,
+  formatIdentifier,
+  generateFileBanner,
+  mapRustTypeToTs,
+  MAX_ALIAS_DEPTH,
+  sanitizeClassName,
+  toCamelCase,
+} from './emit.js';
 
 /**
  * Utility class for handling byte conversions in Calimero
@@ -114,7 +122,7 @@ export function generateClient(
   // Add imports
   lines.push('import {');
   lines.push('  MeroJs,');
-  
+
   lines.push(`} from '${importPath}';`);
   lines.push('');
 
@@ -125,11 +133,7 @@ export function generateClient(
   // Generate type definitions
   for (const [typeName, typeDef] of Object.entries(manifest.types)) {
     lines.push(
-      ...generateTypeDefinition(
-        typeName,
-        typeDef as AbiTypeDef,
-        manifest,
-      ),
+      ...generateTypeDefinition(typeName, typeDef as AbiTypeDef, manifest),
     );
     lines.push('');
   }
@@ -158,83 +162,85 @@ export function generateClient(
 
   // Add CalimeroBytes utility class (only when any type uses bytes)
   if (anyTypeUsesBytes) {
-  lines.push('/**');
-  lines.push(' * Utility class for handling byte conversions in Calimero');
-  lines.push(' */');
-  lines.push('export class CalimeroBytes {');
-  lines.push('  private data: Uint8Array;');
-  lines.push('');
-  lines.push('  constructor(input: string | number[] | Uint8Array) {');
-  lines.push('    if (typeof input === "string") {');
-  lines.push('      // Hex string');
-  lines.push('      this.data = new Uint8Array(');
-  lines.push(
-    '        input.match(/.{1,2}/g)?.map((byte) => parseInt(byte, 16)) || []',
-  );
-  lines.push('      );');
-  lines.push('    } else if (Array.isArray(input)) {');
-  lines.push('      // Number array');
-  lines.push('      this.data = new Uint8Array(input);');
-  lines.push('    } else {');
-  lines.push('      // Uint8Array');
-  lines.push('      this.data = input;');
-  lines.push('    }');
-  lines.push('  }');
-  lines.push('');
-  lines.push('  toArray(): number[] {');
-  lines.push('    return Array.from(this.data);');
-  lines.push('  }');
-  lines.push('');
-  lines.push('  toUint8Array(): Uint8Array {');
-  lines.push('    return this.data;');
-  lines.push('  }');
-  lines.push('');
-  lines.push('  static fromHex(hex: string): CalimeroBytes {');
-  lines.push('    return new CalimeroBytes(hex);');
-  lines.push('  }');
-  lines.push('');
-  lines.push('  static fromArray(arr: number[]): CalimeroBytes {');
-  lines.push('    return new CalimeroBytes(arr);');
-  lines.push('  }');
-  lines.push('');
-  lines.push('  static fromUint8Array(bytes: Uint8Array): CalimeroBytes {');
-  lines.push('    return new CalimeroBytes(bytes);');
-  lines.push('  }');
-  lines.push('}');
-  lines.push('');
+    lines.push('/**');
+    lines.push(' * Utility class for handling byte conversions in Calimero');
+    lines.push(' */');
+    lines.push('export class CalimeroBytes {');
+    lines.push('  private data: Uint8Array;');
+    lines.push('');
+    lines.push('  constructor(input: string | number[] | Uint8Array) {');
+    lines.push('    if (typeof input === "string") {');
+    lines.push('      // Hex string');
+    lines.push('      this.data = new Uint8Array(');
+    lines.push(
+      '        input.match(/.{1,2}/g)?.map((byte) => parseInt(byte, 16)) || []',
+    );
+    lines.push('      );');
+    lines.push('    } else if (Array.isArray(input)) {');
+    lines.push('      // Number array');
+    lines.push('      this.data = new Uint8Array(input);');
+    lines.push('    } else {');
+    lines.push('      // Uint8Array');
+    lines.push('      this.data = input;');
+    lines.push('    }');
+    lines.push('  }');
+    lines.push('');
+    lines.push('  toArray(): number[] {');
+    lines.push('    return Array.from(this.data);');
+    lines.push('  }');
+    lines.push('');
+    lines.push('  toUint8Array(): Uint8Array {');
+    lines.push('    return this.data;');
+    lines.push('  }');
+    lines.push('');
+    lines.push('  static fromHex(hex: string): CalimeroBytes {');
+    lines.push('    return new CalimeroBytes(hex);');
+    lines.push('  }');
+    lines.push('');
+    lines.push('  static fromArray(arr: number[]): CalimeroBytes {');
+    lines.push('    return new CalimeroBytes(arr);');
+    lines.push('  }');
+    lines.push('');
+    lines.push('  static fromUint8Array(bytes: Uint8Array): CalimeroBytes {');
+    lines.push('    return new CalimeroBytes(bytes);');
+    lines.push('  }');
+    lines.push('}');
+    lines.push('');
   } // end if (anyTypeUsesBytes)
 
   // Add utility function for CalimeroBytes conversion (only when any method has bytes params)
   if (anyMethodHasBytesParams) {
-  lines.push('/**');
-  lines.push(
-    ' * Convert CalimeroBytes instances to arrays for WASM compatibility',
-  );
-  lines.push(' */');
-  lines.push('function convertCalimeroBytesForWasm(obj: any): any {');
-  lines.push('  if (obj === null || obj === undefined) {');
-  lines.push('    return obj;');
-  lines.push('  }');
-  lines.push('');
-  lines.push('  if (obj instanceof CalimeroBytes) {');
-  lines.push('    return obj.toArray();');
-  lines.push('  }');
-  lines.push('');
-  lines.push('  if (Array.isArray(obj)) {');
-  lines.push('    return obj.map(item => convertCalimeroBytesForWasm(item));');
-  lines.push('  }');
-  lines.push('');
-  lines.push('  if (typeof obj === "object") {');
-  lines.push('    const result: any = {};');
-  lines.push('    for (const [key, value] of Object.entries(obj)) {');
-  lines.push('      result[key] = convertCalimeroBytesForWasm(value);');
-  lines.push('    }');
-  lines.push('    return result;');
-  lines.push('  }');
-  lines.push('');
-  lines.push('  return obj;');
-  lines.push('}');
-  lines.push('');
+    lines.push('/**');
+    lines.push(
+      ' * Convert CalimeroBytes instances to arrays for WASM compatibility',
+    );
+    lines.push(' */');
+    lines.push('function convertCalimeroBytesForWasm(obj: any): any {');
+    lines.push('  if (obj === null || obj === undefined) {');
+    lines.push('    return obj;');
+    lines.push('  }');
+    lines.push('');
+    lines.push('  if (obj instanceof CalimeroBytes) {');
+    lines.push('    return obj.toArray();');
+    lines.push('  }');
+    lines.push('');
+    lines.push('  if (Array.isArray(obj)) {');
+    lines.push(
+      '    return obj.map(item => convertCalimeroBytesForWasm(item));',
+    );
+    lines.push('  }');
+    lines.push('');
+    lines.push('  if (typeof obj === "object") {');
+    lines.push('    const result: any = {};');
+    lines.push('    for (const [key, value] of Object.entries(obj)) {');
+    lines.push('      result[key] = convertCalimeroBytesForWasm(value);');
+    lines.push('    }');
+    lines.push('    return result;');
+    lines.push('  }');
+    lines.push('');
+    lines.push('  return obj;');
+    lines.push('}');
+    lines.push('');
   } // end if (anyMethodHasBytesParams)
 
   // Add Client class
@@ -285,15 +291,24 @@ function isBytesType(
       return isBytesType(typeRef.value, manifest, seen);
     }
     if (typeRef.kind === 'record') {
-      if ('crdt_type' in typeRef && typeRef.crdt_type && 'inner_type' in typeRef && typeRef.inner_type) {
+      if (
+        'crdt_type' in typeRef &&
+        typeRef.crdt_type &&
+        'inner_type' in typeRef &&
+        typeRef.inner_type
+      ) {
         return isBytesType(typeRef.inner_type, manifest, seen);
       }
       if ('fields' in typeRef) {
-        return typeRef.fields.some((field: any) => isBytesType(field.type, manifest, seen));
+        return typeRef.fields.some((field: any) =>
+          isBytesType(field.type, manifest, seen),
+        );
       }
     }
     if (typeRef.kind === 'tuple' && 'elements' in typeRef) {
-      return (typeRef as any).elements.some((el: AbiTypeRef) => isBytesType(el, manifest, seen));
+      return (typeRef as any).elements.some((el: AbiTypeRef) =>
+        isBytesType(el, manifest, seen),
+      );
     }
   }
   return false;
@@ -361,7 +376,9 @@ function resolveNamedType(
  * emit a string-literal union type rather than a discriminated union.
  */
 function isAllUnitVariant(typeDef: AbiTypeDef): boolean {
-  return typeDef.kind === 'variant' && typeDef.variants.every((v) => !v.payload);
+  return (
+    typeDef.kind === 'variant' && typeDef.variants.every((v) => !v.payload)
+  );
 }
 
 /**
@@ -481,7 +498,12 @@ function decodeVariant(
     .map((variant) => {
       const inner =
         variant.payload &&
-        decodeExpr(variant.payload, manifest, `${expr}['${variant.name}']`, seen);
+        decodeExpr(
+          variant.payload,
+          manifest,
+          `${expr}['${variant.name}']`,
+          seen,
+        );
       return inner
         ? `'${variant.name}' in ${expr} ? { name: '${variant.name}', payload: ${inner} } : `
         : '';
@@ -517,9 +539,7 @@ function generateTypeDefinition(
     if (isAllUnitVariant(typeDef)) {
       // Unit-only variants — serde serializes these as bare strings.
       // Emit a string-literal union type that matches the wire format.
-      const literals = typeDef.variants
-        .map((v) => `'${v.name}'`)
-        .join(' | ');
+      const literals = typeDef.variants.map((v) => `'${v.name}'`).join(' | ');
       lines.push(`export type ${safeName} = ${literals};`);
     } else {
       // Mixed/payload variants — emit a discriminated union and factory.
@@ -800,7 +820,9 @@ function generateMethod(
     });
 
     if (variantParams.length > 0) {
-      lines.push(`    // Serde tags a payload-bearing variant as { Variant: payload }`);
+      lines.push(
+        `    // Serde tags a payload-bearing variant as { Variant: payload }`,
+      );
       lines.push(`    const convertedParams = { ...params } as any;`);
       for (const param of variantParams) {
         const paramName = formatIdentifier(param.name);

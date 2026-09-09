@@ -21,5 +21,9 @@ export const onRequest = defineMiddleware(async (_ctx, next) => {
   const html = (await res.text()).replace(re, `href="${BASE}/`);
   const headers = new Headers(res.headers);
   headers.delete('content-length'); // body length changed
-  return new Response(html, { status: res.status, statusText: res.statusText, headers });
+  return new Response(html, {
+    status: res.status,
+    statusText: res.statusText,
+    headers,
+  });
 });

@@ -5,13 +5,7 @@ import {
   Action,
   CalimeroBytes,
 } from './generated/abi-conformance/AbiConformanceClient';
-import {
-
-  MeroProvider,
-  useMero,
-
-  AppMode,
-} from '@calimero-network/mero-react';
+import { MeroProvider, useMero, AppMode } from '@calimero-network/mero-react';
 
 // Utility function for converting byte arrays to hex strings
 function bytesToHex(bytes: Uint8Array): string {
@@ -57,12 +51,12 @@ function App() {
     setResults([]);
 
     // Create a context for the client (this calls init automatically)
-    
+
     let client;
     try {
       // context = await app.createContext();
-      
-      client = new AbiConformanceClient(mero, contextId || "");
+
+      client = new AbiConformanceClient(mero, contextId || '');
     } catch (error) {
       setResults([
         {

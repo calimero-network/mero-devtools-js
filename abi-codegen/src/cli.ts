@@ -4,7 +4,10 @@ import fs from 'fs';
 import path from 'path';
 import { loadAbiManifestFromFile } from './parse.js';
 import { generateClient } from './generate/client.js';
-import { deriveClientNameFromPath, sanitizeClassName } from './generate/emit.js';
+import {
+  deriveClientNameFromPath,
+  sanitizeClassName,
+} from './generate/emit.js';
 
 const getArgs = () => {
   const args: { [key: string]: string } = {};
@@ -151,8 +154,7 @@ function main() {
       }
 
       // Generate client.ts with derived filename (types are embedded)
-      const importPath =
-        args['import-path'] || '@calimero-network/mero-react';
+      const importPath = args['import-path'] || '@calimero-network/mero-react';
       const clientContent = generateClient(manifest, clientName, importPath);
       const clientPath = path.join(outputDir, `${clientName}.ts`);
       fs.writeFileSync(clientPath, clientContent);
