@@ -15,9 +15,9 @@ describe('WASM-ABI v1 Parser', () => {
       );
 
       expect(manifest.schema_version).toBe('wasm-abi/1');
-      expect(manifest.methods).toHaveLength(38);
+      expect(manifest.methods).toHaveLength(40);
       expect(manifest.events).toHaveLength(7);
-      expect(Object.keys(manifest.types)).toHaveLength(18);
+      expect(Object.keys(manifest.types)).toHaveLength(17);
 
       // Check specific types
       expect(manifest.types.AbiState).toBeDefined();
@@ -28,8 +28,8 @@ describe('WASM-ABI v1 Parser', () => {
       expect(manifest.types.Profile.kind).toBe('record');
       expect(manifest.types.Action).toBeDefined();
       expect(manifest.types.Action.kind).toBe('variant');
-      expect(manifest.types.ConformanceError).toBeDefined();
-      expect(manifest.types.ConformanceError.kind).toBe('variant');
+      expect(manifest.types.Status).toBeDefined();
+      expect(manifest.types.Status.kind).toBe('variant');
       expect(manifest.types.UserId32).toBeDefined();
       expect(manifest.types.UserId32.kind).toBe('alias');
       expect(manifest.types.Hash64).toBeDefined();
@@ -47,6 +47,8 @@ describe('WASM-ABI v1 Parser', () => {
       expect(methodNames).toContain('roundtrip_hash');
       expect(methodNames).toContain('may_fail');
       expect(methodNames).toContain('find_person');
+      expect(methodNames).toContain('tuple_pair');
+      expect(methodNames).toContain('list_tuples');
 
       // Check events
       const eventNames = manifest.events.map((e) => e.name);
@@ -105,13 +107,18 @@ describe('WASM-ABI v1 Parser', () => {
       expect(dataEvent!.payload).toBeDefined();
       expect('size' in (dataEvent!.payload as any)).toBe(false);
 
-      // Check ConformanceError variants have payload for NOT_FOUND
-      const conformanceError = manifest.types.ConformanceError;
-      const notFoundVariant = (conformanceError as any).variants.find(
-        (v: any) => v.name === 'NotFound',
-      );
-      expect(notFoundVariant).toBeDefined();
-      expect(notFoundVariant!.payload).toBeDefined();
+      // Check Status is a mixed variant: a unit arm and a payload-bearing arm
+      const status = manifest.types.Status as any;
+      expect(status.variants.find((v: any) => v.name === 'Pending').payload).
+        toBeUndefined();
+      expect(status.variants.find((v: any) => v.name === 'Active').payload).
+        toBeDefined();
+
+      // tuple_pair carries a positional tuple both ways
+      const tuplePair = manifest.methods.find((m) => m.name === 'tuple_pair');
+      expect((tuplePair!.params[0].type as any).kind).toBe('tuple');
+      expect((tuplePair!.params[0].type as any).elements).toHaveLength(2);
+      expect((tuplePair!.returns as any).kind).toBe('tuple');
     });
   });
 
