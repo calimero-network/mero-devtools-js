@@ -572,6 +572,8 @@ export class AbiConformanceClient {
 
   /**
    * xcall_noop
+   *
+   * @xcall any_in_namespace (callable by any context in the namespace)
    */
   public async xcallNoop(): Promise<void> {
     const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'xcall_noop', argsJson: {} });
