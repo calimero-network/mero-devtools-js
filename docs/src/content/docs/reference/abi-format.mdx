@@ -11,13 +11,13 @@ Calimero contract's public surface. Every shape here mirrors the embedded
 
 ```ts
 interface AbiManifest {
-  schema_version: 'wasm-abi/1';          // must be exactly this string
-  types: Record<string, AbiTypeDef>;     // named type definitions
-  methods: AbiMethod[];                  // callable contract methods
-  events: AbiEvent[];                    // emitted events
-  state_root?: string;                   // type name backing contract state
-  state_version?: number;                // state schema version (≥ 1)
-  migrations?: AbiMigrationEdge[];       // declared migration edges
+  schema_version: 'wasm-abi/1'; // must be exactly this string
+  types: Record<string, AbiTypeDef>; // named type definitions
+  methods: AbiMethod[]; // callable contract methods
+  events: AbiEvent[]; // emitted events
+  state_root?: string; // type name backing contract state
+  state_version?: number; // state schema version (≥ 1)
+  migrations?: AbiMigrationEdge[]; // declared migration edges
 }
 ```
 
@@ -67,14 +67,14 @@ or a `$ref` to a named type.
 
 Each is an object with a single `kind`:
 
-| Type | Meaning |
-| --- | --- |
-| `{ "kind": "bool" }` | Boolean |
-| `{ "kind": "string" }` | UTF-8 string |
-| `{ "kind": "unit" }` | Void / no value |
-| `{ "kind": "i32" }` / `{ "kind": "i64" }` | Signed 32- / 64-bit integer |
+| Type                                      | Meaning                       |
+| ----------------------------------------- | ----------------------------- |
+| `{ "kind": "bool" }`                      | Boolean                       |
+| `{ "kind": "string" }`                    | UTF-8 string                  |
+| `{ "kind": "unit" }`                      | Void / no value               |
+| `{ "kind": "i32" }` / `{ "kind": "i64" }` | Signed 32- / 64-bit integer   |
 | `{ "kind": "u32" }` / `{ "kind": "u64" }` | Unsigned 32- / 64-bit integer |
-| `{ "kind": "f32" }` / `{ "kind": "f64" }` | 32- / 64-bit float |
+| `{ "kind": "f32" }` / `{ "kind": "f64" }` | 32- / 64-bit float            |
 
 ### Bytes
 
@@ -89,13 +89,13 @@ SDKs omit it. In generated code, bytes values are represented by the
 
 ### Collections
 
-| Kind | Shape |
-| --- | --- |
-| `list` | `{ "kind": "list", "items": <type>, "crdt_type"?: <crdt> }` |
-| `map` | `{ "kind": "map", "key": <type>, "value": <type>, "crdt_type"?: <crdt> }` |
+| Kind     | Shape                                                                                     |
+| -------- | ----------------------------------------------------------------------------------------- |
+| `list`   | `{ "kind": "list", "items": <type>, "crdt_type"?: <crdt> }`                               |
+| `map`    | `{ "kind": "map", "key": <type>, "value": <type>, "crdt_type"?: <crdt> }`                 |
 | `record` | `{ "kind": "record", "fields": [<field>…], "crdt_type"?: <crdt>, "inner_type"?: <type> }` |
-| `tuple` | `{ "kind": "tuple", "elements": [<type>…] }` (at least one element) |
-| `$ref` | `{ "$ref": "TypeName" }` — reference to a named type |
+| `tuple`  | `{ "kind": "tuple", "elements": [<type>…] }` (at least one element)                       |
+| `$ref`   | `{ "$ref": "TypeName" }` — reference to a named type                                      |
 
 :::note[Map keys must be strings]
 The parser enforces that a `map`'s `key` is a `string` type; anything else is
@@ -113,12 +113,12 @@ and tuples). Those are mapped straight to TypeScript instead of resolved against
 Any `list`, `map`, or `record` may carry a `crdt_type` marking it as a
 CRDT-backed state collection. The schema accepts exactly these 11 values:
 
-| | | |
-| --- | --- | --- |
-| `lww_register` | `counter` | `vector` |
+|                             |                   |                  |
+| --------------------------- | ----------------- | ---------------- |
+| `lww_register`              | `counter`         | `vector`         |
 | `replicated_growable_array` | `authored_vector` | `shared_storage` |
-| `unordered_map` | `sorted_map` | `authored_map` |
-| `unordered_set` | `sorted_set` | |
+| `unordered_map`             | `sorted_map`      | `authored_map`   |
+| `unordered_set`             | `sorted_set`      |                  |
 
 ## Named type definitions
 
@@ -175,14 +175,14 @@ string it always was, and the JSON on the wire is unchanged.
 
 Branding stops there, and deliberately:
 
-| Alias target | Emitted as | Why |
-| --- | --- | --- |
-| `string`, `i32`/`i64`/`u32`/`u64`/`f32`/`f64` | branded | TypeScript would otherwise erase the distinction entirely |
-| `bool` | plain alias | two inhabitants; nothing to confuse |
-| `bytes` | plain alias (`CalimeroBytes`) | already a class; an intersection would reject real instances |
-| `list`, `map`, `tuple`, inline `record` | plain alias | structurally distinct already, and branding would force a cast on every literal |
-| `$ref` to a record or variant | unchanged | records emit an `interface` and variants a discriminated union, both of which already carry their own shape |
-| `$ref` to another alias | branded under **its own** name | `struct A(B)` and `B` are distinct types in Rust, so they are distinct here |
+| Alias target                                  | Emitted as                     | Why                                                                                                         |
+| --------------------------------------------- | ------------------------------ | ----------------------------------------------------------------------------------------------------------- |
+| `string`, `i32`/`i64`/`u32`/`u64`/`f32`/`f64` | branded                        | TypeScript would otherwise erase the distinction entirely                                                   |
+| `bool`                                        | plain alias                    | two inhabitants; nothing to confuse                                                                         |
+| `bytes`                                       | plain alias (`CalimeroBytes`)  | already a class; an intersection would reject real instances                                                |
+| `list`, `map`, `tuple`, inline `record`       | plain alias                    | structurally distinct already, and branding would force a cast on every literal                             |
+| `$ref` to a record or variant                 | unchanged                      | records emit an `interface` and variants a discriminated union, both of which already carry their own shape |
+| `$ref` to another alias                       | branded under **its own** name | `struct A(B)` and `B` are distinct types in Rust, so they are distinct here                                 |
 
 A newtype over a type the manifest does not define is left as a plain alias.
 
@@ -247,11 +247,11 @@ above generates `createPost(params: { title: string }): Promise<Post>`.
 
 `intent` declares whether a method reads or writes state:
 
-| Value | Meaning |
-| --- | --- |
-| `read_only` | Reads state only; no mutation. |
-| `mutating` | Writes / changes state. |
-| `unspecified` | Not declared. |
+| Value         | Meaning                        |
+| ------------- | ------------------------------ |
+| `read_only`   | Reads state only; no mutation. |
+| `mutating`    | Writes / changes state.        |
+| `unspecified` | Not declared.                  |
 
 A method with no `intent` field is treated as potentially mutating (the node
 defaults an absent intent to write intent). The generator surfaces a declared
@@ -263,10 +263,10 @@ yet change how the method is called.
 Two optional fields describe cross-context invocation, declared by the app
 author:
 
-| Field | Values | Meaning |
-| --- | --- | --- |
-| `xcall_callable` | `boolean` | Whether the method is a cross-context entry point. Absent/`false` means it is not. |
-| `xcall_callers` | `any_in_namespace` \| `same_app` | Who may invoke it. `any_in_namespace` (the default) allows any context in the namespace; `same_app` restricts callers to contexts running the same application. Enforced by the node. |
+| Field            | Values                           | Meaning                                                                                                                                                                               |
+| ---------------- | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `xcall_callable` | `boolean`                        | Whether the method is a cross-context entry point. Absent/`false` means it is not.                                                                                                    |
+| `xcall_callers`  | `any_in_namespace` \| `same_app` | Who may invoke it. `any_in_namespace` (the default) allows any context in the namespace; `same_app` restricts callers to contexts running the same application. Enforced by the node. |
 
 The generator surfaces both on the method as an `@xcall` JSDoc tag, because
 nothing in the emitted signature distinguishes a cross-context entry point from
@@ -334,11 +334,13 @@ emits a `<EventName>Payload` type alias; it also emits a single `AbiEvent` union
 over all events, e.g.:
 
 ```ts
-export type PostCreatedPayload = { /* … */ };
+export type PostCreatedPayload = {
+  /* … */
+};
 
 export type AbiEvent =
-  | { name: "PostCreated"; payload: PostCreatedPayload }
-  | { name: "PostDeleted" };
+  | { name: 'PostCreated'; payload: PostCreatedPayload }
+  | { name: 'PostDeleted' };
 ```
 
 Events whose payload is inline `unit` (or absent) omit the `payload` field in

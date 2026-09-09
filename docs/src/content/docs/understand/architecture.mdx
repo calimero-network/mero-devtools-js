@@ -152,7 +152,12 @@ a new directory.
   ]}
   steps={[
     { from: 0, to: 0, label: 'validate project name (npm rules)' },
-    { from: 0, to: 1, label: 'select template (if no --template)', dashed: true },
+    {
+      from: 0,
+      to: 1,
+      label: 'select template (if no --template)',
+      dashed: true,
+    },
     { from: 1, to: 0, label: 'rust | javascript', dashed: true },
     { from: 0, to: 2, label: 'git clone --depth 1 <repoUrl>' },
     { from: 2, to: 0, label: 'shallow checkout in os.tmpdir()', dashed: true },

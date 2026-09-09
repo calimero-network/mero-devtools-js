@@ -28,6 +28,7 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
+      - run: pnpm format:check
       - run: pnpm build
       - run: pnpm test
       - name: Validate ABI
@@ -88,8 +89,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v7
         with:
-          node-version: "20"
-          cache: "pnpm"
+          node-version: '20'
+          cache: 'pnpm'
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -195,9 +196,9 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v7
         with:
-          node-version: "24"
-          registry-url: "https://registry.npmjs.org"
-          scope: "@calimero-network"
+          node-version: '24'
+          registry-url: 'https://registry.npmjs.org'
+          scope: '@calimero-network'
           token: false
 
       - name: Setup pnpm
@@ -220,7 +221,7 @@ jobs:
         run: cd abi-codegen && npx semantic-release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_CONFIG_PROVENANCE: "true"
+          NPM_CONFIG_PROVENANCE: 'true'
           NODE_ENV: production
 
       - name: Publish create-mero-app to npm

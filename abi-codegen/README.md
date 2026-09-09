@@ -69,4 +69,4 @@ See the [codegen-example](../codegen-example) for a complete React example.
 npm install
 npm run build
 npm run test
-``` 
+```

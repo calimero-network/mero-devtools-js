@@ -26,16 +26,21 @@ function resolve(urlPath) {
   if (p === '' || p === '/') return join(DIST, 'index.html');
   if (p.endsWith('/')) return join(DIST, p, 'index.html');
   if (p.endsWith('.html')) return join(DIST, p);
-  return existsSync(join(DIST, p)) ? join(DIST, p) : join(DIST, p, 'index.html');
+  return existsSync(join(DIST, p))
+    ? join(DIST, p)
+    : join(DIST, p, 'index.html');
 }
 
 const skip = (h) =>
   !h ||
   /^(https?:|mailto:|tel:|#|javascript:|data:)/.test(h) ||
   h.startsWith('//') ||
-  /\.(css|js|svg|png|jpe?g|webp|ico|woff2?|xml|json|txt|map)$/.test(h.split('#')[0]);
+  /\.(css|js|svg|png|jpe?g|webp|ico|woff2?|xml|json|txt|map)$/.test(
+    h.split('#')[0],
+  );
 
-const noBase = [], broken = [];
+const noBase = [],
+  broken = [];
 for (const file of htmlFiles(DIST)) {
   const html = readFileSync(file, 'utf8');
   for (const m of html.matchAll(/href="([^"]+)"/g)) {
@@ -46,14 +51,19 @@ for (const file of htmlFiles(DIST)) {
       continue;
     }
     const path = href.split('#')[0].split('?')[0];
-    if (!existsSync(resolve(path))) broken.push([file.replace(`${DIST}/`, ''), href]);
+    if (!existsSync(resolve(path)))
+      broken.push([file.replace(`${DIST}/`, ''), href]);
   }
 }
 
 if (noBase.length || broken.length) {
   if (noBase.length) {
-    console.error(`\n✗ ${noBase.length} internal link(s) missing the ${BASE} base:`);
-    [...new Set(noBase.map((x) => x[1]))].slice(0, 20).forEach((h) => console.error(`  ${h}`));
+    console.error(
+      `\n✗ ${noBase.length} internal link(s) missing the ${BASE} base:`,
+    );
+    [...new Set(noBase.map((x) => x[1]))]
+      .slice(0, 20)
+      .forEach((h) => console.error(`  ${h}`));
   }
   if (broken.length) {
     console.error(`\n✗ ${broken.length} link(s) to a non-existent page:`);
