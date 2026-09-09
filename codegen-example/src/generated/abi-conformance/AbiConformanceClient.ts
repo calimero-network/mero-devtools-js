@@ -233,7 +233,7 @@ export class AbiConformanceClient {
    * act
    */
   public async act(params: { a: ActionPayload }): Promise<number> {
-    // Convert Action variant to WASM format
+    // Serde tags a payload-bearing variant as { Variant: payload }
     const convertedParams = { ...params } as any;
     if (convertedParams.a && typeof convertedParams.a === 'object' && 'name' in convertedParams.a) {
       if ('payload' in convertedParams.a) {
@@ -362,7 +362,7 @@ export class AbiConformanceClient {
    * handle_multi_struct
    */
   public async handleMultiStruct(params: { a: ActionPayload }): Promise<number> {
-    // Convert Action variant to WASM format
+    // Serde tags a payload-bearing variant as { Variant: payload }
     const convertedParams = { ...params } as any;
     if (convertedParams.a && typeof convertedParams.a === 'object' && 'name' in convertedParams.a) {
       if ('payload' in convertedParams.a) {
@@ -379,7 +379,7 @@ export class AbiConformanceClient {
    * handle_multi_tuple
    */
   public async handleMultiTuple(params: { a: ActionPayload }): Promise<string> {
-    // Convert Action variant to WASM format
+    // Serde tags a payload-bearing variant as { Variant: payload }
     const convertedParams = { ...params } as any;
     if (convertedParams.a && typeof convertedParams.a === 'object' && 'name' in convertedParams.a) {
       if ('payload' in convertedParams.a) {
