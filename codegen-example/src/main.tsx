@@ -38,7 +38,7 @@ interface TestResult {
 function App() {
   const [results, setResults] = useState<TestResult[]>([]);
   const [isRunning, setIsRunning] = useState(false);
-  const { mero, isAuthenticated, contextId, contextIdentity } = useMero();
+  const { mero, isAuthenticated, contextId } = useMero();
 
   const runComprehensiveTests = async () => {
     if (!mero || !isAuthenticated) {
@@ -62,7 +62,7 @@ function App() {
     try {
       // context = await app.createContext();
       
-      client = new AbiConformanceClient(mero, contextId || "", contextIdentity || "");
+      client = new AbiConformanceClient(mero, contextId || "");
     } catch (error) {
       setResults([
         {
