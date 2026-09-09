@@ -668,6 +668,9 @@ function generateMethod(
   const nullableReturnType = method.returns_nullable
     ? `${returnType} | null`
     : returnType;
+  // A void method never reads the rpc response, so skip the binding -
+  // `const response` would otherwise trip noUnusedLocals.
+  const responseDecl = method.returns ? 'const response = ' : '';
 
   if (method.params.length === 0) {
     // No parameters - expose method with no arguments and pass empty object
@@ -675,7 +678,7 @@ function generateMethod(
       `  public async ${methodName}(): Promise<${nullableReturnType}> {`,
     );
     lines.push(
-      `    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: '${method.name}', argsJson: {} });`,
+      `    ${responseDecl}await this._mero.rpc.execute({ contextId: this._contextId, method: '${method.name}', argsJson: {} });`,
     );
   } else {
     // 1+ parameters - build object type and expose single params argument
@@ -723,22 +726,22 @@ function generateMethod(
         // Only apply CalimeroBytes conversion if needed
         if (hasCalimeroBytesParams(method, manifest)) {
           lines.push(
-            `    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: '${method.name}', argsJson: convertCalimeroBytesForWasm(convertedParams) });`,
+            `    ${responseDecl}await this._mero.rpc.execute({ contextId: this._contextId, method: '${method.name}', argsJson: convertCalimeroBytesForWasm(convertedParams) });`,
           );
         } else {
           lines.push(
-            `    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: '${method.name}', argsJson: convertedParams });`,
+            `    ${responseDecl}await this._mero.rpc.execute({ contextId: this._contextId, method: '${method.name}', argsJson: convertedParams });`,
           );
         }
       } else {
         // Only apply CalimeroBytes conversion if needed
         if (hasCalimeroBytesParams(method, manifest)) {
           lines.push(
-            `    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: '${method.name}', argsJson: convertCalimeroBytesForWasm(params) });`,
+            `    ${responseDecl}await this._mero.rpc.execute({ contextId: this._contextId, method: '${method.name}', argsJson: convertCalimeroBytesForWasm(params) });`,
           );
         } else {
           lines.push(
-            `    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: '${method.name}', argsJson: params });`,
+            `    ${responseDecl}await this._mero.rpc.execute({ contextId: this._contextId, method: '${method.name}', argsJson: params });`,
           );
         }
       }
@@ -746,11 +749,11 @@ function generateMethod(
       // For multiple parameters, only apply CalimeroBytes conversion if needed
       if (hasCalimeroBytesParams(method, manifest)) {
         lines.push(
-          `    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: '${method.name}', argsJson: convertCalimeroBytesForWasm(params) });`,
+          `    ${responseDecl}await this._mero.rpc.execute({ contextId: this._contextId, method: '${method.name}', argsJson: convertCalimeroBytesForWasm(params) });`,
         );
       } else {
         lines.push(
-          `    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: '${method.name}', argsJson: params });`,
+          `    ${responseDecl}await this._mero.rpc.execute({ contextId: this._contextId, method: '${method.name}', argsJson: params });`,
         );
       }
     }
