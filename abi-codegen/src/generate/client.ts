@@ -474,9 +474,27 @@ function generateTypeDefinition(
       lines.push(
         `export type ${safeName} = ${brandBase} & { readonly __brand: '${safeName}' };`,
       );
-      lines.push(
-        `export const ${safeName} = (value: ${brandBase}): ${safeName} => value as ${safeName};`,
-      );
+      // A pattern describes string values, so a numeric newtype brands unchecked.
+      // The regex is built from source text rather than inlined as a literal so a
+      // `/` in the pattern cannot terminate it early.
+      if (brandBase === 'string' && typeDef.pattern) {
+        const source = JSON.stringify(typeDef.pattern);
+        const message = JSON.stringify(
+          `${safeName} must match ${typeDef.pattern}`,
+        );
+        lines.push(
+          `export const ${safeName} = (value: ${brandBase}): ${safeName} => {`,
+          `  if (!new RegExp(${source}).test(value)) {`,
+          `    throw new TypeError(${message});`,
+          `  }`,
+          `  return value as ${safeName};`,
+          `};`,
+        );
+      } else {
+        lines.push(
+          `export const ${safeName} = (value: ${brandBase}): ${safeName} => value as ${safeName};`,
+        );
+      }
     } else {
       const targetType = generateTypeRef(typeDef.target, manifest, false);
       lines.push(`export type ${safeName} = ${targetType};`);

@@ -51,6 +51,14 @@ const ok5: number = ok3;
 client.getFolder({ id: ok1 });
 client.bindContext({ folder_id: ok1, context_id: ok2 });
 
+// --- a validating constructor brands exactly like a casting one ---
+const okp1: Sha256Hex = Sha256Hex('0'.repeat(64));
+const okp2: string = okp1;
+// @ts-expect-error a bare string is not assignable to Sha256Hex
+const a7: Sha256Hex = 'deadbeef';
+// @ts-expect-error a sibling patterned newtype is not interchangeable
+const a8: RoutePath = okp1;
+
 // --- unbranded categories are untouched ---
 const ok6: Flag = true;
 const ok7: Tags = ['a', 'b'];
@@ -64,21 +72,38 @@ const ok10: string = entry.member;
 export type _Used = [
   typeof a1, typeof a2, typeof a3, typeof a4, typeof a5, typeof a6,
   typeof ok1, typeof ok2, typeof ok3, typeof ok4, typeof ok5,
-  typeof ok6, typeof ok7, typeof ok8, typeof ok9, typeof ok10
+  typeof ok6, typeof ok7, typeof ok8, typeof ok9, typeof ok10,
+  typeof a7, typeof a8, typeof okp1, typeof okp2
 ];
 `;
+
+function mockMeroImport(clientContent: string): string {
+  return clientContent.replace(
+    `import {\n  MeroJs,\n} from '@calimero-network/mero-react';`,
+    `type MeroJs = { rpc: { execute: (params: any) => Promise<any> } };`,
+  );
+}
+
+// Import the generated client for real, so the emitted validation is executed
+// rather than only string-matched.
+async function importGeneratedClient(
+  clientContent: string,
+  dirName: string,
+): Promise<unknown> {
+  const tmpDir = path.join(__dirname, '../tmp', dirName);
+  fs.mkdirSync(tmpDir, { recursive: true });
+  const file = path.join(tmpDir, 'client.ts');
+  fs.writeFileSync(file, mockMeroImport(clientContent));
+  return import(/* @vite-ignore */ file);
+}
 
 function typecheckGeneratedClient(clientContent: string, dirName: string): void {
   const tmpDir = path.join(__dirname, '../tmp', dirName);
   fs.mkdirSync(tmpDir, { recursive: true });
 
-  const withMockedImport = clientContent.replace(
-    `import {\n  MeroJs,\n} from '@calimero-network/mero-react';`,
-    `type MeroJs = { rpc: { execute: (params: any) => Promise<any> } };`,
-  );
   fs.writeFileSync(
     path.join(tmpDir, 'client.ts'),
-    withMockedImport + TYPE_ASSERTIONS,
+    mockMeroImport(clientContent) + TYPE_ASSERTIONS,
   );
   fs.writeFileSync(
     path.join(tmpDir, 'tsconfig.json'),
@@ -153,5 +178,49 @@ describe('newtype branding', () => {
     expect(out).toContain('export type Index = Record<string, string>;');
     expect(out).toContain('export type Flag = boolean;');
     expect(out).toContain('export type AliasOfRecord = FolderEntry;');
+  });
+
+  it('checks a declared pattern before branding a string newtype', () => {
+    const out = generateClient(manifest, 'NT');
+    expect(out).toContain(
+      'export const Sha256Hex = (value: string): Sha256Hex => {',
+    );
+    expect(out).toContain('if (!new RegExp("^[0-9a-f]{64}$").test(value)) {');
+    expect(out).toContain(
+      'throw new TypeError("Sha256Hex must match ^[0-9a-f]{64}$");',
+    );
+  });
+
+  // A `/` in the pattern would close a regex literal early and emit code that
+  // either fails to parse or silently matches something else.
+  it('carries a pattern containing a slash through intact', () => {
+    const out = generateClient(manifest, 'NT');
+    expect(out).toContain(
+      'if (!new RegExp("^/[a-z]+(/[a-z]+)*$").test(value)) {',
+    );
+  });
+
+  it('brands a numeric newtype without a check even if it declares a pattern', () => {
+    const out = generateClient(manifest, 'NT');
+    expect(out).toContain(
+      'export const OddHeight = (value: number): OddHeight => value as OddHeight;',
+    );
+    expect(out).not.toContain('OddHeight must match');
+  });
+
+  it('rejects a non-matching value and returns a matching one at runtime', async () => {
+    const mod: any = await importGeneratedClient(
+      generateClient(manifest, 'NT'),
+      'branding-runtime',
+    );
+    const good = '0'.repeat(64);
+    expect(mod.Sha256Hex(good)).toBe(good);
+    expect(() => mod.Sha256Hex('nope')).toThrow(
+      /Sha256Hex must match \^\[0-9a-f\]\{64\}\$/,
+    );
+    expect(mod.RoutePath('/a/b')).toBe('/a/b');
+    expect(() => mod.RoutePath('a/b')).toThrow(TypeError);
+    // the unchecked numeric newtype still just casts
+    expect(mod.OddHeight(7)).toBe(7);
   });
 });
