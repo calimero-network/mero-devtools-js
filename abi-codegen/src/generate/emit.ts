@@ -1,7 +1,22 @@
 /**
  * Helper functions for emitting generated code
  */
+import { AbiManifest, AbiTypeDef } from '../model.js';
 
+// Primitives whose newtype identity TypeScript would otherwise erase. Bytes,
+// collections and records already emit types that will not silently accept a
+// foreign value, so they stay plain aliases.
+// A hand-written or malformed manifest can point an alias at itself.
+const MAX_ALIAS_DEPTH = 16;
+const BRANDABLE_SCALARS: Record<string, 'string' | 'number'> = {
+  string: 'string',
+  i32: 'number',
+  i64: 'number',
+  u32: 'number',
+  u64: 'number',
+  f32: 'number',
+  f64: 'number',
+};
 /**
  * Generate a file banner for generated files
  */
@@ -241,4 +256,28 @@ export function deriveClientNameFromPath(p: string): string {
       : s[0].toUpperCase() + s.slice(1).toLowerCase();
   const pascal = parts.map(word).join('');
   return pascal + 'Client';
+}
+
+/**
+ * The primitive an alias newtype should be branded over, or null to leave it a
+ * plain alias. A `kind: "alias"` typedef is emitted only for a Rust one-field
+ * tuple struct, so every alias is a newtype whose identity the ABI declared.
+ * Follows `$ref` chains so a newtype over a newtype still brands.
+ */
+export function brandBaseType(
+  typeDef: AbiTypeDef,
+  manifest: AbiManifest,
+): 'string' | 'number' | null {
+  if (typeDef.kind !== 'alias') return null;
+
+  let target = typeDef.target;
+  for (let depth = 0; depth < MAX_ALIAS_DEPTH; depth++) {
+    if (!('$ref' in target)) {
+      return BRANDABLE_SCALARS[target.kind] ?? null;
+    }
+    const next = manifest.types[target.$ref];
+    if (!next || next.kind !== 'alias') return null;
+    target = next.target;
+  }
+  return null;
 }

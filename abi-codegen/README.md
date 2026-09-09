@@ -31,7 +31,8 @@ npx calimero-abi-codegen --validate -i abi.json
 
 Flags: `-i, --input <file>` (default `abi.json`), `-o, --output <dir>` (default `src`),
 `--client-name <Name>`, `--name-from <path>`, `--import-path <path>` (default
-`@calimero-network/mero-react`), `--validate`, `-h, --help`. Full details in the
+`@calimero-network/mero-react`), `--validate`,
+`-h, --help`. Full details in the
 [CLI reference](https://calimero-network.github.io/mero-devtools-js/reference/cli/).
 
 ### Programmatic
@@ -49,7 +50,7 @@ fs.writeFileSync('src/generated/MyClient.ts', clientContent);
 `generateClient` is self-contained: its output includes the type definitions and
 the client class together. See the
 [programmatic API reference](https://calimero-network.github.io/mero-devtools-js/reference/api/)
-for the full surface (`parseAbiManifest`, `generateTypes`, and the naming utilities
+for the full surface (`parseAbiManifest` and the naming utilities
 in `generate/emit`).
 
 ## Generated Files

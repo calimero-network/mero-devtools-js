@@ -5,7 +5,7 @@ import {
   AbiTypeDef,
   AbiEvent,
 } from '../model.js';
-import { formatIdentifier, generateFileBanner, mapRustTypeToTs, sanitizeClassName, toCamelCase } from './emit.js';
+import { brandBaseType, formatIdentifier, generateFileBanner, mapRustTypeToTs, sanitizeClassName, toCamelCase } from './emit.js';
 
 /**
  * Utility class for handling byte conversions in Calimero
@@ -150,7 +150,11 @@ export function generateClient(
   // Generate type definitions
   for (const [typeName, typeDef] of Object.entries(manifest.types)) {
     lines.push(
-      ...generateTypeDefinition(typeName, typeDef as AbiTypeDef, manifest),
+      ...generateTypeDefinition(
+        typeName,
+        typeDef as AbiTypeDef,
+        manifest,
+      ),
     );
     lines.push('');
   }
@@ -465,8 +469,18 @@ function generateTypeDefinition(
       lines.push('} as const;');
     }
   } else if (typeDef.kind === 'alias') {
-    const targetType = generateTypeRef(typeDef.target, manifest, false);
-    lines.push(`export type ${safeName} = ${targetType};`);
+    const brandBase = brandBaseType(typeDef, manifest);
+    if (brandBase) {
+      lines.push(
+        `export type ${safeName} = ${brandBase} & { readonly __brand: '${safeName}' };`,
+      );
+      lines.push(
+        `export const ${safeName} = (value: ${brandBase}): ${safeName} => value as ${safeName};`,
+      );
+    } else {
+      const targetType = generateTypeRef(typeDef.target, manifest, false);
+      lines.push(`export type ${safeName} = ${targetType};`);
+    }
   }
 
   return lines;

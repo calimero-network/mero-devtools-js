@@ -3,7 +3,6 @@ import fs from 'fs';
 import path from 'path';
 import { execSync } from 'child_process';
 import { loadAbiManifestFromFile } from '../src/parse.js';
-import { generateTypes } from '../src/generate/types.js';
 import { generateClient } from '../src/generate/client.js';
 import { deriveClientNameFromPath, sanitizeClassName, mapRustTypeToTs } from '../src/generate/emit.js';
 import { parseAbiManifest } from '../src/parse.js';
@@ -21,7 +20,7 @@ describe('Codegen', () => {
 
   describe('types.ts generation', () => {
     it('should generate types.ts with correct structure', () => {
-      const typesContent = generateTypes(manifest);
+      const typesContent = generateClient(manifest, 'Types');
 
       // Snapshot test removed - format has changed significantly
 
@@ -46,20 +45,20 @@ describe('Codegen', () => {
     });
 
     it('should handle nullable fields correctly', () => {
-      const typesContent = generateTypes(manifest);
+      const typesContent = generateClient(manifest, 'Types');
 
       expect(typesContent).toContain('bio: string | null;');
       expect(typesContent).toContain('bio: string | null;');
     });
 
     it('should handle maps correctly', () => {
-      const typesContent = generateTypes(manifest);
+      const typesContent = generateClient(manifest, 'Types');
 
       expect(typesContent).toContain('counters: Record<string, number>;');
     });
 
     it('should handle lists correctly', () => {
-      const typesContent = generateTypes(manifest);
+      const typesContent = generateClient(manifest, 'Types');
 
       // The conformance ABI has list_u32 method that returns number[]
       // But we need to check the client generation for this
@@ -77,7 +76,7 @@ describe('Codegen', () => {
     });
 
     it('should handle unit events correctly', () => {
-      const typesContent = generateTypes(manifest);
+      const typesContent = generateClient(manifest, 'Types');
 
       // Unit events should not have payload property in the union
       expect(typesContent).toContain('| { name: "Ping" }');
@@ -88,7 +87,7 @@ describe('Codegen', () => {
     });
 
     it('should include fixed bytes JSDoc', () => {
-      const typesContent = generateTypes(manifest);
+      const typesContent = generateClient(manifest, 'Types');
 
       // Fixed bytes are now handled by CalimeroBytes class
       expect(typesContent).toContain('export type UserId32 = CalimeroBytes;');
@@ -96,7 +95,7 @@ describe('Codegen', () => {
     });
 
     it('should handle variant inline struct payloads correctly', () => {
-      const typesContent = generateTypes(manifest);
+      const typesContent = generateClient(manifest, 'Types');
 
       // The Action variant "Update" has a reference to UpdatePayload
       expect(typesContent).toContain(
@@ -105,7 +104,7 @@ describe('Codegen', () => {
     });
 
     it('should handle variant $ref payloads correctly', () => {
-      const typesContent = generateTypes(manifest);
+      const typesContent = generateClient(manifest, 'Types');
 
       // The Action variant "SetName" has a string payload
       expect(typesContent).toContain("| { name: 'SetName'; payload: string }");
@@ -239,7 +238,7 @@ describe('Codegen', () => {
 
     it('should include generated banner', () => {
       const clientContent = generateClient(manifest);
-      const typesContent = generateTypes(manifest);
+      const typesContent = generateClient(manifest, 'Types');
 
       // Both files should have the generated banner
       expect(clientContent).toContain(
@@ -507,7 +506,7 @@ describe('Codegen', () => {
         events: [],
       };
       const parsed = parseAbiManifest(abiWithTuple);
-      const typesContent = generateTypes(parsed);
+      const typesContent = generateClient(parsed, 'Types');
       expect(typesContent).toContain('export type Pair = [string, number];');
     });
   });
@@ -556,7 +555,7 @@ describe('Codegen', () => {
         events: [],
       };
       const parsedTypes = parseAbiManifest(typesAbi);
-      const typesContent = generateTypes(parsedTypes);
+      const typesContent = generateClient(parsedTypes, 'Types');
       expect(typesContent).toContain('tags: string[];');
     });
   });
@@ -649,7 +648,7 @@ describe('Codegen', () => {
 
     it('should emit a string-literal union for all-unit variants (types.ts)', () => {
       const parsed = parseAbiManifest(allUnitAbi);
-      const typesContent = generateTypes(parsed);
+      const typesContent = generateClient(parsed, 'Types');
       expect(typesContent).toContain(
         "export type MatchStatus = 'Pending' | 'Active' | 'Finished';",
       );
@@ -659,7 +658,7 @@ describe('Codegen', () => {
     it('should reference all-unit variant by bare name in record fields', () => {
       const parsed = parseAbiManifest(allUnitAbi);
       const clientContent = generateClient(parsed, 'TestClient');
-      const typesContent = generateTypes(parsed);
+      const typesContent = generateClient(parsed, 'Types');
       expect(clientContent).toContain('status: MatchStatus;');
       expect(typesContent).toContain('status: MatchStatus;');
       // Must NOT use the (now-nonexistent) Payload form
@@ -708,7 +707,7 @@ describe('Codegen', () => {
         events: [],
       };
       const parsed = parseAbiManifest(abi);
-      const typesContent = generateTypes(parsed);
+      const typesContent = generateClient(parsed, 'Types');
       expect(typesContent).toContain('colors: Color[];');
       expect(typesContent).not.toContain('ColorPayload');
     });
@@ -740,7 +739,7 @@ describe('Codegen', () => {
     it('should reference mixed variants as Payload in record fields', () => {
       const parsed = parseAbiManifest(mixedAbi);
       const clientContent = generateClient(parsed, 'TestClient');
-      const typesContent = generateTypes(parsed);
+      const typesContent = generateClient(parsed, 'Types');
       expect(clientContent).toContain('action: ActionPayload;');
       expect(typesContent).toContain('action: ActionPayload;');
       expect(clientContent).not.toMatch(/action: Action;/);
@@ -893,8 +892,8 @@ describe('Codegen', () => {
         events: [],
       };
       const parsed = parseAbiManifest(abi);
-      expect(() => generateTypes(parsed)).not.toThrow();
-      const typesContent = generateTypes(parsed);
+      expect(() => generateClient(parsed, 'Types')).not.toThrow();
+      const typesContent = generateClient(parsed, 'Types');
       expect(typesContent).toContain(
         'export type doThingError = { code: doThingErrorCode } & (',
       );
@@ -918,8 +917,8 @@ describe('Codegen', () => {
         ],
       };
       const parsed = parseAbiManifest(abi);
-      expect(() => generateTypes(parsed)).not.toThrow();
-      const typesContent = generateTypes(parsed);
+      expect(() => generateClient(parsed, 'Types')).not.toThrow();
+      const typesContent = generateClient(parsed, 'Types');
       expect(typesContent).toContain(
         'export type AbiEvent =',
       );
@@ -944,8 +943,8 @@ describe('Codegen', () => {
         events: [{ name: 'Changed', payload: { $ref: 'ChangeKind' } }],
       };
       const parsed = parseAbiManifest(abi);
-      expect(() => generateTypes(parsed)).not.toThrow();
-      const typesContent = generateTypes(parsed);
+      expect(() => generateClient(parsed, 'Types')).not.toThrow();
+      const typesContent = generateClient(parsed, 'Types');
       // Mixed variant → Payload suffix
       expect(typesContent).toContain(
         '| { name: "Changed"; payload: ChangeKindPayload }',
@@ -978,7 +977,7 @@ describe('Codegen', () => {
 // Test stub to verify parameter structure
 const mero = { rpc: { execute: async (p: any) => p } } as any;
 const client = new Client(mero, 'ctx-1');
-await client.roundtripId({ x: "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef" });
+await client.roundtripId({ x: CalimeroBytes.fromHex("1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef") });
 await client.makePerson({ p: { id: "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef" as any, name: "test", age: 25 } });
 await client.act({ a: Action.Ping() });
 `;
@@ -1002,9 +1001,10 @@ await client.act({ a: Action.Ping() });
       };
       fs.writeFileSync(tsconfigPath, JSON.stringify(tsconfig, null, 2));
 
-      // Run tsc --strict --noEmit using the local TypeScript installation
+      // `-p` with an explicit path is required: without it tsc walks up and
+      // picks abi-codegen's own tsconfig, compiling src/ instead of this file.
       try {
-        execSync('npx tsc --strict --noEmit', {
+        execSync(`npx tsc --noEmit -p ${tsconfigPath}`, {
           cwd: tmpDir,
           stdio: 'pipe',
           encoding: 'utf-8',
@@ -1031,7 +1031,7 @@ describe('executorPublicKey is never emitted', () => {
       const m = loadAbiManifestFromFile(
         path.join(__dirname, '../__fixtures__', fixture),
       );
-      for (const output of [generateClient(m, 'TestClient'), generateTypes(m)]) {
+      for (const output of [generateClient(m, 'TestClient'), generateClient(m, 'Types')]) {
         expect(output).not.toMatch(/executorPublicKey/i);
       }
     });
