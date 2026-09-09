@@ -47,10 +47,12 @@ export const Action = {
 export type CommandPayload =
   | { name: 'Cancel' }
   | { name: 'Store'; payload: Digest }
+  | { name: 'Scores'; payload: number[] }
 
 export const Command = {
   Cancel: (): CommandPayload => ({ name: 'Cancel' }),
   Store: (store: Digest): CommandPayload => ({ name: 'Store', payload: store }),
+  Scores: (scores: number[]): CommandPayload => ({ name: 'Scores', payload: scores }),
 } as const;
 
 export type AliasOfCommand = CommandPayload;
@@ -271,6 +273,22 @@ export class NewtypesAbiClient {
       }
     }
     await this._mero.rpc.execute({ contextId: this._contextId, method: 'run_aliased_command', argsJson: convertCalimeroBytesForWasm(convertedParams) });
+  }
+
+  /**
+   * get_role
+   */
+  public async getRole(): Promise<Role> {
+    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'get_role', argsJson: {} });
+    return response as Role;
+  }
+
+  /**
+   * last_command
+   */
+  public async lastCommand(): Promise<CommandPayload> {
+    const response: any = await this._mero.rpc.execute({ contextId: this._contextId, method: 'last_command', argsJson: {} });
+    return (response == null ? null : (typeof response === 'string' ? { name: response } : 'Store' in response ? { name: 'Store', payload: new CalimeroBytes(response['Store']) } : { name: Object.keys(response)[0], payload: Object.values(response)[0] })) as CommandPayload;
   }
 
 }

@@ -113,6 +113,15 @@
           "payload": {
             "$ref": "Digest"
           }
+        },
+        {
+          "name": "Scores",
+          "payload": {
+            "kind": "list",
+            "items": {
+              "kind": "u32"
+            }
+          }
         }
       ]
     },
@@ -315,6 +324,20 @@
           }
         }
       ]
+    },
+    {
+      "name": "get_role",
+      "params": [],
+      "returns": {
+        "$ref": "Role"
+      }
+    },
+    {
+      "name": "last_command",
+      "params": [],
+      "returns": {
+        "$ref": "Command"
+      }
     }
   ],
   "events": []
