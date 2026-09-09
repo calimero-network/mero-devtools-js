@@ -28,6 +28,7 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
+      - run: pnpm format:check
       - run: pnpm build
       - run: pnpm test
       - name: Validate ABI

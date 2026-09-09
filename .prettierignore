@@ -2,6 +2,14 @@ node_modules/
 dist/
 pnpm-lock.yaml
 
-# Vendored verbatim from calimero core / mero-drive — must stay byte-faithful to
-# the source. Regenerate with `pnpm run sync:corpus`, never reformat.
-abi-codegen/__fixtures__/corpus/
+# Emitted in the generator's own style; prettier owning this would fight the
+# "generated example is in sync" check on every run.
+codegen-example/src/generated/
+
+# Test fixtures mirror core's own manifest shape; reformatting them produces
+# diffs unrelated to the code under test.
+abi-codegen/__fixtures__/
+
+# Hand-maintained; pasted release notes use their own bullet/indent style, so
+# reformatting churns on every release.
+abi-codegen/CHANGELOG.md
