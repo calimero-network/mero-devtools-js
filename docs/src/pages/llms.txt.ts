@@ -37,7 +37,7 @@ export const GET: APIRoute = async () => {
     '> JavaScript/TypeScript developer tools for building Calimero apps. Two CLIs',
     '> in one monorepo: abi-codegen parses a WASM-ABI v1 manifest and generates a',
     '> fully-typed TypeScript client, and create-mero-app scaffolds a new project',
-    '> from a starter template.',
+    '> from the KV Store reference app.',
     '',
     `Docs site: ${SITE}${BASE}/`,
     '',
