@@ -134,10 +134,10 @@ prints an error and exits with a non-zero status without writing anything.
 
 ## `create-mero-app`
 
-Scaffolds a new Calimero application by cloning a starter template from GitHub.
+Scaffolds a new Calimero application from the KV Store reference app in the
+`calimero-network/apps` monorepo.
 
 ```bash
-# Interactive (prompts for the template)
 npx create-mero-app my-app
 
 # …or the npm-init form
@@ -153,25 +153,61 @@ create-mero-app [project-name] [options]
 | Argument / flag         | Description                                                                                                   |
 | ----------------------- | ------------------------------------------------------------------------------------------------------------- |
 | `[project-name]`        | Directory to scaffold into. Omit to use the current directory; its basename must be a valid npm package name. |
-| `-t, --template <name>` | Template to use: `rust` or `javascript`. If omitted, you are prompted to choose.                              |
+| `-t, --template <name>` | Template to use. `rust` is the only one, and the default, so this flag is optional.                           |
 
 ### Templates
 
-| Name         | Repository                     | Contents                             |
-| ------------ | ------------------------------ | ------------------------------------ |
-| `rust`       | `calimero-network/kv-store`    | Rust WASM contract + React frontend  |
-| `javascript` | `calimero-network/kv-store-js` | JavaScript contract + React frontend |
+| Name   | Source                                     | Contents                            |
+| ------ | ------------------------------------------ | ----------------------------------- |
+| `rust` | `calimero-network/apps` → `apps/kv-store`  | Rust WASM contract + React frontend |
+
+The template is a directory inside the `apps` monorepo, not a repository of its
+own. The standalone `calimero-network/kv-store` and `calimero-network/kv-store-js`
+repos this CLI used to clone were archived when every app moved into that
+monorepo.
+
+There is no `javascript` template. `kv-store-js` was archived with no
+replacement — for a JavaScript contract, see the examples in
+[calimero-sdk-js](https://github.com/calimero-network/calimero-sdk-js).
 
 ### What it does
 
 1. Validates the project name as an npm package name; refuses a non-empty
    existing directory.
-2. Resolves the template from `--template`, or prompts you to pick one.
-3. `git clone --depth 1` the template into a temp directory.
-4. Copies the files into your project, excluding `.git`, `.github`,
-   `.gitignore`, `.gitattributes`, `.gitmodules`, and `node_modules`.
-5. Writes your project name into the new `package.json`.
-6. Prints next steps: `cd`, `pnpm install`, `pnpm dev`.
+2. Sparse-checks-out `apps/kv-store` from `calimero-network/apps` into a temp
+   directory. Cone mode also brings the repo-root files, which the next step
+   needs.
+3. Copies the app into your project, excluding `.git`, `.github`, `.gitignore`,
+   `.gitattributes`, `.gitmodules`, and `node_modules`.
+4. **Detaches it from the monorepo** — see below.
+5. Writes a project root (`package.json`, `pnpm-workspace.yaml`) and a README
+   describing the standalone commands.
+6. Prints next steps: `cd`, `pnpm install`, `pnpm logic:build`, `pnpm dev`.
+
+### Detaching from the monorepo
+
+An app in `apps` is deliberately not self-contained: shared versions live at the
+repo root so one edit moves the whole fleet. Copying the directory alone would
+produce a project that cannot install and cannot build, so three kinds of
+inherited reference are resolved against the checkout it came from:
+
+| Inherited                          | Resolved from            | Becomes                              |
+| ---------------------------------- | ------------------------ | ------------------------------------ |
+| `"react": "catalog:"`              | `pnpm-workspace.yaml`    | the concrete version range           |
+| `edition.workspace = true`         | root `Cargo.toml`        | the concrete value                   |
+| `calimero-sdk.workspace = true`    | root `Cargo.toml`        | the pinned git dependency            |
+| `extends: ../../../tsconfig.base.json` | root `tsconfig.base.json` | the file, hoisted into the project |
+
+Nothing is hardcoded in the CLI: the values come from the commit that was
+cloned, so a core bump or a frontend release in `apps` reaches newly scaffolded
+projects with no change here. The crate also gains its own `[workspace]` table,
+without which cargo would search parent directories and either fail or adopt an
+unrelated workspace above your project.
+
+:::caution[A scaffolded project does not track the template]
+Versions are pinned at scaffold time. The project upgrades on its own schedule
+from then on — it is a starting point, not a live link to `apps`.
+:::
 
 :::caution
 `create-mero-app` does **not** initialise a git repository — the scaffolded

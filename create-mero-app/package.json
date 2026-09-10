@@ -14,7 +14,8 @@
   "scripts": {
     "build": "tsc -p tsconfig.json && node scripts/postbuild.mjs",
     "dev": "ts-node-esm src/index.ts",
-    "prepublishOnly": "pnpm build"
+    "prepublishOnly": "pnpm build",
+    "test": "vitest run --reporter=dot"
   },
   "publishConfig": {
     "access": "public"
@@ -36,18 +37,17 @@
   "dependencies": {
     "commander": "^11.1.0",
     "kolorist": "^1.8.0",
-    "prompts": "^2.4.2",
     "validate-npm-package-name": "^5.0.0"
   },
   "devDependencies": {
     "@semantic-release/exec": "^7.1.0",
     "@semantic-release/github": "^8.0.0",
     "@types/node": "^20.11.30",
-    "@types/prompts": "^2.4.9",
     "@types/validate-npm-package-name": "^4.0.2",
     "conventional-changelog-conventionalcommits": "^7.0.0",
     "semantic-release": "^21.0.0",
     "ts-node": "^10.9.2",
-    "typescript": "^5.4.0"
+    "typescript": "^5.4.0",
+    "vitest": "^1.0.0"
   }
 }
