@@ -7,11 +7,26 @@
       {
         "preset": "conventionalcommits",
         "releaseRules": [
-          { "breaking": true, "release": "major" },
-          { "type": "fix", "release": "patch" },
-          { "type": "feat", "release": "minor" },
-          { "type": "chore", "release": "patch" },
-          { "type": "docs", "release": "patch" }
+          {
+            "breaking": true,
+            "release": "major"
+          },
+          {
+            "type": "fix",
+            "release": "patch"
+          },
+          {
+            "type": "feat",
+            "release": "minor"
+          },
+          {
+            "type": "chore",
+            "release": "patch"
+          },
+          {
+            "type": "docs",
+            "release": "patch"
+          }
         ]
       }
     ],
@@ -24,7 +39,7 @@
     [
       "@semantic-release/exec",
       {
-        "prepareCmd": "npm pkg set version=${nextRelease.version}",
+        "prepareCmd": "node ../scripts/assert-package-name.mjs @calimero-network/abi-codegen && npm pkg set version=${nextRelease.version}",
         "publishCmd": "npm publish"
       }
     ],
