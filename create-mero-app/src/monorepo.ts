@@ -134,11 +134,12 @@ export function parseLockedVersions(
     if (nameMatch) {
       const name = nameMatch[1] ?? nameMatch[2] ?? nameMatch[3];
       // Section headers, not packages.
-      pendingName = /^(dependencies|devDependencies|optionalDependencies|peerDependencies)$/.test(
-        name,
-      )
-        ? null
-        : name;
+      pendingName =
+        /^(dependencies|devDependencies|optionalDependencies|peerDependencies)$/.test(
+          name,
+        )
+          ? null
+          : name;
       continue;
     }
 
@@ -341,9 +342,10 @@ export function detachCargoManifest(
     const name = /^\s*\[([^\]]+)\]/m.exec(table)?.[1]?.trim();
     return (
       name &&
-      !new RegExp(`^\\s*\\[${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\]`, 'm').test(
-        text,
-      )
+      !new RegExp(
+        `^\\s*\\[${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\]`,
+        'm',
+      ).test(text)
     );
   });
 
@@ -366,7 +368,7 @@ export function detachCargoManifest(
       text.trimEnd() +
       '\n\n' +
       '# This crate came out of a monorepo and is its own workspace root now.\n' +
-      "# Without this table cargo searches parent directories for a workspace and\n" +
+      '# Without this table cargo searches parent directories for a workspace and\n' +
       '# fails, or silently adopts an unrelated one above the project directory.\n' +
       '[workspace]\n';
   }

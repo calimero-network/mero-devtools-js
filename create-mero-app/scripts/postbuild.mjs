@@ -19,7 +19,10 @@ const emitted = (await fs.readdir(distEsm)).filter((f) => f.endsWith('.js'));
 
 for (const file of emitted) {
   const isEntry = file === 'index.js';
-  const dest = path.join(distCjs, isEntry ? 'cli.mjs' : file.replace(/\.js$/, '.mjs'));
+  const dest = path.join(
+    distCjs,
+    isEntry ? 'cli.mjs' : file.replace(/\.js$/, '.mjs'),
+  );
 
   let content = await fs.readFile(path.join(distEsm, file), 'utf8');
   content = content.replace(/^#!.*\n/, '');

@@ -173,7 +173,9 @@ describe('detachCargoManifest', () => {
       WORKSPACE_PACKAGE,
       WORKSPACE_DEPS,
     );
-    expect(text).toContain('thiserror = { version = "1.0.56", features = ["std"] }');
+    expect(text).toContain(
+      'thiserror = { version = "1.0.56", features = ["std"] }',
+    );
   });
 
   it('resolves [package] and dependency tables from their own sources', () => {
@@ -235,38 +237,67 @@ describe('planExtendsRewrite', () => {
   it('hoists a base config the app reaches out of the repo root for', () => {
     // The real case: apps/kv-store/app/tsconfig.app.json -> repo root.
     expect(
-      planExtendsRewrite('app/tsconfig.app.json', '../../../tsconfig.base.json', SUBDIR),
-    ).toEqual({ hoistFrom: 'tsconfig.base.json', newExtends: '../tsconfig.base.json' });
+      planExtendsRewrite(
+        'app/tsconfig.app.json',
+        '../../../tsconfig.base.json',
+        SUBDIR,
+      ),
+    ).toEqual({
+      hoistFrom: 'tsconfig.base.json',
+      newExtends: '../tsconfig.base.json',
+    });
   });
 
   it('gets the depth right from a nested directory', () => {
     expect(
-      planExtendsRewrite('app/e2e/tsconfig.json', '../../../../tsconfig.base.json', SUBDIR),
-    ).toEqual({ hoistFrom: 'tsconfig.base.json', newExtends: '../../tsconfig.base.json' });
+      planExtendsRewrite(
+        'app/e2e/tsconfig.json',
+        '../../../../tsconfig.base.json',
+        SUBDIR,
+      ),
+    ).toEqual({
+      hoistFrom: 'tsconfig.base.json',
+      newExtends: '../../tsconfig.base.json',
+    });
   });
 
   it('leaves a reference that stays inside the app alone', () => {
     expect(
-      planExtendsRewrite('app/tsconfig.app.json', './tsconfig.base.json', SUBDIR),
+      planExtendsRewrite(
+        'app/tsconfig.app.json',
+        './tsconfig.base.json',
+        SUBDIR,
+      ),
     ).toBeNull();
   });
 
   it('leaves a package specifier alone', () => {
     expect(
-      planExtendsRewrite('app/tsconfig.json', '@tsconfig/node20/tsconfig.json', SUBDIR),
+      planExtendsRewrite(
+        'app/tsconfig.json',
+        '@tsconfig/node20/tsconfig.json',
+        SUBDIR,
+      ),
     ).toBeNull();
   });
 
   it('gives up on a path that escapes the repository', () => {
     expect(
-      planExtendsRewrite('app/tsconfig.json', '../../../../../elsewhere.json', SUBDIR),
+      planExtendsRewrite(
+        'app/tsconfig.json',
+        '../../../../../elsewhere.json',
+        SUBDIR,
+      ),
     ).toBeNull();
   });
 
   it('handles a tsconfig at the project root', () => {
     expect(
       planExtendsRewrite('tsconfig.json', '../../tsconfig.base.json', SUBDIR),
-    ).toEqual({ hoistFrom: 'tsconfig.base.json', newExtends: './tsconfig.base.json' });
+    ).toEqual({
+      hoistFrom: 'tsconfig.base.json',
+      newExtends: './tsconfig.base.json',
+    });
   });
 });
 
@@ -409,9 +440,9 @@ importers:
   });
 
   it('skips a workspace link, which cannot follow the app out', () => {
-    expect(parseLockedVersions(LOCK, 'apps/kv-store/app').has('shared-thing')).toBe(
-      false,
-    );
+    expect(
+      parseLockedVersions(LOCK, 'apps/kv-store/app').has('shared-thing'),
+    ).toBe(false);
   });
 
   it('returns empty for an importer that is not there', () => {
@@ -421,7 +452,9 @@ importers:
 
 describe('resolveCatalogSpecifiers with a lockfile', () => {
   it('prefers the locked version over the catalog range', () => {
-    const pkg = { devDependencies: { '@calimero-network/abi-codegen': 'catalog:' } };
+    const pkg = {
+      devDependencies: { '@calimero-network/abi-codegen': 'catalog:' },
+    };
     resolveCatalogSpecifiers(
       pkg,
       new Map([['@calimero-network/abi-codegen', '^1.2.2']]),

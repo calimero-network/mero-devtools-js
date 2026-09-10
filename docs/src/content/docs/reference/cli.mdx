@@ -157,9 +157,9 @@ create-mero-app [project-name] [options]
 
 ### Templates
 
-| Name   | Source                                     | Contents                            |
-| ------ | ------------------------------------------ | ----------------------------------- |
-| `rust` | `calimero-network/apps` → `apps/kv-store`  | Rust WASM contract + React frontend |
+| Name   | Source                                    | Contents                            |
+| ------ | ----------------------------------------- | ----------------------------------- |
+| `rust` | `calimero-network/apps` → `apps/kv-store` | Rust WASM contract + React frontend |
 
 The template is a directory inside the `apps` monorepo, not a repository of its
 own. The standalone `calimero-network/kv-store` and `calimero-network/kv-store-js`
@@ -191,11 +191,11 @@ repo root so one edit moves the whole fleet. Copying the directory alone would
 produce a project that cannot install and cannot build, so three kinds of
 inherited reference are resolved against the checkout it came from:
 
-| Inherited                          | Resolved from            | Becomes                              |
-| ---------------------------------- | ------------------------ | ------------------------------------ |
-| `"react": "catalog:"`              | `pnpm-workspace.yaml`    | the concrete version range           |
-| `edition.workspace = true`         | root `Cargo.toml`        | the concrete value                   |
-| `calimero-sdk.workspace = true`    | root `Cargo.toml`        | the pinned git dependency            |
+| Inherited                              | Resolved from             | Becomes                            |
+| -------------------------------------- | ------------------------- | ---------------------------------- |
+| `"react": "catalog:"`                  | `pnpm-workspace.yaml`     | the concrete version range         |
+| `edition.workspace = true`             | root `Cargo.toml`         | the concrete value                 |
+| `calimero-sdk.workspace = true`        | root `Cargo.toml`         | the pinned git dependency          |
 | `extends: ../../../tsconfig.base.json` | root `tsconfig.base.json` | the file, hoisted into the project |
 
 Nothing is hardcoded in the CLI: the values come from the commit that was

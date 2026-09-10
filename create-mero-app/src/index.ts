@@ -461,7 +461,9 @@ async function main() {
         const rel = path.relative(cwd, targetDir);
         if (rel) console.log(`  cd ${rel}`);
         console.log('  pnpm install');
-        console.log('  pnpm logic:build   ' + dim('# needs cargo + cargo-mero'));
+        console.log(
+          '  pnpm logic:build   ' + dim('# needs cargo + cargo-mero'),
+        );
         console.log('  pnpm dev');
       },
     );

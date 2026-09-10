@@ -58,12 +58,12 @@ repo root so that one edit moves the whole fleet. Copying the directory alone
 would produce a project that can neither install nor build, so four kinds of
 inherited reference are resolved against the checkout they came from:
 
-| Inherited                                  | Resolved from             | Becomes                             |
-| ------------------------------------------ | ------------------------- | ----------------------------------- |
-| `"react": "catalog:"`                      | `pnpm-workspace.yaml`     | a concrete version                  |
-| `edition.workspace = true`                 | root `Cargo.toml`         | the concrete value                  |
-| `calimero-sdk.workspace = true`            | root `Cargo.toml`         | the pinned git dependency           |
-| `extends: ../../../tsconfig.base.json`     | root `tsconfig.base.json` | the file, hoisted into the project  |
+| Inherited                              | Resolved from             | Becomes                            |
+| -------------------------------------- | ------------------------- | ---------------------------------- |
+| `"react": "catalog:"`                  | `pnpm-workspace.yaml`     | a concrete version                 |
+| `edition.workspace = true`             | root `Cargo.toml`         | the concrete value                 |
+| `calimero-sdk.workspace = true`        | root `Cargo.toml`         | the pinned git dependency          |
+| `extends: ../../../tsconfig.base.json` | root `tsconfig.base.json` | the file, hoisted into the project |
 
 Plus two things the app relied on the workspace root to provide: the
 `[profile.app-release]` / `[profile.app-profiling]` tables (`cargo mero build`
