@@ -137,32 +137,32 @@ Note the shape, because it differs from older hand-written clients:
 
 ## The create-mero-app scaffolding flow
 
-`create-mero-app` is an independent CLI built on `commander` and `prompts`
-(`create-mero-app/src/index.ts`). It clones a starter template from GitHub into
-a new directory.
+`create-mero-app` is an independent CLI built on `commander`
+(`create-mero-app/src/index.ts`). It copies the KV Store reference app out of
+the `calimero-network/apps` monorepo into a new standalone project directory.
 
 <SeqDiagram
   id="d-scaffold"
   title="create-mero-app: template → new project"
   lanes={[
     { label: 'create-mero-app', color: '#3fb950' },
-    { label: 'prompts', color: '#a371f7' },
-    { label: 'git (temp clone)', color: '#58a6ff' },
+    { label: 'git (sparse clone)', color: '#58a6ff' },
+    { label: 'repo-root files', color: '#a371f7' },
     { label: 'target dir', color: '#a5ff11' },
   ]}
   steps={[
     { from: 0, to: 0, label: 'validate project name (npm rules)' },
+    { from: 0, to: 1, label: 'clone --sparse --filter=blob:none' },
+    { from: 0, to: 1, label: 'sparse-checkout set apps/kv-store' },
     {
-      from: 0,
-      to: 1,
-      label: 'select template (if no --template)',
+      from: 1,
+      to: 2,
+      label: 'cone mode also brings the root files',
       dashed: true,
     },
-    { from: 1, to: 0, label: 'rust | javascript', dashed: true },
-    { from: 0, to: 2, label: 'git clone --depth 1 <repoUrl>' },
-    { from: 2, to: 0, label: 'shallow checkout in os.tmpdir()', dashed: true },
-    { from: 0, to: 3, label: 'copy files (excluding .git, .github, …)' },
-    { from: 0, to: 3, label: 'write project name into package.json' },
+    { from: 0, to: 3, label: 'copy app (excluding .git, .github, …)' },
+    { from: 2, to: 3, label: 'resolve catalog: / workspace = true / extends' },
+    { from: 0, to: 3, label: 'write project root + README' },
   ]}
 />
 
@@ -171,21 +171,30 @@ Step by step:
 1. Resolve the target directory from the optional `[project-name]` argument
    (defaults to the current directory) and validate its basename with
    `validate-npm-package-name`. A non-empty existing directory is rejected.
-2. Pick the template — from `-t, --template <name>` if given, otherwise via an
-   interactive `select` prompt. The two templates are `rust`
-   (`calimero-network/kv-store`) and `javascript` (`calimero-network/kv-store-js`).
-3. `git clone --depth 1` the template repo into a temporary directory
-   (`os.tmpdir()`).
-4. Copy the tree into the target directory, **excluding** `.git`, `.github`,
-   `.gitignore`, `.gitattributes`, `.gitmodules`, and `node_modules`; then delete
-   the temp clone.
-5. Rewrite the `name` field of the new project's `package.json` to the app name.
-6. Print next steps: `cd <dir>`, `pnpm install`, `pnpm dev`.
+2. Sparse-clone `calimero-network/apps` into a temporary directory
+   (`os.tmpdir()`) and `sparse-checkout set apps/kv-store`. There is one
+   template, `rust`, so nothing is prompted.
+3. Copy the app into the target directory, **excluding** `.git`, `.github`,
+   `.gitignore`, `.gitattributes`, `.gitmodules`, and `node_modules`.
+4. **Detach it from the monorepo.** Cone-mode sparse checkout also materializes
+   the repo-root files, and those are what the inherited references resolve
+   against — see [the CLI reference](/reference/cli/#detaching-from-the-monorepo)
+   for the full table.
+5. Write a project root (`package.json`, `pnpm-workspace.yaml`) and a README
+   with the standalone commands, then delete the temp clone.
+6. Print next steps: `cd <dir>`, `pnpm install`, `pnpm logic:build`, `pnpm dev`.
 
 :::caution[No git repo is initialised]
-`create-mero-app` does **not** run `git init` in the new project, and the clone
-is a shallow `--depth 1` clone (not a sparse checkout). The scaffolded directory
-starts with no `.git` — initialise version control yourself if you want it.
+`create-mero-app` does **not** run `git init` in the new project. The scaffolded
+directory starts with no `.git` — initialise version control yourself if you
+want it.
+:::
+
+:::note[Why a sparse checkout]
+The template is a directory inside a large monorepo, and the repo-root files it
+inherits from (`Cargo.toml`, `pnpm-workspace.yaml`, `pnpm-lock.yaml`,
+`tsconfig.base.json`) have to come along to be resolved. A plain `--depth 1`
+clone would fetch every app in the repo to use one of them.
 :::
 
 ## Package layout
@@ -204,6 +213,8 @@ abi-codegen/
 │   │   └── wasm-abi-v1.schema.json  ← embedded JSON Schema (AJV)
 │   └── utils/                     ← deepFreeze, AJV error formatting
 create-mero-app/
-└── src/index.ts                   ← interactive scaffolding CLI
+└── src/
+    ├── index.ts                   ← scaffolding CLI
+    └── monorepo.ts                ← resolves catalog:/workspace/extends refs
 codegen-example/                   ← reference React app (not published)
 ```
