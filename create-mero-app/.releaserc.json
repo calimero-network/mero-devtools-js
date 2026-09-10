@@ -7,10 +7,22 @@
       {
         "preset": "conventionalcommits",
         "releaseRules": [
-          { "type": "fix", "release": "patch" },
-          { "type": "feat", "release": "minor" },
-          { "type": "chore", "release": "patch" },
-          { "type": "docs", "release": "patch" }
+          {
+            "type": "fix",
+            "release": "patch"
+          },
+          {
+            "type": "feat",
+            "release": "minor"
+          },
+          {
+            "type": "chore",
+            "release": "patch"
+          },
+          {
+            "type": "docs",
+            "release": "patch"
+          }
         ]
       }
     ],
@@ -23,7 +35,7 @@
     [
       "@semantic-release/exec",
       {
-        "prepareCmd": "npm pkg set version=${nextRelease.version}",
+        "prepareCmd": "node ../scripts/assert-package-name.mjs create-mero-app && npm pkg set version=${nextRelease.version}",
         "publishCmd": "npm publish"
       }
     ],
