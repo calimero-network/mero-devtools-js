@@ -87,6 +87,14 @@
             },
             "crdt_type": "authored_vector"
           }
+        },
+        {
+          "name": "document",
+          "type": {
+            "kind": "record",
+            "fields": [],
+            "crdt_type": "fugue_text"
+          }
         }
       ]
     },
@@ -401,7 +409,8 @@
       ],
       "returns": {
         "$ref": "CustomRecord"
-      }
+      },
+      "intent": "read_only"
     },
     {
       "name": "echo_bool",
@@ -569,7 +578,8 @@
       ],
       "returns": {
         "$ref": "NestedRecord"
-      }
+      },
+      "intent": "read_only"
     },
     {
       "name": "get_status",
@@ -583,7 +593,8 @@
       ],
       "returns": {
         "$ref": "Status"
-      }
+      },
+      "intent": "read_only"
     },
     {
       "name": "handle_multi_struct",
@@ -1019,6 +1030,7 @@
       "returns": {
         "kind": "unit"
       },
+      "intent": "mutating",
       "xcall_callable": true
     }
   ],

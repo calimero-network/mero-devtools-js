@@ -29,6 +29,7 @@ const CANONICAL_CRDT_TYPES = [
   'unordered_set',
   'sorted_set',
   'replicated_growable_array',
+  'fugue_text',
   'authored_vector',
   'shared_storage',
 ];

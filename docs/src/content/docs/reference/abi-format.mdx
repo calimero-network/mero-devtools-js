@@ -111,14 +111,14 @@ and tuples). Those are mapped straight to TypeScript instead of resolved against
 ### CRDT-backed collections
 
 Any `list`, `map`, or `record` may carry a `crdt_type` marking it as a
-CRDT-backed state collection. The schema accepts exactly these 11 values:
+CRDT-backed state collection. The schema accepts exactly these 12 values:
 
-|                             |                   |                  |
-| --------------------------- | ----------------- | ---------------- |
-| `lww_register`              | `counter`         | `vector`         |
-| `replicated_growable_array` | `authored_vector` | `shared_storage` |
-| `unordered_map`             | `sorted_map`      | `authored_map`   |
-| `unordered_set`             | `sorted_set`      |                  |
+|                             |                 |                   |
+| --------------------------- | --------------- | ----------------- |
+| `lww_register`              | `counter`       | `vector`          |
+| `replicated_growable_array` | `fugue_text`    | `authored_vector` |
+| `shared_storage`            | `unordered_map` | `sorted_map`      |
+| `authored_map`              | `unordered_set` | `sorted_set`      |
 
 ## Named type definitions
 
