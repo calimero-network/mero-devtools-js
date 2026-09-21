@@ -72,11 +72,23 @@ jobs:
           echo "Latest core release: $TAG"
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
 
-      - name: Checkout core reference files at release tag (no build)
+      - name: Test resolve-core-ref.sh
+        run: bash .github/scripts/resolve-core-ref.test.sh
+
+      - name: Resolve core ref (paired, else the latest release)
+        id: coreref
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          REF="$(bash .github/scripts/resolve-core-ref.sh "${{ steps.coretag.outputs.tag }}")"
+          echo "Comparing against core@$REF"
+          echo "ref=$REF" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout core reference files (no build)
         uses: actions/checkout@v7
         with:
           repository: calimero-network/core
-          ref: ${{ steps.coretag.outputs.tag }}
+          ref: ${{ steps.coreref.outputs.ref }}
           path: core
           sparse-checkout: |
             crates/wasm-abi/wasm-abi.schema.json
