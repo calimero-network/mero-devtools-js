@@ -23,6 +23,7 @@ check() {
 
 check "no body resolves to the default"  0 "0.11.0-rc.41"   ""
 check "a core-ref line wins"             0 "feat/some-abi"  $'## Summary\n\ncore-ref: feat/some-abi\n'
+check "the first of two lines wins"      0 "feat/first"     $'core-ref: feat/first\ncore-ref: feat/second'
 check "another key is ignored"           0 "0.11.0-rc.41"   "sdk-ref: feat/x"
 check "an unsafe ref is refused"         1 ""               "core-ref: --upload-pack=x"
 check "path traversal is refused"        1 ""               "core-ref: a/../b"

@@ -5,7 +5,7 @@ set -euo pipefail
 
 DEFAULT_REF="${1:?usage: resolve-core-ref.sh <default-ref>}"
 
-ref="$(printf '%s\n' "${PR_BODY:-}" | sed -n 's/^[[:space:]]*core-ref:[[:space:]]*\([^[:space:]]*\).*/\1/p' | head -n1)"
+ref="$(printf '%s\n' "${PR_BODY:-}" | sed -n '/^[[:space:]]*core-ref:[[:space:]]*\([^[:space:]]*\).*/{s//\1/p;q;}')"
 if [ -z "$ref" ]; then
   echo "$DEFAULT_REF"
   exit 0

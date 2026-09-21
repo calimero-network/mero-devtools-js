@@ -5,6 +5,8 @@ on:
     branches:
       - main
   pull_request:
+    # edited: a changed `core-ref:` line in the PR body must re-resolve the pair.
+    types: [opened, synchronize, reopened, edited]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
