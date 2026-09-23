@@ -9,7 +9,7 @@
 //
 // Both are CHECKED-IN files in core, so this needs no core build and no other
 // repos — it works against a plain checkout or a release-tag checkout. The full
-// multi-app breadth and the "all 11 CRDT types are exercised" guarantee live on
+// multi-app breadth and the "every CRDT type is exercised" guarantee live on
 // the core side (core builds every app and validates its ABI against this tool),
 // so they are deliberately not vendored here.
 //

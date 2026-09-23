@@ -12,6 +12,7 @@ export interface AbiState {
   users: UserId32[];
   authored_counters: Record<string, number>;
   authored_log: UserId32[];
+  document: {  };
 }
 
 export type ActionPayload =
@@ -221,6 +222,8 @@ export class AbiConformanceClient {
 
   /**
    * create_custom_record
+   *
+   * @intent read_only
    */
   public async createCustomRecord(params: { name: string; value: number }): Promise<CustomRecord> {
     const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'create_custom_record', argsJson: params });
@@ -317,6 +320,8 @@ export class AbiConformanceClient {
 
   /**
    * get_nested_record
+   *
+   * @intent read_only
    */
   public async getNestedRecord(params: { name: string }): Promise<NestedRecord> {
     const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'get_nested_record', argsJson: params });
@@ -325,6 +330,8 @@ export class AbiConformanceClient {
 
   /**
    * get_status
+   *
+   * @intent read_only
    */
   public async getStatus(params: { timestamp: number }): Promise<StatusPayload> {
     const response: any = await this._mero.rpc.execute({ contextId: this._contextId, method: 'get_status', argsJson: params });
@@ -545,6 +552,8 @@ export class AbiConformanceClient {
 
   /**
    * xcall_noop
+   *
+   * @intent mutating
    *
    * @xcall any_in_namespace (callable by any context in the namespace)
    */

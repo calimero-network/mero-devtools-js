@@ -311,6 +311,32 @@ describe('CRDT type annotations', () => {
       expect(clientContent).toContain('log: string[]');
     });
 
+    it('should accept fugue_text crdt_type on opaque record fields', () => {
+      const manifest = parseAbiManifest({
+        schema_version: 'wasm-abi/1',
+        types: {
+          Test: {
+            kind: 'record',
+            fields: [
+              {
+                name: 'document',
+                type: {
+                  kind: 'record',
+                  fields: [],
+                  crdt_type: 'fugue_text',
+                },
+              },
+            ],
+          },
+        },
+        methods: [],
+        events: [],
+      });
+
+      const clientContent = generateClient(manifest);
+      expect(clientContent).toContain('document: {  }');
+    });
+
     it('should handle state_root field in manifest', () => {
       const manifest = parseAbiManifest({
         schema_version: 'wasm-abi/1',

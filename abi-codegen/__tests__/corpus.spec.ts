@@ -14,7 +14,7 @@ import { deriveClientNameFromPath } from '../src/generate/emit.js';
 // Scope is deliberately narrow. SCHEMA PARITY with core (the drift that caused
 // the original breakage) is covered by schema-drift.spec.ts and
 // enum-completeness.spec.ts against the vendored core schema. The full multi-app
-// breadth and the "all 11 CRDT types are exercised" check are a CORE emitter
+// breadth and the "every CRDT type is exercised" check are a CORE emitter
 // concern, proven live in calimero core (PR #2839 builds every app, extracts its
 // ABI, and validates it against this tool) — so they are intentionally not
 // duplicated here as a large vendored corpus.
