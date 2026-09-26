@@ -224,6 +224,9 @@
         },
         "nullable": {
           "type": "boolean"
+        },
+        "doc": {
+          "type": "string"
         }
       }
     },
@@ -240,6 +243,9 @@
         },
         "payload": {
           "$ref": "#/definitions/TypeRef"
+        },
+        "doc": {
+          "type": "string"
         }
       }
     },
@@ -258,6 +264,9 @@
               "items": {
                 "$ref": "#/definitions/Field"
               }
+            },
+            "doc": {
+              "type": "string"
             }
           }
         },
@@ -274,6 +283,9 @@
               "items": {
                 "$ref": "#/definitions/Variant"
               }
+            },
+            "doc": {
+              "type": "string"
             }
           }
         },
@@ -292,11 +304,31 @@
               "type": "string",
               "format": "regex",
               "minLength": 1
+            },
+            "doc": {
+              "type": "string"
             }
           }
         },
         {
-          "$ref": "#/definitions/BytesType"
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind"],
+          "properties": {
+            "kind": {
+              "const": "bytes"
+            },
+            "size": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "encoding": {
+              "type": "string"
+            },
+            "doc": {
+              "type": "string"
+            }
+          }
         }
       ]
     },
@@ -313,6 +345,9 @@
         },
         "nullable": {
           "type": "boolean"
+        },
+        "doc": {
+          "type": "string"
         }
       }
     },
@@ -349,6 +384,10 @@
         "returns_nullable": {
           "type": "boolean"
         },
+        "returns_doc": {
+          "type": "string",
+          "description": "What the return value means, from the method's # Returns doc section. Absent when there is none."
+        },
         "errors": {
           "type": "array",
           "items": {
@@ -365,6 +404,17 @@
         "xcall_callers": {
           "type": "string",
           "enum": ["any_in_namespace", "same_app"]
+        },
+        "destructive": {
+          "type": "boolean",
+          "description": "Deletes or irreversibly overwrites data (#[app::destructive]). Emitted only when true; a hint, not enforced."
+        },
+        "idempotent": {
+          "type": "boolean",
+          "description": "Repeating the call with the same arguments has no further effect (#[app::idempotent]). Emitted only when true; a hint, not enforced."
+        },
+        "doc": {
+          "type": "string"
         }
       }
     },
@@ -378,6 +428,9 @@
         },
         "payload": {
           "$ref": "#/definitions/TypeRef"
+        },
+        "doc": {
+          "type": "string"
         }
       }
     }
