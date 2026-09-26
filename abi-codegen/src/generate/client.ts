@@ -521,7 +521,7 @@ function decodeVariant(
 function jsdocLines(doc: string, indent: string): string[] {
   return doc
     .replace(/\*\//g, '*\\/')
-    .split('\n')
+    .split(/\r?\n/)
     .map((line) => (line ? `${indent} * ${line}` : `${indent} *`));
 }
 
