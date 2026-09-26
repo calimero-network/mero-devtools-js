@@ -205,4 +205,12 @@ describe('doc emission as JSDoc', () => {
       '   * @param params.key Lookup key.\n   * Must be non-empty.',
     );
   });
+
+  it('drops carriage returns from method doc with CRLF line endings', () => {
+    const m = documented();
+    m.methods[0].doc = 'line one\r\nline two';
+    const rendered = generateClient(parseAbiManifest(m), 'DocClient');
+    expect(rendered).toContain('   * line one\n   * line two');
+    expect(rendered).not.toContain('\r');
+  });
 });
