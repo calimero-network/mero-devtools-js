@@ -131,6 +131,10 @@ Note the shape, because it differs from older hand-written clients:
 - A cross-context entry point is tagged `@xcall <callers>`, and a declared
   migration entrypoint `@migration from state version N to N+1`. Both are
   documentation; the node enforces the caller policy and drives migrations.
+- A method's `doc` leads its JSDoc block, followed by one `@param params.<name>`
+  line per documented parameter, `@returns` for its `returns_doc`, and a
+  `@remarks` line for `destructive`/`idempotent`; type and field docs sit
+  above their declarations.
 - `bytes`-typed values are represented by the generated `CalimeroBytes` class
   (`CalimeroBytes.fromHex(...)`, `.toUint8Array()`), converted to/from plain
   arrays at the RPC boundary.
