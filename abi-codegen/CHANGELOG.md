@@ -38,6 +38,11 @@
 
 ### Features
 
+- **abi-codegen:** accept `Method.tee_every_secs`, the period of a timer-driven
+  TEE trigger (`#[app::tee(every = "..")]`), and tag such a method
+  `@tee every <n>s` in the generated client JSDoc. Only the node's TEE
+  scheduler may run one. Pairs with calimero-network/core#4083.
+
 - **abi-codegen:** surface a method's declared read/write `intent` in the
   generated client JSDoc (`@intent read_only`). Documentation only — there is no
   read transport yet.

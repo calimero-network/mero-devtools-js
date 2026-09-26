@@ -25,6 +25,7 @@ const manifest = parseAbiManifest({
     { name: 'defaulted_call', params: [], xcall_callable: true },
     { name: 'plain_call', params: [] },
     { name: 'migrate_v1', params: [], intent: 'mutating' },
+    { name: 'reshuffle', params: [], intent: 'mutating', tee_every_secs: 60 },
   ],
   events: [],
   state_version: 2,
@@ -49,6 +50,16 @@ describe('method metadata in JSDoc', () => {
   it('leaves a non-xcall method unmarked', () => {
     const block = out.slice(0, out.indexOf('public async plainCall'));
     expect(block.slice(block.lastIndexOf('/**'))).not.toContain('@xcall');
+  });
+
+  it('marks a TEE timer with its period', () => {
+    const block = out.slice(0, out.indexOf('public async reshuffle'));
+    expect(block.slice(block.lastIndexOf('/**'))).toContain('@tee every 60s');
+  });
+
+  it('leaves a method that is not a TEE timer unmarked', () => {
+    const block = out.slice(0, out.indexOf('public async plainCall'));
+    expect(block.slice(block.lastIndexOf('/**'))).not.toContain('@tee');
   });
 
   it('marks a declared migration entrypoint with the version it carries from', () => {

@@ -285,6 +285,15 @@ An `xcall_callable` method with no declared `xcall_callers` is tagged
 `any_in_namespace`, since that is the value the node applies. The tag is
 documentation: the policy is enforced by the node, not by the generated client.
 
+A TEE timer (`#[app::tee(every = "..")]`) carries its period:
+
+| Field            | Values                | Meaning                                                                                                                    |
+| ---------------- | --------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `tee_every_secs` | integer, at least `1` | The node's TEE scheduler fires the method once per this many seconds, on one TEE authority. Absent for every other method. |
+
+The generator tags such a method `@tee every <n>s`. Calling it from a client is
+refused inside the method: only the TEE scheduler may run it.
+
 ## State versioning & migrations
 
 When a contract's state schema evolves, the manifest records the current

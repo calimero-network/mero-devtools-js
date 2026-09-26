@@ -731,6 +731,15 @@ function generateMethod(
     lines.push(`   * @xcall ${callers} (${note})`);
   }
 
+  // TEE timer. The node's TEE scheduler fires it; a call from anywhere else
+  // is refused inside the method, which the signature would never tell you.
+  if (method.tee_every_secs !== undefined) {
+    lines.push('   *');
+    lines.push(
+      `   * @tee every ${method.tee_every_secs}s (fired by the node's TEE scheduler; other callers are refused)`,
+    );
+  }
+
   // Declared migration edge. The node drives these during an upgrade; app code
   // calling one directly is almost always a mistake.
   const migration = manifest.migrations?.find((m) => m.method === method.name);

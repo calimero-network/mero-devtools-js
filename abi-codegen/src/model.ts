@@ -141,6 +141,11 @@ export interface AbiMethod {
   // historical behaviour; 'same_app' (#[app::xcall(from_same_app)]) restricts
   // callers to contexts running the same application id. Enforced by the node.
   xcall_callers?: 'any_in_namespace' | 'same_app';
+  // Period, in seconds, of a timer-driven TEE trigger declared via
+  // #[app::tee(every = "..")]. The node's TEE scheduler fires the method once
+  // per period on one TEE authority; any other caller is refused. Absent for
+  // every other method.
+  tee_every_secs?: number;
 }
 
 // Parameter definition
