@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { parseAbiManifest } from '../src/parse.js';
+import { generateClient } from '../src/generate/client.js';
 
 // One doc-bearing instance of every object kind that carries `doc`.
 const documented = (): any => ({
@@ -112,5 +113,77 @@ describe('doc fields', () => {
     expect(() => parseAbiManifest(badFlag)).toThrow(
       /ABI schema validation failed/,
     );
+  });
+});
+
+describe('doc emission as JSDoc', () => {
+  const out = generateClient(parseAbiManifest(documented()), 'DocClient');
+
+  it('puts a named type doc above each declaration kind', () => {
+    expect(out).toContain(
+      '/**\n * A stored entry.\n */\nexport interface Entry {',
+    );
+    expect(out).toContain(
+      '/**\n * Entry lifecycle.\n */\nexport type Status =',
+    );
+    expect(out).toContain(
+      '/**\n * Opaque entry id.\n */\nexport type EntryId =',
+    );
+  });
+
+  it('emits no orphan comment for a named bytes type, which declares nothing', () => {
+    expect(out).not.toContain('SHA-256 of the value.');
+  });
+
+  it('puts a field doc above the field', () => {
+    expect(out).toContain('  /**\n   * Lookup key.\n   */\n  key: string;');
+  });
+
+  it('renders the method doc and documented params in the method JSDoc', () => {
+    expect(out).toContain(
+      [
+        '  /**',
+        '   * set',
+        '   *',
+        '   * Store a value.',
+        '   *',
+        '   * # Errors',
+        '   * Fails when the key is empty.',
+        '   *',
+        '   * @param params.key Lookup key.',
+        '   */',
+        '  public async set(',
+      ].join('\n'),
+    );
+  });
+
+  it('renders returns_doc and the method flags as tags', () => {
+    expect(out).toContain(
+      [
+        '  /**',
+        '   * remove',
+        '   *',
+        '   * @returns Whether the key existed.',
+        '   * @remarks destructive, idempotent',
+        '   */',
+        '  public async remove(',
+      ].join('\n'),
+    );
+  });
+
+  it('adds no @param line for an undocumented param', () => {
+    expect(out).not.toContain('@param params.value');
+  });
+
+  it('leaves an undocumented method block unchanged', () => {
+    expect(out).toContain('  /**\n   * plain\n   */\n  public async plain(');
+  });
+
+  it('escapes a comment terminator in doc text', () => {
+    const m = documented();
+    m.methods[0].doc = 'Globs like a/*/b are literal.';
+    const escaped = generateClient(parseAbiManifest(m), 'DocClient');
+    expect(escaped).toContain('   * Globs like a/*\\/b are literal.');
+    expect(escaped).not.toContain('a/*/b');
   });
 });
