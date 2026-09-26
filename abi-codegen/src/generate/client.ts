@@ -516,6 +516,19 @@ function decodeVariant(
   );
 }
 
+// ABI doc text as JSDoc body lines at `indent`. A literal `*/` in the text
+// would close the comment, so it is escaped.
+function jsdocLines(doc: string, indent: string): string[] {
+  return doc
+    .replace(/\*\//g, '*\\/')
+    .split(/\r\n?|\n/)
+    .map((line) => (line ? `${indent} * ${line}` : `${indent} *`));
+}
+
+function jsdocBlock(doc: string, indent: string): string[] {
+  return [`${indent}/**`, ...jsdocLines(doc, indent), `${indent} */`];
+}
+
 /**
  * Generate a single type definition
  */
@@ -530,6 +543,7 @@ function generateTypeDefinition(
   if (typeDef.kind === 'record') {
     lines.push(`export interface ${safeName} {`);
     for (const field of typeDef.fields) {
+      if (field.doc) lines.push(...jsdocBlock(field.doc, '  '));
       const fieldType = generateTypeRef(field.type, manifest, false);
       const nullableType = field.nullable ? `${fieldType} | null` : fieldType;
       lines.push(`  ${formatIdentifier(field.name)}: ${nullableType};`);
@@ -543,6 +557,7 @@ function generateTypeDefinition(
       lines.push(`export type ${safeName} = ${literals};`);
     } else {
       // Mixed/payload variants — emit a discriminated union and factory.
+      // The type doc goes on the factory below, the one users actually call.
       lines.push(`export type ${safeName}Payload =`);
       const variantLines = typeDef.variants.map((variant) => {
         if (variant.payload) {
@@ -556,6 +571,7 @@ function generateTypeDefinition(
 
       // Generate factory object for variants
       lines.push('');
+      if (typeDef.doc) lines.push(...jsdocBlock(typeDef.doc, ''));
       lines.push(`export const ${safeName} = {`);
       typeDef.variants.forEach((variant) => {
         const variantName = formatIdentifier(variant.name);
@@ -605,7 +621,13 @@ function generateTypeDefinition(
     }
   }
 
-  return lines;
+  // A mixed variant's doc is already placed above its factory const.
+  // A named bytes type declares nothing, so its doc has nowhere to attach.
+  const docAlreadyPlaced =
+    typeDef.kind === 'variant' && !isAllUnitVariant(typeDef);
+  return typeDef.doc && lines.length > 0 && !docAlreadyPlaced
+    ? [...jsdocBlock(typeDef.doc, ''), ...lines]
+    : lines;
 }
 
 /**
@@ -710,6 +732,27 @@ function generateMethod(
   // Generate JSDoc comment
   lines.push('  /**');
   lines.push(`   * ${method.name}`);
+
+  if (method.doc) {
+    lines.push('   *', ...jsdocLines(method.doc, '  '));
+  }
+
+  const remarks = [
+    method.destructive && 'destructive',
+    method.idempotent && 'idempotent',
+  ].filter(Boolean);
+  const tags = [
+    ...method.params
+      .filter((param) => param.doc)
+      .map(
+        (param) => `@param params.${formatIdentifier(param.name)} ${param.doc}`,
+      ),
+    ...(method.returns_doc ? [`@returns ${method.returns_doc}`] : []),
+    ...(remarks.length > 0 ? [`@remarks ${remarks.join(', ')}`] : []),
+  ];
+  if (tags.length > 0) {
+    lines.push('   *', ...tags.flatMap((tag) => jsdocLines(tag, '  ')));
+  }
 
   // Surface the app-declared read/write intent when present. mero-js has no
   // read transport yet, so this is documentation only — not a routing hint.

@@ -345,3 +345,44 @@ export type AbiEvent =
 
 Events whose payload is inline `unit` (or absent) omit the `payload` field in
 the union.
+
+## Documentation (`doc`)
+
+Methods, parameters, named types (all four kinds), record fields, variants and events may carry an optional `doc` string: the author's rustdoc for that item.
+The SDK moves a method's `# Arguments` entries onto the matching parameters, so a method's `doc` holds the rest of its rustdoc.
+An item without documentation has no `doc` key.
+
+```json
+{
+  "name": "get_folder",
+  "doc": "Look up one folder.\n\n# Errors\nFails when no folder has this id.",
+  "params": [
+    {
+      "name": "id",
+      "type": { "$ref": "FolderId" },
+      "doc": "Handle returned by an earlier call."
+    }
+  ]
+}
+```
+
+The generator emits these as JSDoc, so editors show them on hover:
+
+```ts
+/**
+ * get_folder
+ *
+ * Look up one folder.
+ *
+ * # Errors
+ * Fails when no folder has this id.
+ *
+ * @param params.id Handle returned by an earlier call.
+ */
+```
+
+A method may also carry `returns_doc` (its `# Returns` section), `destructive: true` and `idempotent: true`; each is absent otherwise.
+They are emitted as `@returns <returns_doc>` and one `@remarks` line naming the flags that are set, e.g. `@remarks destructive, idempotent`.
+
+Type and field docs are emitted above the declaration they describe.
+Variant and event docs, and the doc of a named `bytes` type (which emits no declaration), stay on the parsed manifest and are not emitted.
