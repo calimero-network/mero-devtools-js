@@ -365,6 +365,10 @@
         "xcall_callers": {
           "type": "string",
           "enum": ["any_in_namespace", "same_app"]
+        },
+        "tee_every_secs": {
+          "type": "integer",
+          "minimum": 1
         }
       }
     },
