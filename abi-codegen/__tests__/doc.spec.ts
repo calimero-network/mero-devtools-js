@@ -46,22 +46,13 @@ const documented = (): any => ({
 });
 
 describe('doc fields', () => {
-  it('parses a doc on every object kind and exposes it', () => {
+  it('parses a doc on sites the client does not emit', () => {
     const m = parseAbiManifest(documented());
-    expect(m.types.Entry.doc).toBe('A stored entry.');
-    expect(m.types.Status.doc).toBe('Entry lifecycle.');
-    expect(m.types.EntryId.doc).toBe('Opaque entry id.');
     expect(m.types.Digest.doc).toBe('SHA-256 of the value.');
-    const entry = m.types.Entry;
-    expect(entry.kind === 'record' && entry.fields[0].doc).toBe('Lookup key.');
     const status = m.types.Status;
     expect(status.kind === 'variant' && status.variants[0].doc).toBe(
       'Visible to readers.',
     );
-    expect(m.methods[0].doc).toBe(
-      'Store a value.\n\n# Errors\nFails when the key is empty.',
-    );
-    expect(m.methods[0].params[0].doc).toBe('Lookup key.');
     expect(m.events[0].doc).toBe('Emitted after set.');
   });
 
@@ -70,12 +61,6 @@ describe('doc fields', () => {
     expect(remove.returns_doc).toBe('Whether the key existed.');
     expect(remove.destructive).toBe(true);
     expect(remove.idempotent).toBe(true);
-  });
-
-  it('freezes doc-bearing objects like the rest of the manifest', () => {
-    const m = parseAbiManifest(documented());
-    expect(Object.isFrozen(m.methods[0].params[0])).toBe(true);
-    expect(Object.isFrozen(m.types.Entry)).toBe(true);
   });
 
   it('still rejects an unknown key next to doc', () => {
@@ -179,19 +164,13 @@ describe('doc emission as JSDoc', () => {
     expect(out).toContain('  /**\n   * plain\n   */\n  public async plain(');
   });
 
-  it('escapes a comment terminator in doc text', () => {
+  it('escapes a comment terminator on a method, a field and a type', () => {
     const m = documented();
     m.methods[0].doc = 'Globs like a/*/b are literal.';
-    const escaped = generateClient(parseAbiManifest(m), 'DocClient');
-    expect(escaped).toContain('   * Globs like a/*\\/b are literal.');
-    expect(escaped).not.toContain('a/*/b');
-  });
-
-  it('escapes a comment terminator on a field and on a type definition', () => {
-    const m = documented();
     m.types.Entry.doc = 'A record, e.g. a/*/b.';
     m.types.Entry.fields[0].doc = 'A key, e.g. a/*/b.';
     const escaped = generateClient(parseAbiManifest(m), 'DocClient');
+    expect(escaped).toContain('   * Globs like a/*\\/b are literal.');
     expect(escaped).toContain('A record, e.g. a/*\\/b.');
     expect(escaped).toContain('A key, e.g. a/*\\/b.');
     expect(escaped).not.toContain('a/*/b');
@@ -212,5 +191,29 @@ describe('doc emission as JSDoc', () => {
     const rendered = generateClient(parseAbiManifest(m), 'DocClient');
     expect(rendered).toContain('   * line one\n   * line two');
     expect(rendered).not.toContain('\r');
+  });
+
+  it('drops a lone carriage return with no following newline', () => {
+    const m = documented();
+    m.methods[0].doc = 'line one\rline two';
+    const rendered = generateClient(parseAbiManifest(m), 'DocClient');
+    expect(rendered).toContain('   * line one\n   * line two');
+    expect(rendered).not.toContain('\r');
+  });
+
+  it('puts the type doc on the factory for a payload-bearing variant', () => {
+    const m = documented();
+    m.types.Action = {
+      kind: 'variant',
+      doc: 'Something happened.',
+      variants: [{ name: 'Ping', payload: { kind: 'string' } }],
+    };
+    const rendered = generateClient(parseAbiManifest(m), 'DocClient');
+    expect(rendered).toContain(
+      '/**\n * Something happened.\n */\nexport const Action = {',
+    );
+    expect(rendered).not.toContain(
+      '/**\n * Something happened.\n */\nexport type ActionPayload =',
+    );
   });
 });

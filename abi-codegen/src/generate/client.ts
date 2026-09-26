@@ -521,7 +521,7 @@ function decodeVariant(
 function jsdocLines(doc: string, indent: string): string[] {
   return doc
     .replace(/\*\//g, '*\\/')
-    .split(/\r?\n/)
+    .split(/\r\n?|\n/)
     .map((line) => (line ? `${indent} * ${line}` : `${indent} *`));
 }
 
@@ -557,6 +557,7 @@ function generateTypeDefinition(
       lines.push(`export type ${safeName} = ${literals};`);
     } else {
       // Mixed/payload variants — emit a discriminated union and factory.
+      // The type doc goes on the factory below, the one users actually call.
       lines.push(`export type ${safeName}Payload =`);
       const variantLines = typeDef.variants.map((variant) => {
         if (variant.payload) {
@@ -570,6 +571,7 @@ function generateTypeDefinition(
 
       // Generate factory object for variants
       lines.push('');
+      if (typeDef.doc) lines.push(...jsdocBlock(typeDef.doc, ''));
       lines.push(`export const ${safeName} = {`);
       typeDef.variants.forEach((variant) => {
         const variantName = formatIdentifier(variant.name);
@@ -619,8 +621,11 @@ function generateTypeDefinition(
     }
   }
 
+  // A mixed variant's doc is already placed above its factory const.
   // A named bytes type declares nothing, so its doc has nowhere to attach.
-  return typeDef.doc && lines.length > 0
+  const docAlreadyPlaced =
+    typeDef.kind === 'variant' && !isAllUnitVariant(typeDef);
+  return typeDef.doc && lines.length > 0 && !docAlreadyPlaced
     ? [...jsdocBlock(typeDef.doc, ''), ...lines]
     : lines;
 }
