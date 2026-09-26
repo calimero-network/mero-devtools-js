@@ -186,4 +186,23 @@ describe('doc emission as JSDoc', () => {
     expect(escaped).toContain('   * Globs like a/*\\/b are literal.');
     expect(escaped).not.toContain('a/*/b');
   });
+
+  it('escapes a comment terminator on a field and on a type definition', () => {
+    const m = documented();
+    m.types.Entry.doc = 'A record, e.g. a/*/b.';
+    m.types.Entry.fields[0].doc = 'A key, e.g. a/*/b.';
+    const escaped = generateClient(parseAbiManifest(m), 'DocClient');
+    expect(escaped).toContain('A record, e.g. a/*\\/b.');
+    expect(escaped).toContain('A key, e.g. a/*\\/b.');
+    expect(escaped).not.toContain('a/*/b');
+  });
+
+  it('renders a multi-line param doc inside its @param tag', () => {
+    const m = documented();
+    m.methods[0].params[0].doc = 'Lookup key.\nMust be non-empty.';
+    const rendered = generateClient(parseAbiManifest(m), 'DocClient');
+    expect(rendered).toContain(
+      '   * @param params.key Lookup key.\n   * Must be non-empty.',
+    );
+  });
 });

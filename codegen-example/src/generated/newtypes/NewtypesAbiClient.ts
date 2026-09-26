@@ -6,6 +6,9 @@ import {
 
 // Generated types
 
+/**
+ * Opaque folder handle, unique within a context.
+ */
 export type FolderId = string & { readonly __brand: 'FolderId' };
 export const FolderId = (value: string): FolderId => value as FolderId;
 
@@ -57,7 +60,13 @@ export const Command = {
 
 export type AliasOfCommand = CommandPayload;
 
+/**
+ * One folder as the app stores it.
+ */
 export interface FolderEntry {
+  /**
+   * Handle of this folder.
+   */
   id: FolderId;
   member: string;
   height: Height;
@@ -72,6 +81,9 @@ export const Sha256Hex = (value: string): Sha256Hex => {
   return value as Sha256Hex;
 };
 
+/**
+ * An absolute path such as /docs/*\/drafts, where * matches one segment.
+ */
 export type RoutePath = string & { readonly __brand: 'RoutePath' };
 export const RoutePath = (value: string): RoutePath => {
   if (!new RegExp("^/[a-z]+(/[a-z]+)*$").test(value)) {
@@ -164,6 +176,13 @@ export class NewtypesAbiClient {
 
   /**
    * get_folder
+   *
+   * Look up one folder.
+   *
+   * # Errors
+   * Fails when no folder has this id.
+   *
+   * @param params.id Handle returned by an earlier call.
    */
   public async getFolder(params: { id: FolderId }): Promise<FolderEntry> {
     const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'get_folder', argsJson: params });
