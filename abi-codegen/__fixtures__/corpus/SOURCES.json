@@ -9,7 +9,7 @@
     {
       "name": "core-abi_conformance-expected.json",
       "source": "core/apps/abi_conformance/abi.expected.json",
-      "sha256": "fc9036312c046f0975cb6709565089b007ff6d8c5c716242337c4a4fa0260326"
+      "sha256": "051f7a1ce877787fd77cf2532d04d444e0c1af24571e43704af36c37048b0926"
     }
   ]
 }
