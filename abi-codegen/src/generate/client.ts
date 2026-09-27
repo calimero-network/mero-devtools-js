@@ -742,14 +742,14 @@ function generateMethod(
     method.idempotent && 'idempotent',
   ].filter(Boolean);
   const tags = [
-    ...method.params
-      .filter((param) => param.doc)
-      .map(
-        (param) => `@param params.${formatIdentifier(param.name)} ${param.doc}`,
-      ),
-    ...(method.returns_doc ? [`@returns ${method.returns_doc}`] : []),
-    ...(remarks.length > 0 ? [`@remarks ${remarks.join(', ')}`] : []),
-  ];
+    ...method.params.map(
+      (param) =>
+        param.doc &&
+        `@param params.${formatIdentifier(param.name)} ${param.doc}`,
+    ),
+    method.returns_doc && `@returns ${method.returns_doc}`,
+    remarks.length > 0 && `@remarks ${remarks.join(', ')}`,
+  ].filter(Boolean) as string[];
   if (tags.length > 0) {
     lines.push('   *', ...tags.flatMap((tag) => jsdocLines(tag, '  ')));
   }

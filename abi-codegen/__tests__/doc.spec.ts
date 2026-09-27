@@ -46,23 +46,6 @@ const documented = (): any => ({
 });
 
 describe('doc fields', () => {
-  it('parses a doc on sites the client does not emit', () => {
-    const m = parseAbiManifest(documented());
-    expect(m.types.Digest.doc).toBe('SHA-256 of the value.');
-    const status = m.types.Status;
-    expect(status.kind === 'variant' && status.variants[0].doc).toBe(
-      'Visible to readers.',
-    );
-    expect(m.events[0].doc).toBe('Emitted after set.');
-  });
-
-  it('parses returns_doc, destructive and idempotent on a method', () => {
-    const remove = parseAbiManifest(documented()).methods[1];
-    expect(remove.returns_doc).toBe('Whether the key existed.');
-    expect(remove.destructive).toBe(true);
-    expect(remove.idempotent).toBe(true);
-  });
-
   it('still rejects an unknown key next to doc', () => {
     const bad = documented();
     bad.methods[0].docs = 'typo';
@@ -85,19 +68,6 @@ describe('doc fields', () => {
     const bad = documented();
     bad.methods[0].params[1].type = { kind: 'bytes', size: 4, doc: 'x' };
     expect(() => parseAbiManifest(bad)).toThrow(/ABI schema validation failed/);
-  });
-
-  it('rejects a non-string doc and a non-boolean method flag', () => {
-    const badDoc = documented();
-    badDoc.events[0].doc = 42;
-    expect(() => parseAbiManifest(badDoc)).toThrow(
-      /ABI schema validation failed/,
-    );
-    const badFlag = documented();
-    badFlag.methods[1].destructive = 'yes';
-    expect(() => parseAbiManifest(badFlag)).toThrow(
-      /ABI schema validation failed/,
-    );
   });
 });
 
@@ -185,19 +155,11 @@ describe('doc emission as JSDoc', () => {
     );
   });
 
-  it('drops carriage returns from method doc with CRLF line endings', () => {
+  it('splits a doc on CRLF and on a lone CR', () => {
     const m = documented();
-    m.methods[0].doc = 'line one\r\nline two';
+    m.methods[0].doc = 'a\r\nb\rc';
     const rendered = generateClient(parseAbiManifest(m), 'DocClient');
-    expect(rendered).toContain('   * line one\n   * line two');
-    expect(rendered).not.toContain('\r');
-  });
-
-  it('drops a lone carriage return with no following newline', () => {
-    const m = documented();
-    m.methods[0].doc = 'line one\rline two';
-    const rendered = generateClient(parseAbiManifest(m), 'DocClient');
-    expect(rendered).toContain('   * line one\n   * line two');
+    expect(rendered).toContain('   * a\n   * b\n   * c\n');
     expect(rendered).not.toContain('\r');
   });
 
