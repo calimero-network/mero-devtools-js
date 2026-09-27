@@ -516,6 +516,19 @@ function decodeVariant(
   );
 }
 
+// ABI doc text as JSDoc body lines at `indent`. A literal `*/` in the text
+// would close the comment, so it is escaped.
+function jsdocLines(doc: string, indent: string): string[] {
+  return doc
+    .replace(/\*\//g, '*\\/')
+    .split(/\r\n?|\n/)
+    .map((line) => (line ? `${indent} * ${line}` : `${indent} *`));
+}
+
+function jsdocBlock(doc: string, indent: string): string[] {
+  return [`${indent}/**`, ...jsdocLines(doc, indent), `${indent} */`];
+}
+
 /**
  * Generate a single type definition
  */
@@ -530,6 +543,7 @@ function generateTypeDefinition(
   if (typeDef.kind === 'record') {
     lines.push(`export interface ${safeName} {`);
     for (const field of typeDef.fields) {
+      if (field.doc) lines.push(...jsdocBlock(field.doc, '  '));
       const fieldType = generateTypeRef(field.type, manifest, false);
       const nullableType = field.nullable ? `${fieldType} | null` : fieldType;
       lines.push(`  ${formatIdentifier(field.name)}: ${nullableType};`);
@@ -543,6 +557,7 @@ function generateTypeDefinition(
       lines.push(`export type ${safeName} = ${literals};`);
     } else {
       // Mixed/payload variants — emit a discriminated union and factory.
+      // The type doc goes on the factory below, the one users actually call.
       lines.push(`export type ${safeName}Payload =`);
       const variantLines = typeDef.variants.map((variant) => {
         if (variant.payload) {
@@ -556,9 +571,11 @@ function generateTypeDefinition(
 
       // Generate factory object for variants
       lines.push('');
+      if (typeDef.doc) lines.push(...jsdocBlock(typeDef.doc, ''));
       lines.push(`export const ${safeName} = {`);
       typeDef.variants.forEach((variant) => {
         const variantName = formatIdentifier(variant.name);
+        if (variant.doc) lines.push(...jsdocBlock(variant.doc, '  '));
         if (variant.payload) {
           const payloadType = generateTypeRef(variant.payload, manifest, false);
           lines.push(
@@ -605,7 +622,14 @@ function generateTypeDefinition(
     }
   }
 
-  return lines;
+  // A mixed variant's doc is already placed above its factory const.
+  const docAlreadyPlaced =
+    typeDef.kind === 'variant' && !isAllUnitVariant(typeDef);
+  // A bytes type carries no doc: it declares nothing a doc could attach to.
+  const doc = typeDef.kind === 'bytes' ? undefined : typeDef.doc;
+  return doc && lines.length > 0 && !docAlreadyPlaced
+    ? [...jsdocBlock(doc, ''), ...lines]
+    : lines;
 }
 
 /**
@@ -683,14 +707,21 @@ function generateAbiEventUnion(
       event.payload &&
       !('$ref' in event.payload) &&
       event.payload.kind === 'unit';
+    const members = [`name: "${event.name}"`];
     if (event.payload && !isInlineUnit) {
-      const payloadType = generateTypeRef(event.payload, manifest);
-      return `  | { name: "${event.name}"; payload: ${payloadType} }`;
-    } else {
-      return `  | { name: "${event.name}" }`;
+      members.push(`payload: ${generateTypeRef(event.payload, manifest)}`);
     }
+    if (!event.doc) return [`  | { ${members.join('; ')} }`];
+    // On `name`, where narrowing or constructing the event surfaces it; a doc
+    // on the union member itself is not shown by TypeScript tooling.
+    return [
+      '  | {',
+      ...jsdocBlock(event.doc, '    '),
+      ...members.map((member) => `    ${member};`),
+      '  }',
+    ];
   });
-  lines.push(...eventLines);
+  lines.push(...eventLines.flat());
   lines.push(';');
 
   return lines;
@@ -710,6 +741,27 @@ function generateMethod(
   // Generate JSDoc comment
   lines.push('  /**');
   lines.push(`   * ${method.name}`);
+
+  if (method.doc) {
+    lines.push('   *', ...jsdocLines(method.doc, '  '));
+  }
+
+  const remarks = [
+    method.destructive && 'destructive',
+    method.idempotent && 'idempotent',
+  ].filter(Boolean);
+  const tags = [
+    ...method.params.map(
+      (param) =>
+        param.doc &&
+        `@param params.${formatIdentifier(param.name)} ${param.doc}`,
+    ),
+    method.returns_doc && `@returns ${method.returns_doc}`,
+    remarks.length > 0 && `@remarks ${remarks.join(', ')}`,
+  ].filter(Boolean) as string[];
+  if (tags.length > 0) {
+    lines.push('   *', ...tags.flatMap((tag) => jsdocLines(tag, '  ')));
+  }
 
   // Surface the app-declared read/write intent when present. mero-js has no
   // read transport yet, so this is documentation only — not a routing hint.
