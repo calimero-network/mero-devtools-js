@@ -17,6 +17,8 @@ import {
   toCamelCase,
 } from './emit.js';
 
+const IDENTIFIER = /^[A-Za-z_$][A-Za-z0-9_$]*$/; // keys that need no quoting
+
 /**
  * Utility class for handling byte conversions in Calimero
  */
@@ -370,6 +372,17 @@ function resolveNamedType(
   return undefined;
 }
 
+// A wire name as an object key: bare when it is an identifier, else quoted.
+function propertyKey(name: string): string {
+  return IDENTIFIER.test(name) ? name : JSON.stringify(name);
+}
+
+function propertyAccess(object: string, name: string): string {
+  return IDENTIFIER.test(name)
+    ? `${object}.${name}`
+    : `${object}[${JSON.stringify(name)}]`;
+}
+
 /**
  * Check whether every variant in a variant typedef is unit (no payload).
  * Serde's default for such enums is to serialize as bare strings, so we
@@ -455,12 +468,10 @@ function decodeRecord(
   seen: Set<string>,
 ): string | null {
   const decoded = fields.flatMap((field) => {
-    // Read the wire key but emit the sanitised one the interface declares. A
-    // sanitised field is copied across even when it needs no decoding.
     const read = `${expr}['${field.name}']`;
-    const name = formatIdentifier(field.name);
+    const name = propertyKey(field.name);
     const inner = decodeExpr(field.type, manifest, read, seen);
-    if (!inner) return name === field.name ? [] : [`${name}: ${read}`];
+    if (!inner) return [];
     return field.nullable
       ? [`${name}: ${read} == null ? null : ${inner}`]
       : [`${name}: ${inner}`];
@@ -546,7 +557,7 @@ function generateTypeDefinition(
       if (field.doc) lines.push(...jsdocBlock(field.doc, '  '));
       const fieldType = generateTypeRef(field.type, manifest, false);
       const nullableType = field.nullable ? `${fieldType} | null` : fieldType;
-      lines.push(`  ${formatIdentifier(field.name)}: ${nullableType};`);
+      lines.push(`  ${propertyKey(field.name)}: ${nullableType};`);
     }
     lines.push('}');
   } else if (typeDef.kind === 'variant') {
@@ -752,9 +763,7 @@ function generateMethod(
   ].filter(Boolean);
   const tags = [
     ...method.params.map(
-      (param) =>
-        param.doc &&
-        `@param params.${formatIdentifier(param.name)} ${param.doc}`,
+      (param) => param.doc && `@param params.${param.name} ${param.doc}`,
     ),
     method.returns_doc && `@returns ${method.returns_doc}`,
     remarks.length > 0 && `@remarks ${remarks.join(', ')}`,
@@ -862,7 +871,7 @@ function generateMethod(
         true,
       );
       const nullableType = param.nullable ? `${paramType} | null` : paramType;
-      return `${formatIdentifier(param.name)}: ${nullableType}`;
+      return `${propertyKey(param.name)}: ${nullableType}`;
     });
 
     lines.push(
@@ -886,13 +895,13 @@ function generateMethod(
       );
       lines.push(`    const convertedParams = { ...params } as any;`);
       for (const param of variantParams) {
-        const paramName = formatIdentifier(param.name);
+        const ref = propertyAccess('convertedParams', param.name);
         lines.push(
-          `    if (convertedParams.${paramName} && typeof convertedParams.${paramName} === 'object' && 'name' in convertedParams.${paramName}) {`,
-          `      if ('payload' in convertedParams.${paramName}) {`,
-          `        convertedParams.${paramName} = { [convertedParams.${paramName}.name]: convertedParams.${paramName}.payload };`,
+          `    if (${ref} && typeof ${ref} === 'object' && 'name' in ${ref}) {`,
+          `      if ('payload' in ${ref}) {`,
+          `        ${ref} = { [${ref}.name]: ${ref}.payload };`,
           `      } else {`,
-          `        convertedParams.${paramName} = convertedParams.${paramName}.name;`,
+          `        ${ref} = ${ref}.name;`,
           `      }`,
           `    }`,
         );
@@ -1027,7 +1036,7 @@ function generateTypeRef(
           forUserApi,
         );
         const nullableType = field.nullable ? `${fieldType} | null` : fieldType;
-        return `${formatIdentifier(field.name)}: ${nullableType}`;
+        return `${propertyKey(field.name)}: ${nullableType}`;
       });
       return `{ ${fields.join('; ')} }`;
     default:

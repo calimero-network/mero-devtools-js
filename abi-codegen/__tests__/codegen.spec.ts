@@ -1097,7 +1097,7 @@ describe('Codegen', () => {
       );
     });
 
-    it('should decode a field whose name is a TypeScript keyword at its wire key', () => {
+    it('should declare and decode a keyword-named field under its wire key', () => {
       const parsed = parseAbiManifest({
         schema_version: 'wasm-abi/1',
         types: {
@@ -1110,14 +1110,13 @@ describe('Codegen', () => {
         events: [],
       });
       const clientContent = generateClient(parsed, 'TestClient');
-      // The interface declares `default_`, but the node sends `default`.
-      expect(clientContent).toContain('default_: CalimeroBytes;');
+      expect(clientContent).toContain('default: CalimeroBytes;');
       expect(clientContent).toContain(
-        "default_: new CalimeroBytes(response['default'])",
+        "default: new CalimeroBytes(response['default'])",
       );
     });
 
-    it('should copy a sanitised field to its declared name even with nothing to decode', () => {
+    it('should quote a non-identifier field name instead of renaming it', () => {
       const parsed = parseAbiManifest({
         schema_version: 'wasm-abi/1',
         types: {
@@ -1133,14 +1132,10 @@ describe('Codegen', () => {
         events: [],
       });
       const clientContent = generateClient(parsed, 'TestClient');
-      // Without the copy, `rec.my_field` reads undefined: the value only ever
-      // arrives under the wire key the interface does not declare.
-      expect(clientContent).toContain('my_field: string;');
-      expect(clientContent).toContain(
-        "({ ...response, my_field: response['my-field'] })",
-      );
-      // A field needing neither sanitising nor decoding stays on the spread.
-      expect(clientContent).not.toContain("plain: response['plain']");
+      // A renamed key would be sent under a name the node does not know.
+      expect(clientContent).toContain('"my-field": string;');
+      expect(clientContent).not.toContain('my_field');
+      expect(clientContent).toContain('return response as Rec;');
     });
 
     // The bundled schema rejects crdt_type on a named typedef, but `AbiRecord`
