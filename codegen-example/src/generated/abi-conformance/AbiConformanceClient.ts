@@ -19,25 +19,20 @@ export type ActionPayload =
   | { name: 'Ping' }
   | { name: 'SetName'; payload: string }
   | { name: 'Update'; payload: UpdatePayload }
-  | { name: 'MultiTuple'; payload: Action_MultiTuple }
+  | { name: 'MultiTuple'; payload: [number, string] }
   | { name: 'MultiStruct'; payload: Action_MultiStruct }
 
 export const Action = {
   Ping: (): ActionPayload => ({ name: 'Ping' }),
   SetName: (setname: string): ActionPayload => ({ name: 'SetName', payload: setname }),
   Update: (update: UpdatePayload): ActionPayload => ({ name: 'Update', payload: update }),
-  MultiTuple: (multituple: Action_MultiTuple): ActionPayload => ({ name: 'MultiTuple', payload: multituple }),
+  MultiTuple: (multituple: [number, string]): ActionPayload => ({ name: 'MultiTuple', payload: multituple }),
   MultiStruct: (multistruct: Action_MultiStruct): ActionPayload => ({ name: 'MultiStruct', payload: multistruct }),
 } as const;
 
 export interface Action_MultiStruct {
   x: number;
   y: string;
-}
-
-export interface Action_MultiTuple {
-  field_0: number;
-  field_1: string;
 }
 
 /**
@@ -62,11 +57,6 @@ export interface CustomRecord {
 export interface Event_StructEvent {
   id: number;
   name: string;
-}
-
-export interface Event_TupleEvent {
-  field_0: number;
-  field_1: string;
 }
 
 export type Hash64 = CalimeroBytes;
@@ -133,6 +123,38 @@ export interface UpdatePayload {
 
 export type UserId32 = CalimeroBytes;
 
+export type WireOutcome =
+  | { kind: "Done" }
+  | { kind: "Failed"; data: string };
+
+export interface WireRecord {
+  strokeWidth: number;
+  blobId: string;
+  shape: WireShape;
+  step: WireStep;
+  outcome: WireOutcome;
+}
+
+export type WireShape =
+  | { kind: "rect" }
+  | ({ kind: "text" } & WireShape_Text);
+
+export interface WireShape_Text {
+  fontSize: number;
+}
+
+export type WireStep =
+  | WireStep_Retain
+  | WireStep_Insert;
+
+export interface WireStep_Insert {
+  insert: string;
+}
+
+export interface WireStep_Retain {
+  retain: number;
+}
+
 
 export type DataPayload = CalimeroBytes;
 
@@ -141,6 +163,7 @@ export type NamedPayload = string;
 
 
 
+export type TupleEventPayload = [number, string];
 
 export type AbiEvent =
   | { name: "ActionTaken"; payload: ActionPayload }
@@ -154,7 +177,7 @@ export type AbiEvent =
     name: "Ping";
   }
   | { name: "StructEvent"; payload: Event_StructEvent }
-  | { name: "TupleEvent"; payload: Event_TupleEvent }
+  | { name: "TupleEvent"; payload: [number, string] }
 ;
 
 
@@ -242,11 +265,11 @@ export class AbiConformanceClient {
   public async act(params: { a: ActionPayload }): Promise<number> {
     // Serde tags a payload-bearing variant as { Variant: payload }
     const convertedParams = { ...params } as any;
-    if (convertedParams.a && typeof convertedParams.a === 'object' && 'name' in convertedParams.a) {
-      if ('payload' in convertedParams.a) {
-        convertedParams.a = { [convertedParams.a.name]: convertedParams.a.payload };
+    if (convertedParams["a"] && typeof convertedParams["a"] === 'object' && 'name' in convertedParams["a"]) {
+      if ('payload' in convertedParams["a"]) {
+        convertedParams["a"] = { [convertedParams["a"].name]: convertedParams["a"].payload };
       } else {
-        convertedParams.a = convertedParams.a.name;
+        convertedParams["a"] = convertedParams["a"].name;
       }
     }
     const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'act', argsJson: convertedParams });
@@ -358,6 +381,14 @@ export class AbiConformanceClient {
   }
 
   /**
+   * echo_wire
+   */
+  public async echoWire(params: { w: WireRecord }): Promise<WireRecord> {
+    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'echo_wire', argsJson: params });
+    return response as WireRecord;
+  }
+
+  /**
    * find_person
    */
   public async findPerson(params: { name: string }): Promise<Person> {
@@ -405,11 +436,11 @@ export class AbiConformanceClient {
   public async handleMultiStruct(params: { a: ActionPayload }): Promise<number> {
     // Serde tags a payload-bearing variant as { Variant: payload }
     const convertedParams = { ...params } as any;
-    if (convertedParams.a && typeof convertedParams.a === 'object' && 'name' in convertedParams.a) {
-      if ('payload' in convertedParams.a) {
-        convertedParams.a = { [convertedParams.a.name]: convertedParams.a.payload };
+    if (convertedParams["a"] && typeof convertedParams["a"] === 'object' && 'name' in convertedParams["a"]) {
+      if ('payload' in convertedParams["a"]) {
+        convertedParams["a"] = { [convertedParams["a"].name]: convertedParams["a"].payload };
       } else {
-        convertedParams.a = convertedParams.a.name;
+        convertedParams["a"] = convertedParams["a"].name;
       }
     }
     const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'handle_multi_struct', argsJson: convertedParams });
@@ -422,11 +453,11 @@ export class AbiConformanceClient {
   public async handleMultiTuple(params: { a: ActionPayload }): Promise<string> {
     // Serde tags a payload-bearing variant as { Variant: payload }
     const convertedParams = { ...params } as any;
-    if (convertedParams.a && typeof convertedParams.a === 'object' && 'name' in convertedParams.a) {
-      if ('payload' in convertedParams.a) {
-        convertedParams.a = { [convertedParams.a.name]: convertedParams.a.payload };
+    if (convertedParams["a"] && typeof convertedParams["a"] === 'object' && 'name' in convertedParams["a"]) {
+      if ('payload' in convertedParams["a"]) {
+        convertedParams["a"] = { [convertedParams["a"].name]: convertedParams["a"].payload };
       } else {
-        convertedParams.a = convertedParams.a.name;
+        convertedParams["a"] = convertedParams["a"].name;
       }
     }
     const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'handle_multi_tuple', argsJson: convertedParams });

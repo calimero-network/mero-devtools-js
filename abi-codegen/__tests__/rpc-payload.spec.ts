@@ -2,8 +2,9 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
 import { pathToFileURL } from 'url';
-import { loadAbiManifestFromFile } from '../src/parse.js';
+import { loadAbiManifestFromFile, parseAbiManifest } from '../src/parse.js';
 import { generateClient } from '../src/generate/client.js';
+import { mockMeroImport, typecheckGeneratedClient } from './tsc.js';
 
 // The rest of the suite asserts the emitted *source text*. That cannot tell a
 // correct payload from a renamed field, so this one actually runs a generated
@@ -11,15 +12,13 @@ import { generateClient } from '../src/generate/client.js';
 let Client: any;
 let conformance: any;
 let newtypes: any;
+let wire: any;
 
 async function importClient(fixture: string, clientName: string): Promise<any> {
   const manifest = loadAbiManifestFromFile(
     path.join(__dirname, '../__fixtures__', fixture),
   );
-  const source = generateClient(manifest, clientName).replace(
-    `import {\n  MeroJs,\n} from '@calimero-network/mero-react';`,
-    `type MeroJs = { rpc: { execute: (params: any) => Promise<any> } };`,
-  );
+  const source = mockMeroImport(generateClient(manifest, clientName));
 
   const dir = path.join(__dirname, '../tmp/rpc-payload', clientName);
   fs.mkdirSync(dir, { recursive: true });
@@ -33,6 +32,7 @@ beforeAll(async () => {
   conformance = await importClient('abi_conformance.json', 'Client');
   Client = conformance.Client;
   newtypes = await importClient('newtypes_abi.json', 'NT');
+  wire = await importClient('serde_wire_abi.json', 'Wire');
 });
 
 function callAndCapture(
@@ -191,5 +191,170 @@ describe('rpc.execute response decode', () => {
     expect(command.name).toBe('Store');
     expect(command.payload).toBeInstanceOf(newtypes.CalimeroBytes);
     expect(command.payload.toArray()).toEqual([0, 255]);
+  });
+});
+
+// Wire examples from core's serde tagging tests: mero-design `ElementData`
+// (internal), mero-drive `Change` (untagged) and `DriveError`-style `Outcome` (adjacent).
+describe('serde enum tagging', () => {
+  const element = (data: unknown) => ({
+    id: 'e1',
+    data,
+    strokeWidth: 2,
+    shadowColor: '#000',
+    cornerRadius: null,
+  });
+
+  it('reads an internally tagged enum as tag plus payload fields', async () => {
+    for (const data of [
+      { kind: 'rect' },
+      { kind: 'line', points: '0,0 10,10' },
+      { kind: 'text', content: 'hi', fontSize: 12, bold: true },
+      { kind: 'image', naturalWidth: 64, blobId: 'b1' },
+    ]) {
+      expect(
+        await callWithResponse('addElement', element(data), wire.Wire),
+      ).toEqual(element(data));
+    }
+  });
+
+  it('reads an untagged enum as its bare payload', async () => {
+    for (const change of [
+      { retain: 6, attributes: { bold: 'true' } },
+      { insert: 'hi', attributes: null },
+      { delete: 2 },
+    ]) {
+      expect(await callWithResponse('applyDelta', change, wire.Wire)).toEqual(
+        change,
+      );
+    }
+  });
+
+  it('reads an adjacently tagged enum under tag and content', async () => {
+    for (const outcome of [
+      { kind: 'NotFound', data: 'doc' },
+      { kind: 'Done' },
+    ]) {
+      expect(await callWithResponse('settle', outcome, wire.Wire)).toEqual(
+        outcome,
+      );
+    }
+  });
+
+  it('decodes bytes beside the tag of an internally tagged payload', async () => {
+    const file = await callWithResponse(
+      'attachment',
+      { kind: 'file', hash: [0, 255] },
+      wire.Wire,
+    );
+    expect(file.kind).toBe('file');
+    expect(file.hash).toBeInstanceOf(wire.CalimeroBytes);
+    expect(file.hash.toArray()).toEqual([0, 255]);
+    expect(
+      await callWithResponse('attachment', { kind: 'none' }, wire.Wire),
+    ).toEqual({ kind: 'none' });
+  });
+
+  it('decodes bytes under the content key of an adjacently tagged payload', async () => {
+    const stored = await callWithResponse(
+      'receipt',
+      { kind: 'Stored', data: [7] },
+      wire.Wire,
+    );
+    expect(stored.data).toBeInstanceOf(wire.CalimeroBytes);
+    expect(stored.data.toArray()).toEqual([7]);
+    expect(
+      await callWithResponse('receipt', { kind: 'Missing' }, wire.Wire),
+    ).toEqual({ kind: 'Missing' });
+  });
+
+  // An untagged value names no variant, so nothing in it can be decoded: its type
+  // must be what arrives, including a null unit member and raw byte arrays.
+  it('types an untagged enum as the raw value it arrives as', async () => {
+    for (const chunk of [{ hash: [0, 255] }, [1, 2], 'hi', null]) {
+      expect(await callWithResponse('chunk', chunk, wire.Wire)).toEqual(chunk);
+    }
+    const manifest = loadAbiManifestFromFile(
+      path.join(__dirname, '../__fixtures__/serde_wire_abi.json'),
+    );
+    typecheckGeneratedClient(
+      generateClient(manifest, 'Wire'),
+      `
+const chunks: Chunk[] = [{ hash: [0, 255] }, [1, 2], 'hi', null];
+export type _Used = typeof chunks;
+`,
+      'untagged-wire',
+    );
+  });
+
+  it('types bytes nested anywhere in an untagged payload as number arrays', () => {
+    const bytes = { kind: 'bytes' };
+    const manifest = parseAbiManifest({
+      schema_version: 'wasm-abi/1',
+      types: {
+        Hash: { kind: 'alias', target: { kind: 'bytes', size: 1 } },
+        Ext: {
+          kind: 'variant',
+          variants: [{ name: 'Put', payload: bytes }, { name: 'Clear' }],
+        },
+        Int: {
+          kind: 'variant',
+          tag: 'kind',
+          variants: [{ name: 'File', payload: { $ref: 'Int_File' } }],
+        },
+        Int_File: { kind: 'record', fields: [{ name: 'hash', type: bytes }] },
+        Rec: {
+          kind: 'record',
+          fields: [
+            { name: 'h', type: { $ref: 'Hash' } },
+            { name: 'list', type: { kind: 'list', items: bytes } },
+            {
+              name: 'map',
+              type: { kind: 'map', key: { kind: 'string' }, value: bytes },
+            },
+            {
+              name: 'pair',
+              type: { kind: 'tuple', elements: [bytes, { kind: 'u32' }] },
+            },
+            { name: 'opt', type: bytes, nullable: true },
+            {
+              name: 'reg',
+              type: {
+                kind: 'record',
+                fields: [],
+                crdt_type: 'lww_register',
+                inner_type: bytes,
+              },
+            },
+            { name: 'ext', type: { $ref: 'Ext' } },
+            { name: 'int', type: { $ref: 'Int' } },
+          ],
+        },
+        Wrapped: {
+          kind: 'variant',
+          untagged: true,
+          variants: [{ name: 'Rec', payload: { $ref: 'Rec' } }],
+        },
+      },
+      methods: [{ name: 'wrapped', params: [], returns: { $ref: 'Wrapped' } }],
+      events: [],
+    });
+    typecheckGeneratedClient(
+      generateClient(manifest, 'Nested'),
+      `
+const base = { h: [1], list: [[1]], map: { a: [1] }, pair: [[1], 2] as [number[], number], opt: null, reg: [1] };
+const values: Wrapped[] = [
+  { ...base, ext: { Put: [1] }, int: { kind: 'File', hash: [1] } },
+  { ...base, ext: 'Clear', int: { kind: 'File', hash: [1] } },
+];
+export type _Used = typeof values;
+`,
+      'untagged-nested-wire',
+    );
+  });
+
+  it('keeps a non-identifier field name as its wire key', async () => {
+    const style = { 'line-cap': 'round' };
+    expect(await callWithResponse('setStyle', style, wire.Wire)).toEqual(style);
   });
 });

@@ -223,11 +223,11 @@ export class NewtypesAbiClient {
   public async dispatchAction(params: { action: ActionPayload }): Promise<void> {
     // Serde tags a payload-bearing variant as { Variant: payload }
     const convertedParams = { ...params } as any;
-    if (convertedParams.action && typeof convertedParams.action === 'object' && 'name' in convertedParams.action) {
-      if ('payload' in convertedParams.action) {
-        convertedParams.action = { [convertedParams.action.name]: convertedParams.action.payload };
+    if (convertedParams["action"] && typeof convertedParams["action"] === 'object' && 'name' in convertedParams["action"]) {
+      if ('payload' in convertedParams["action"]) {
+        convertedParams["action"] = { [convertedParams["action"].name]: convertedParams["action"].payload };
       } else {
-        convertedParams.action = convertedParams.action.name;
+        convertedParams["action"] = convertedParams["action"].name;
       }
     }
     await this._mero.rpc.execute({ contextId: this._contextId, method: 'dispatch_action', argsJson: convertedParams });
@@ -260,11 +260,11 @@ export class NewtypesAbiClient {
   public async runCommand(params: { cmd: CommandPayload; label: string }): Promise<void> {
     // Serde tags a payload-bearing variant as { Variant: payload }
     const convertedParams = { ...params } as any;
-    if (convertedParams.cmd && typeof convertedParams.cmd === 'object' && 'name' in convertedParams.cmd) {
-      if ('payload' in convertedParams.cmd) {
-        convertedParams.cmd = { [convertedParams.cmd.name]: convertedParams.cmd.payload };
+    if (convertedParams["cmd"] && typeof convertedParams["cmd"] === 'object' && 'name' in convertedParams["cmd"]) {
+      if ('payload' in convertedParams["cmd"]) {
+        convertedParams["cmd"] = { [convertedParams["cmd"].name]: convertedParams["cmd"].payload };
       } else {
-        convertedParams.cmd = convertedParams.cmd.name;
+        convertedParams["cmd"] = convertedParams["cmd"].name;
       }
     }
     await this._mero.rpc.execute({ contextId: this._contextId, method: 'run_command', argsJson: convertCalimeroBytesForWasm(convertedParams) });
@@ -290,11 +290,11 @@ export class NewtypesAbiClient {
   public async runAliasedCommand(params: { cmd: AliasOfCommand }): Promise<void> {
     // Serde tags a payload-bearing variant as { Variant: payload }
     const convertedParams = { ...params } as any;
-    if (convertedParams.cmd && typeof convertedParams.cmd === 'object' && 'name' in convertedParams.cmd) {
-      if ('payload' in convertedParams.cmd) {
-        convertedParams.cmd = { [convertedParams.cmd.name]: convertedParams.cmd.payload };
+    if (convertedParams["cmd"] && typeof convertedParams["cmd"] === 'object' && 'name' in convertedParams["cmd"]) {
+      if ('payload' in convertedParams["cmd"]) {
+        convertedParams["cmd"] = { [convertedParams["cmd"].name]: convertedParams["cmd"].payload };
       } else {
-        convertedParams.cmd = convertedParams.cmd.name;
+        convertedParams["cmd"] = convertedParams["cmd"].name;
       }
     }
     await this._mero.rpc.execute({ contextId: this._contextId, method: 'run_aliased_command', argsJson: convertCalimeroBytesForWasm(convertedParams) });

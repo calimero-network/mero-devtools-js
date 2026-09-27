@@ -151,6 +151,44 @@ four kinds: **record**, **variant**, **alias**, or **bytes**.
 { "kind": "bytes", "size": 64 }
 ```
 
+### Enum representation
+
+Field, variant and event names are serde's wire names, so they may be `camelCase` or `kebab-case`.
+The generator declares every object key under its wire name and quotes it when it is not a JS identifier.
+
+A variant type may carry serde's tagging keys; with none it is externally tagged, as before.
+
+| Keys             | Unit variant on the wire | Payload variant on the wire          | Generated TS type                      |
+| ---------------- | ------------------------ | ------------------------------------ | -------------------------------------- |
+| none             | `"Name"`                 | `{ "Name": payload }`                | `{ name, payload }` union plus factory |
+| `tag`            | `{ tag: "Name" }`        | `{ tag: "Name", ...payload fields }` | the wire shape                         |
+| `tag`, `content` | `{ tag: "Name" }`        | `{ tag: "Name", content: payload }`  | the wire shape                         |
+| `untagged: true` | `null`                   | the bare payload                     | the wire shape                         |
+
+```json
+{
+  "kind": "variant",
+  "tag": "kind",
+  "content": "data",
+  "variants": [
+    { "name": "NotFound", "payload": { "kind": "string" } },
+    { "name": "Done" }
+  ]
+}
+```
+
+generates
+
+{/* prettier-ignore */}
+```ts
+export type Outcome =
+  | { kind: "NotFound"; data: string }
+  | { kind: "Done" };
+```
+
+`content` requires `tag`, and `untagged` excludes both; the schema rejects other combinations.
+Bytes inside an untagged payload are not converted to `CalimeroBytes`, because the value does not say which variant it is, so the generated type keeps them as `number[]`.
+
 ### Aliases are newtypes, and they are branded
 
 `kind: "alias"` is emitted only for a Rust one-field tuple struct — a newtype
@@ -395,5 +433,6 @@ A method may also carry `returns_doc` (its `# Returns` section), `destructive: t
 They are emitted as `@returns <returns_doc>` and one `@remarks` line naming the flags that are set, e.g. `@remarks destructive, idempotent`.
 
 Type and field docs are emitted above the declaration they describe.
-A variant member's doc is emitted above its factory function, and an event's doc above the `name` property of its `AbiEvent` member.
-Member docs of a unit-only variant (a string-literal union) have nothing to attach to and are not emitted.
+A variant member's doc is emitted above its factory function, or above its tag property when the enum carries `tag`.
+An event's doc is emitted above the `name` property of its `AbiEvent` member.
+Member docs of a unit-only or untagged variant and the doc of a named `bytes` type have no declaration to attach to and are not emitted.
