@@ -44,9 +44,12 @@ describe('Codegen', () => {
       expect(typesContent).toContain(
         '| { name: "PersonUpdated"; payload: Person }',
       );
-      // Unit events should not have payload property
-      expect(typesContent).toContain('| { name: "Ping" }');
-      expect(typesContent).not.toContain('| { name: "Ping"; payload:');
+      // Unit events should not have payload property. Ping is documented, so
+      // its member carries the event's doc above `name`.
+      expect(typesContent).toContain(
+        '  | {\n    /**\n     * Liveness signal with no payload.\n     */\n    name: "Ping";\n  }',
+      );
+      expect(typesContent).not.toMatch(/name: "Ping";\s*payload:/);
     });
 
     it('should handle nullable fields correctly', () => {
@@ -84,8 +87,8 @@ describe('Codegen', () => {
       const typesContent = generateClient(manifest, 'Types');
 
       // Unit events should not have payload property in the union
-      expect(typesContent).toContain('| { name: "Ping" }');
-      expect(typesContent).not.toContain('| { name: "Ping"; payload:');
+      expect(typesContent).toContain('    name: "Ping";\n  }');
+      expect(typesContent).not.toMatch(/name: "Ping";\s*payload:/);
 
       // Unit events should not generate payload type aliases
       expect(typesContent).not.toContain('export type PingPayload =');

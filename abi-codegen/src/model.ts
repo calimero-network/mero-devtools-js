@@ -52,7 +52,6 @@ export interface AbiScalar {
 export interface AbiBytesVar {
   kind: 'bytes';
   encoding?: string;
-  doc?: string;
   // No size property for variable bytes
 }
 
@@ -60,7 +59,6 @@ export interface AbiBytesFixed {
   kind: 'bytes';
   size: number; // minimum: 1
   encoding?: string;
-  doc?: string;
 }
 
 // Collection types

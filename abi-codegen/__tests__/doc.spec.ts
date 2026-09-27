@@ -29,7 +29,7 @@ const documented = (): any => ({
       target: { kind: 'string' },
       doc: 'Opaque entry id.',
     },
-    Digest: { kind: 'bytes', size: 32, doc: 'SHA-256 of the value.' },
+    Digest: { kind: 'bytes', size: 32 },
   },
   methods: [
     {
@@ -80,6 +80,12 @@ describe('doc fields', () => {
     bad.methods[0].params[1].type = { kind: 'bytes', size: 4, doc: 'x' };
     expect(() => parseAbiManifest(bad)).toThrow(/ABI schema validation failed/);
   });
+
+  it('rejects doc on a named bytes type, as core does', () => {
+    const bad = documented();
+    bad.types.Digest = { kind: 'bytes', size: 32, doc: 'x' };
+    expect(() => parseAbiManifest(bad)).toThrow(/ABI schema validation failed/);
+  });
 });
 
 describe('doc emission as JSDoc', () => {
@@ -95,10 +101,6 @@ describe('doc emission as JSDoc', () => {
     expect(out).toContain(
       '/**\n * Opaque entry id.\n */\nexport type EntryId =',
     );
-  });
-
-  it('emits no orphan comment for a named bytes type, which declares nothing', () => {
-    expect(out).not.toContain('SHA-256 of the value.');
   });
 
   it('puts a field doc above the field', () => {

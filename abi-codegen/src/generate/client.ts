@@ -623,11 +623,12 @@ function generateTypeDefinition(
   }
 
   // A mixed variant's doc is already placed above its factory const.
-  // A named bytes type declares nothing, so its doc has nowhere to attach.
   const docAlreadyPlaced =
     typeDef.kind === 'variant' && !isAllUnitVariant(typeDef);
-  return typeDef.doc && lines.length > 0 && !docAlreadyPlaced
-    ? [...jsdocBlock(typeDef.doc, ''), ...lines]
+  // A bytes type carries no doc: it declares nothing a doc could attach to.
+  const doc = typeDef.kind === 'bytes' ? undefined : typeDef.doc;
+  return doc && lines.length > 0 && !docAlreadyPlaced
+    ? [...jsdocBlock(doc, ''), ...lines]
     : lines;
 }
 

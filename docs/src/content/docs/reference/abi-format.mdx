@@ -357,7 +357,8 @@ the union.
 
 ## Documentation (`doc`)
 
-Methods, parameters, named types (all four kinds), record fields, variants and events may carry an optional `doc` string: the author's rustdoc for that item.
+Methods, parameters, named record, variant and alias types, record fields, variants and events may carry an optional `doc` string: the author's rustdoc for that item.
+A `bytes` type never does, named or inline: it declares nothing a doc could attach to.
 The SDK moves a method's `# Arguments` entries onto the matching parameters, so a method's `doc` holds the rest of its rustdoc.
 An item without documentation has no `doc` key.
 
@@ -395,4 +396,4 @@ They are emitted as `@returns <returns_doc>` and one `@remarks` line naming the 
 
 Type and field docs are emitted above the declaration they describe.
 A variant member's doc is emitted above its factory function, and an event's doc above the `name` property of its `AbiEvent` member.
-Member docs of a unit-only variant (a string-literal union) and the doc of a named `bytes` type (which emits no declaration) have nothing to attach to and are not emitted.
+Member docs of a unit-only variant (a string-literal union) have nothing to attach to and are not emitted.
