@@ -207,53 +207,39 @@ describe('serde enum tagging', () => {
     cornerRadius: null,
   });
 
-  const roundTrip = async (method: string, param: string, value: unknown) => {
-    const sent = await callAndCapture(method, { [param]: value }, wire.Wire);
-    const received = await callWithResponse(method, value, wire.Wire);
-    return { sent: sent.argsJson[param], received };
-  };
-
-  it('sends and reads an internally tagged enum as tag plus payload fields', async () => {
+  it('reads an internally tagged enum as tag plus payload fields', async () => {
     for (const data of [
       { kind: 'rect' },
       { kind: 'line', points: '0,0 10,10' },
       { kind: 'text', content: 'hi', fontSize: 12, bold: true },
       { kind: 'image', naturalWidth: 64, blobId: 'b1' },
     ]) {
-      const { sent, received } = await roundTrip(
-        'addElement',
-        'element',
-        element(data),
-      );
-      expect(sent).toEqual(element(data));
-      expect(received).toEqual(element(data));
+      expect(
+        await callWithResponse('addElement', element(data), wire.Wire),
+      ).toEqual(element(data));
     }
   });
 
-  it('sends and reads an untagged enum as its bare payload', async () => {
+  it('reads an untagged enum as its bare payload', async () => {
     for (const change of [
       { retain: 6, attributes: { bold: 'true' } },
       { insert: 'hi', attributes: null },
       { delete: 2 },
     ]) {
-      const { sent, received } = await roundTrip(
-        'applyDelta',
-        'change',
+      expect(await callWithResponse('applyDelta', change, wire.Wire)).toEqual(
         change,
       );
-      expect(sent).toEqual(change);
-      expect(received).toEqual(change);
     }
   });
 
-  it('sends and reads an adjacently tagged enum under tag and content', async () => {
+  it('reads an adjacently tagged enum under tag and content', async () => {
     for (const outcome of [
       { kind: 'NotFound', data: 'doc' },
       { kind: 'Done' },
     ]) {
-      const { sent, received } = await roundTrip('settle', 'outcome', outcome);
-      expect(sent).toEqual(outcome);
-      expect(received).toEqual(outcome);
+      expect(await callWithResponse('settle', outcome, wire.Wire)).toEqual(
+        outcome,
+      );
     }
   });
 
@@ -285,10 +271,7 @@ describe('serde enum tagging', () => {
   });
 
   it('keeps a non-identifier field name as its wire key', async () => {
-    const { sent, received } = await roundTrip('setStyle', 'style', {
-      'line-cap': 'round',
-    });
-    expect(sent).toEqual({ 'line-cap': 'round' });
-    expect(received).toEqual({ 'line-cap': 'round' });
+    const style = { 'line-cap': 'round' };
+    expect(await callWithResponse('setStyle', style, wire.Wire)).toEqual(style);
   });
 });

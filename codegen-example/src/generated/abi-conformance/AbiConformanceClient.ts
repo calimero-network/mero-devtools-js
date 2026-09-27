@@ -265,11 +265,11 @@ export class AbiConformanceClient {
   public async act(params: { a: ActionPayload }): Promise<number> {
     // Serde tags a payload-bearing variant as { Variant: payload }
     const convertedParams = { ...params } as any;
-    if (convertedParams.a && typeof convertedParams.a === 'object' && 'name' in convertedParams.a) {
-      if ('payload' in convertedParams.a) {
-        convertedParams.a = { [convertedParams.a.name]: convertedParams.a.payload };
+    if (convertedParams["a"] && typeof convertedParams["a"] === 'object' && 'name' in convertedParams["a"]) {
+      if ('payload' in convertedParams["a"]) {
+        convertedParams["a"] = { [convertedParams["a"].name]: convertedParams["a"].payload };
       } else {
-        convertedParams.a = convertedParams.a.name;
+        convertedParams["a"] = convertedParams["a"].name;
       }
     }
     const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'act', argsJson: convertedParams });
@@ -436,11 +436,11 @@ export class AbiConformanceClient {
   public async handleMultiStruct(params: { a: ActionPayload }): Promise<number> {
     // Serde tags a payload-bearing variant as { Variant: payload }
     const convertedParams = { ...params } as any;
-    if (convertedParams.a && typeof convertedParams.a === 'object' && 'name' in convertedParams.a) {
-      if ('payload' in convertedParams.a) {
-        convertedParams.a = { [convertedParams.a.name]: convertedParams.a.payload };
+    if (convertedParams["a"] && typeof convertedParams["a"] === 'object' && 'name' in convertedParams["a"]) {
+      if ('payload' in convertedParams["a"]) {
+        convertedParams["a"] = { [convertedParams["a"].name]: convertedParams["a"].payload };
       } else {
-        convertedParams.a = convertedParams.a.name;
+        convertedParams["a"] = convertedParams["a"].name;
       }
     }
     const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'handle_multi_struct', argsJson: convertedParams });
@@ -453,11 +453,11 @@ export class AbiConformanceClient {
   public async handleMultiTuple(params: { a: ActionPayload }): Promise<string> {
     // Serde tags a payload-bearing variant as { Variant: payload }
     const convertedParams = { ...params } as any;
-    if (convertedParams.a && typeof convertedParams.a === 'object' && 'name' in convertedParams.a) {
-      if ('payload' in convertedParams.a) {
-        convertedParams.a = { [convertedParams.a.name]: convertedParams.a.payload };
+    if (convertedParams["a"] && typeof convertedParams["a"] === 'object' && 'name' in convertedParams["a"]) {
+      if ('payload' in convertedParams["a"]) {
+        convertedParams["a"] = { [convertedParams["a"].name]: convertedParams["a"].payload };
       } else {
-        convertedParams.a = convertedParams.a.name;
+        convertedParams["a"] = convertedParams["a"].name;
       }
     }
     const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'handle_multi_tuple', argsJson: convertedParams });

@@ -784,7 +784,7 @@ describe('Codegen', () => {
       });
       const clientContent = generateClient(parsed, 'TestClient');
       expect(clientContent).toContain(
-        'convertedParams.cmd = { [convertedParams.cmd.name]: convertedParams.cmd.payload };',
+        'convertedParams["cmd"] = { [convertedParams["cmd"].name]: convertedParams["cmd"].payload };',
       );
       expect(clientContent).toContain(
         "method: 'run', argsJson: convertedParams });",
@@ -833,7 +833,7 @@ describe('Codegen', () => {
       });
       const clientContent = generateClient(parsed, 'TestClient');
       expect(clientContent).toContain(
-        'convertedParams.cmd = { [convertedParams.cmd.name]: convertedParams.cmd.payload };',
+        'convertedParams["cmd"] = { [convertedParams["cmd"].name]: convertedParams["cmd"].payload };',
       );
       expect(clientContent).toContain(
         "method: 'run', argsJson: convertedParams });",
@@ -854,7 +854,7 @@ describe('Codegen', () => {
       });
       const clientContent = generateClient(parsed, 'TestClient');
       expect(clientContent).toContain(
-        'convertedParams.cmd = { [convertedParams.cmd.name]: convertedParams.cmd.payload };',
+        'convertedParams["cmd"] = { [convertedParams["cmd"].name]: convertedParams["cmd"].payload };',
       );
       expect(clientContent).toContain(
         "method: 'run', argsJson: convertedParams });",

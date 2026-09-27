@@ -378,12 +378,6 @@ function propertyKey(name: string): string {
   return IDENTIFIER.test(name) ? name : JSON.stringify(name);
 }
 
-function propertyAccess(object: string, name: string): string {
-  return IDENTIFIER.test(name)
-    ? `${object}.${name}`
-    : `${object}[${JSON.stringify(name)}]`;
-}
-
 // Only an externally tagged enum with a payload is rewritten to and from the
 // `{ name, payload }` shape; every other enum's TS type is its wire shape.
 function hasNamePayloadShape(typeDef: AbiTypeDef): boolean {
@@ -580,10 +574,10 @@ function decodeTaggedVariant(
   seen: Set<string>,
 ): string | null {
   const content = typeDef.content;
+  const read = content ? `${expr}[${JSON.stringify(content)}]` : expr;
   const branches = typeDef.variants
     .map((variant) => {
       if (!variant.payload) return '';
-      const read = content ? `${expr}[${JSON.stringify(content)}]` : expr;
       const inner = decodeExpr(variant.payload, manifest, read, seen);
       if (!inner) return '';
       const value = content
@@ -951,7 +945,7 @@ function generateMethod(
       );
       lines.push(`    const convertedParams = { ...params } as any;`);
       for (const param of variantParams) {
-        const ref = propertyAccess('convertedParams', param.name);
+        const ref = `convertedParams[${JSON.stringify(param.name)}]`;
         lines.push(
           `    if (${ref} && typeof ${ref} === 'object' && 'name' in ${ref}) {`,
           `      if ('payload' in ${ref}) {`,
