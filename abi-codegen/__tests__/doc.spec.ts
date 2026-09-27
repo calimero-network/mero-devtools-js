@@ -204,4 +204,18 @@ describe('doc emission as JSDoc', () => {
       '  | {\n    /**\n     * A note was added.\n     */\n    name: "Noted";\n    payload: string;\n  }',
     );
   });
+
+  it('puts the type doc on the union of a tagged variant', () => {
+    const m = documented();
+    m.types.Action = {
+      kind: 'variant',
+      tag: 'kind',
+      doc: 'Something happened.',
+      variants: [{ name: 'Ping', payload: { kind: 'string' } }],
+    };
+    const rendered = generateClient(parseAbiManifest(m), 'DocClient');
+    expect(rendered).toContain(
+      '/**\n * Something happened.\n */\nexport type Action =',
+    );
+  });
 });
