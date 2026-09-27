@@ -91,6 +91,7 @@
     },
     "Action": {
       "kind": "variant",
+      "doc": "A change a member asks for.",
       "variants": [
         {
           "name": "Noop"
@@ -99,7 +100,8 @@
           "name": "Rename",
           "payload": {
             "kind": "string"
-          }
+          },
+          "doc": "Give the folder this new name."
         }
       ]
     },

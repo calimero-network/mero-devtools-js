@@ -575,6 +575,7 @@ function generateTypeDefinition(
       lines.push(`export const ${safeName} = {`);
       typeDef.variants.forEach((variant) => {
         const variantName = formatIdentifier(variant.name);
+        if (variant.doc) lines.push(...jsdocBlock(variant.doc, '  '));
         if (variant.payload) {
           const payloadType = generateTypeRef(variant.payload, manifest, false);
           lines.push(
@@ -705,14 +706,21 @@ function generateAbiEventUnion(
       event.payload &&
       !('$ref' in event.payload) &&
       event.payload.kind === 'unit';
+    const members = [`name: "${event.name}"`];
     if (event.payload && !isInlineUnit) {
-      const payloadType = generateTypeRef(event.payload, manifest);
-      return `  | { name: "${event.name}"; payload: ${payloadType} }`;
-    } else {
-      return `  | { name: "${event.name}" }`;
+      members.push(`payload: ${generateTypeRef(event.payload, manifest)}`);
     }
+    if (!event.doc) return [`  | { ${members.join('; ')} }`];
+    // On `name`, where narrowing or constructing the event surfaces it; a doc
+    // on the union member itself is not shown by TypeScript tooling.
+    return [
+      '  | {',
+      ...jsdocBlock(event.doc, '    '),
+      ...members.map((member) => `    ${member};`),
+      '  }',
+    ];
   });
-  lines.push(...eventLines);
+  lines.push(...eventLines.flat());
   lines.push(';');
 
   return lines;

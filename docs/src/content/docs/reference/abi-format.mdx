@@ -394,4 +394,5 @@ A method may also carry `returns_doc` (its `# Returns` section), `destructive: t
 They are emitted as `@returns <returns_doc>` and one `@remarks` line naming the flags that are set, e.g. `@remarks destructive, idempotent`.
 
 Type and field docs are emitted above the declaration they describe.
-Variant and event docs, and the doc of a named `bytes` type (which emits no declaration), stay on the parsed manifest and are not emitted.
+A variant member's doc is emitted above its factory function, and an event's doc above the `name` property of its `AbiEvent` member.
+Member docs of a unit-only variant (a string-literal union) and the doc of a named `bytes` type (which emits no declaration) have nothing to attach to and are not emitted.

@@ -42,8 +42,14 @@ export type ActionPayload =
   | { name: 'Noop' }
   | { name: 'Rename'; payload: string }
 
+/**
+ * A change a member asks for.
+ */
 export const Action = {
   Noop: (): ActionPayload => ({ name: 'Noop' }),
+  /**
+   * Give the folder this new name.
+   */
   Rename: (rename: string): ActionPayload => ({ name: 'Rename', payload: rename }),
 } as const;
 

@@ -16,6 +16,14 @@ const documented = (): any => ({
       doc: 'Entry lifecycle.',
       variants: [{ name: 'Live', doc: 'Visible to readers.' }],
     },
+    Action: {
+      kind: 'variant',
+      doc: 'Something happened.',
+      variants: [
+        { name: 'Ping', payload: { kind: 'string' }, doc: 'Carries a note.' },
+        { name: 'Stop', doc: 'Ends the session.' },
+      ],
+    },
     EntryId: {
       kind: 'alias',
       target: { kind: 'string' },
@@ -42,7 +50,10 @@ const documented = (): any => ({
     },
     { name: 'plain', params: [] },
   ],
-  events: [{ name: 'Stored', doc: 'Emitted after set.' }],
+  events: [
+    { name: 'Stored', doc: 'Emitted after set.' },
+    { name: 'Noted', payload: { kind: 'string' }, doc: 'A note was added.' },
+  ],
 });
 
 describe('doc fields', () => {
@@ -164,18 +175,31 @@ describe('doc emission as JSDoc', () => {
   });
 
   it('puts the type doc on the factory for a payload-bearing variant', () => {
-    const m = documented();
-    m.types.Action = {
-      kind: 'variant',
-      doc: 'Something happened.',
-      variants: [{ name: 'Ping', payload: { kind: 'string' } }],
-    };
-    const rendered = generateClient(parseAbiManifest(m), 'DocClient');
-    expect(rendered).toContain(
+    expect(out).toContain(
       '/**\n * Something happened.\n */\nexport const Action = {',
     );
-    expect(rendered).not.toContain(
+    expect(out).not.toContain(
       '/**\n * Something happened.\n */\nexport type ActionPayload =',
+    );
+  });
+
+  it('puts a variant member doc above its factory function', () => {
+    expect(out).toContain('  /**\n   * Carries a note.\n   */\n  Ping: (');
+    expect(out).toContain('  /**\n   * Ends the session.\n   */\n  Stop: (');
+  });
+
+  // A unit-only variant is a string-literal union: no member declaration exists
+  // for a doc to attach to, so tooling could never surface it.
+  it('emits no member doc for a unit-only variant', () => {
+    expect(out).not.toContain('Visible to readers.');
+  });
+
+  it('puts an event doc on the name property of its AbiEvent member', () => {
+    expect(out).toContain(
+      '  | {\n    /**\n     * Emitted after set.\n     */\n    name: "Stored";\n  }',
+    );
+    expect(out).toContain(
+      '  | {\n    /**\n     * A note was added.\n     */\n    name: "Noted";\n    payload: string;\n  }',
     );
   });
 });
