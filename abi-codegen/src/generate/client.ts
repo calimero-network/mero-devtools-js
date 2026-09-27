@@ -5,6 +5,7 @@ import {
   AbiTypeDef,
   AbiEvent,
   AbiField,
+  AbiVariant,
   AbiVariantDef,
 } from '../model.js';
 import {
@@ -383,6 +384,34 @@ function propertyAccess(object: string, name: string): string {
     : `${object}[${JSON.stringify(name)}]`;
 }
 
+// Only an externally tagged enum with a payload is rewritten to and from the
+// `{ name, payload }` shape; every other enum's TS type is its wire shape.
+function hasNamePayloadShape(typeDef: AbiTypeDef): boolean {
+  return (
+    typeDef.kind === 'variant' &&
+    !typeDef.tag &&
+    !typeDef.untagged &&
+    !isAllUnitVariant(typeDef)
+  );
+}
+
+// One member of a tagged or untagged enum's union, as serde writes it.
+function wireVariantMember(
+  variant: AbiVariant,
+  typeDef: AbiVariantDef,
+  manifest: AbiManifest,
+): string {
+  const payload =
+    variant.payload && generateTypeRef(variant.payload, manifest, false);
+  if (typeDef.untagged) return payload ?? 'null';
+  const tag = `${propertyKey(typeDef.tag!)}: ${JSON.stringify(variant.name)}`;
+  if (!payload) return `{ ${tag} }`;
+  if (typeDef.content) {
+    return `{ ${tag}; ${propertyKey(typeDef.content)}: ${payload} }`;
+  }
+  return `({ ${tag} } & ${payload})`;
+}
+
 /**
  * Check whether every variant in a variant typedef is unit (no payload).
  * Serde's default for such enums is to serialize as bare strings, so we
@@ -503,6 +532,9 @@ function decodeVariant(
   expr: string,
   seen: Set<string>,
 ): string | null {
+  // An untagged value names no variant, so bytes in its payload stay arrays.
+  if (typeDef.untagged) return null;
+  if (typeDef.tag) return decodeTaggedVariant(typeDef, manifest, expr, seen);
   if (isAllUnitVariant(typeDef)) return null;
 
   const payloadBranches = typeDef.variants
@@ -540,6 +572,29 @@ function jsdocBlock(doc: string, indent: string): string[] {
   return [`${indent}/**`, ...jsdocLines(doc, indent), `${indent} */`];
 }
 
+// Internally tagged payload fields sit beside the tag; adjacent ones under `content`.
+function decodeTaggedVariant(
+  typeDef: AbiVariantDef,
+  manifest: AbiManifest,
+  expr: string,
+  seen: Set<string>,
+): string | null {
+  const content = typeDef.content;
+  const branches = typeDef.variants
+    .map((variant) => {
+      if (!variant.payload) return '';
+      const read = content ? `${expr}[${JSON.stringify(content)}]` : expr;
+      const inner = decodeExpr(variant.payload, manifest, read, seen);
+      if (!inner) return '';
+      const value = content
+        ? `{ ...${expr}, ${propertyKey(content)}: ${inner} }`
+        : inner;
+      return `${expr}[${JSON.stringify(typeDef.tag)}] === ${JSON.stringify(variant.name)} ? ${value} : `;
+    })
+    .join('');
+  return branches ? `(${branches}${expr})` : null;
+}
+
 /**
  * Generate a single type definition
  */
@@ -561,7 +616,13 @@ function generateTypeDefinition(
     }
     lines.push('}');
   } else if (typeDef.kind === 'variant') {
-    if (isAllUnitVariant(typeDef)) {
+    if (typeDef.tag || typeDef.untagged) {
+      const members = typeDef.variants.map(
+        (variant) => `  | ${wireVariantMember(variant, typeDef, manifest)}`,
+      );
+      lines.push(`export type ${safeName} =`, ...members);
+      lines[lines.length - 1] += ';';
+    } else if (isAllUnitVariant(typeDef)) {
       // Unit-only variants — serde serializes these as bare strings.
       // Emit a string-literal union type that matches the wire format.
       const literals = typeDef.variants.map((v) => `'${v.name}'`).join(' | ');
@@ -634,8 +695,7 @@ function generateTypeDefinition(
   }
 
   // A mixed variant's doc is already placed above its factory const.
-  const docAlreadyPlaced =
-    typeDef.kind === 'variant' && !isAllUnitVariant(typeDef);
+  const docAlreadyPlaced = hasNamePayloadShape(typeDef);
   // A bytes type carries no doc: it declares nothing a doc could attach to.
   const doc = typeDef.kind === 'bytes' ? undefined : typeDef.doc;
   return doc && lines.length > 0 && !docAlreadyPlaced
@@ -882,11 +942,7 @@ function generateMethod(
     // serde expects `{ Variant: payload }`, so rewrite those params before the call.
     const variantParams = method.params.filter((param) => {
       const typeDef = resolveNamedType(param.type, manifest);
-      return (
-        typeDef !== undefined &&
-        typeDef.kind === 'variant' &&
-        !isAllUnitVariant(typeDef)
-      );
+      return typeDef !== undefined && hasNamePayloadShape(typeDef);
     });
 
     if (variantParams.length > 0) {
@@ -962,7 +1018,7 @@ function generateTypeRef(
     //   - all-unit  → bare name is the type alias (e.g. type Status = 'A' | 'B')
     //   - mixed     → use {Name}Payload (the discriminated union)
     if (typeDef && typeDef.kind === 'variant') {
-      if (isAllUnitVariant(typeDef)) {
+      if (!hasNamePayloadShape(typeDef)) {
         return useTypesNamespace ? `Types.${typeName}` : typeName;
       }
       const payloadType = useTypesNamespace

@@ -11,6 +11,7 @@ import { generateClient } from '../src/generate/client.js';
 let Client: any;
 let conformance: any;
 let newtypes: any;
+let wire: any;
 
 async function importClient(fixture: string, clientName: string): Promise<any> {
   const manifest = loadAbiManifestFromFile(
@@ -33,6 +34,7 @@ beforeAll(async () => {
   conformance = await importClient('abi_conformance.json', 'Client');
   Client = conformance.Client;
   newtypes = await importClient('newtypes_abi.json', 'NT');
+  wire = await importClient('serde_wire_abi.json', 'Wire');
 });
 
 function callAndCapture(
@@ -191,5 +193,102 @@ describe('rpc.execute response decode', () => {
     expect(command.name).toBe('Store');
     expect(command.payload).toBeInstanceOf(newtypes.CalimeroBytes);
     expect(command.payload.toArray()).toEqual([0, 255]);
+  });
+});
+
+// Wire examples from core's serde tagging tests: mero-design `ElementData`
+// (internal), mero-drive `Change` (untagged) and `DriveError`-style `Outcome` (adjacent).
+describe('serde enum tagging', () => {
+  const element = (data: unknown) => ({
+    id: 'e1',
+    data,
+    strokeWidth: 2,
+    shadowColor: '#000',
+    cornerRadius: null,
+  });
+
+  const roundTrip = async (method: string, param: string, value: unknown) => {
+    const sent = await callAndCapture(method, { [param]: value }, wire.Wire);
+    const received = await callWithResponse(method, value, wire.Wire);
+    return { sent: sent.argsJson[param], received };
+  };
+
+  it('sends and reads an internally tagged enum as tag plus payload fields', async () => {
+    for (const data of [
+      { kind: 'rect' },
+      { kind: 'line', points: '0,0 10,10' },
+      { kind: 'text', content: 'hi', fontSize: 12, bold: true },
+      { kind: 'image', naturalWidth: 64, blobId: 'b1' },
+    ]) {
+      const { sent, received } = await roundTrip(
+        'addElement',
+        'element',
+        element(data),
+      );
+      expect(sent).toEqual(element(data));
+      expect(received).toEqual(element(data));
+    }
+  });
+
+  it('sends and reads an untagged enum as its bare payload', async () => {
+    for (const change of [
+      { retain: 6, attributes: { bold: 'true' } },
+      { insert: 'hi', attributes: null },
+      { delete: 2 },
+    ]) {
+      const { sent, received } = await roundTrip(
+        'applyDelta',
+        'change',
+        change,
+      );
+      expect(sent).toEqual(change);
+      expect(received).toEqual(change);
+    }
+  });
+
+  it('sends and reads an adjacently tagged enum under tag and content', async () => {
+    for (const outcome of [
+      { kind: 'NotFound', data: 'doc' },
+      { kind: 'Done' },
+    ]) {
+      const { sent, received } = await roundTrip('settle', 'outcome', outcome);
+      expect(sent).toEqual(outcome);
+      expect(received).toEqual(outcome);
+    }
+  });
+
+  it('decodes bytes beside the tag of an internally tagged payload', async () => {
+    const file = await callWithResponse(
+      'attachment',
+      { kind: 'file', hash: [0, 255] },
+      wire.Wire,
+    );
+    expect(file.kind).toBe('file');
+    expect(file.hash).toBeInstanceOf(wire.CalimeroBytes);
+    expect(file.hash.toArray()).toEqual([0, 255]);
+    expect(
+      await callWithResponse('attachment', { kind: 'none' }, wire.Wire),
+    ).toEqual({ kind: 'none' });
+  });
+
+  it('decodes bytes under the content key of an adjacently tagged payload', async () => {
+    const stored = await callWithResponse(
+      'receipt',
+      { kind: 'Stored', data: [7] },
+      wire.Wire,
+    );
+    expect(stored.data).toBeInstanceOf(wire.CalimeroBytes);
+    expect(stored.data.toArray()).toEqual([7]);
+    expect(
+      await callWithResponse('receipt', { kind: 'Missing' }, wire.Wire),
+    ).toEqual({ kind: 'Missing' });
+  });
+
+  it('keeps a non-identifier field name as its wire key', async () => {
+    const { sent, received } = await roundTrip('setStyle', 'style', {
+      'line-cap': 'round',
+    });
+    expect(sent).toEqual({ 'line-cap': 'round' });
+    expect(received).toEqual({ 'line-cap': 'round' });
   });
 });

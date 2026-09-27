@@ -1,0 +1,352 @@
+{
+  "schema_version": "wasm-abi/1",
+  "types": {
+    "ElementData": {
+      "kind": "variant",
+      "tag": "kind",
+      "variants": [
+        {
+          "name": "rect"
+        },
+        {
+          "name": "line",
+          "payload": {
+            "$ref": "ElementData_Line"
+          }
+        },
+        {
+          "name": "text",
+          "payload": {
+            "$ref": "ElementData_Text"
+          }
+        },
+        {
+          "name": "image",
+          "payload": {
+            "$ref": "ElementData_Image"
+          }
+        }
+      ]
+    },
+    "ElementData_Line": {
+      "kind": "record",
+      "fields": [
+        {
+          "name": "points",
+          "type": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    "ElementData_Text": {
+      "kind": "record",
+      "fields": [
+        {
+          "name": "content",
+          "type": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "fontSize",
+          "type": {
+            "kind": "u32"
+          }
+        },
+        {
+          "name": "bold",
+          "type": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "text_align",
+          "nullable": true,
+          "type": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    "ElementData_Image": {
+      "kind": "record",
+      "fields": [
+        {
+          "name": "naturalWidth",
+          "type": {
+            "kind": "u32"
+          }
+        },
+        {
+          "name": "blobId",
+          "type": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    "Element": {
+      "kind": "record",
+      "fields": [
+        {
+          "name": "id",
+          "type": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "data",
+          "type": {
+            "$ref": "ElementData"
+          }
+        },
+        {
+          "name": "strokeWidth",
+          "type": {
+            "kind": "u32"
+          }
+        },
+        {
+          "name": "shadowColor",
+          "nullable": true,
+          "type": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "cornerRadius",
+          "nullable": true,
+          "type": {
+            "kind": "u32"
+          }
+        }
+      ]
+    },
+    "Change": {
+      "kind": "variant",
+      "untagged": true,
+      "variants": [
+        {
+          "name": "Retain",
+          "payload": {
+            "$ref": "Change_Retain"
+          }
+        },
+        {
+          "name": "Insert",
+          "payload": {
+            "$ref": "Change_Insert"
+          }
+        },
+        {
+          "name": "Delete",
+          "payload": {
+            "$ref": "Change_Delete"
+          }
+        }
+      ]
+    },
+    "Change_Retain": {
+      "kind": "record",
+      "fields": [
+        {
+          "name": "retain",
+          "type": {
+            "kind": "u32"
+          }
+        },
+        {
+          "name": "attributes",
+          "nullable": true,
+          "type": {
+            "kind": "map",
+            "key": {
+              "kind": "string"
+            },
+            "value": {
+              "kind": "string"
+            }
+          }
+        }
+      ]
+    },
+    "Change_Insert": {
+      "kind": "record",
+      "fields": [
+        {
+          "name": "insert",
+          "type": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "attributes",
+          "nullable": true,
+          "type": {
+            "kind": "map",
+            "key": {
+              "kind": "string"
+            },
+            "value": {
+              "kind": "string"
+            }
+          }
+        }
+      ]
+    },
+    "Change_Delete": {
+      "kind": "record",
+      "fields": [
+        {
+          "name": "delete",
+          "type": {
+            "kind": "u32"
+          }
+        }
+      ]
+    },
+    "Outcome": {
+      "kind": "variant",
+      "tag": "kind",
+      "content": "data",
+      "variants": [
+        {
+          "name": "NotFound",
+          "payload": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "Done"
+        }
+      ]
+    },
+    "Attachment": {
+      "kind": "variant",
+      "tag": "kind",
+      "variants": [
+        {
+          "name": "file",
+          "payload": {
+            "$ref": "Attachment_File"
+          }
+        },
+        {
+          "name": "none"
+        }
+      ]
+    },
+    "Attachment_File": {
+      "kind": "record",
+      "fields": [
+        {
+          "name": "hash",
+          "type": {
+            "kind": "bytes"
+          }
+        }
+      ]
+    },
+    "Receipt": {
+      "kind": "variant",
+      "tag": "kind",
+      "content": "data",
+      "variants": [
+        {
+          "name": "Stored",
+          "payload": {
+            "kind": "bytes"
+          }
+        },
+        {
+          "name": "Missing"
+        }
+      ]
+    },
+    "Style": {
+      "kind": "record",
+      "fields": [
+        {
+          "name": "line-cap",
+          "type": {
+            "kind": "string"
+          }
+        }
+      ]
+    }
+  },
+  "methods": [
+    {
+      "name": "add_element",
+      "params": [
+        {
+          "name": "element",
+          "type": {
+            "$ref": "Element"
+          }
+        }
+      ],
+      "returns": {
+        "$ref": "Element"
+      }
+    },
+    {
+      "name": "apply_delta",
+      "params": [
+        {
+          "name": "change",
+          "type": {
+            "$ref": "Change"
+          }
+        }
+      ],
+      "returns": {
+        "$ref": "Change"
+      }
+    },
+    {
+      "name": "settle",
+      "params": [
+        {
+          "name": "outcome",
+          "type": {
+            "$ref": "Outcome"
+          }
+        }
+      ],
+      "returns": {
+        "$ref": "Outcome"
+      }
+    },
+    {
+      "name": "attachment",
+      "params": [],
+      "returns": {
+        "$ref": "Attachment"
+      }
+    },
+    {
+      "name": "receipt",
+      "params": [],
+      "returns": {
+        "$ref": "Receipt"
+      }
+    },
+    {
+      "name": "set_style",
+      "params": [
+        {
+          "name": "style",
+          "type": {
+            "$ref": "Style"
+          }
+        }
+      ],
+      "returns": {
+        "$ref": "Style"
+      }
+    }
+  ],
+  "events": []
+}
