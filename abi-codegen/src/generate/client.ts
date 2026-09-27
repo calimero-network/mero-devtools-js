@@ -393,10 +393,9 @@ function hasNamePayloadShape(typeDef: AbiTypeDef): boolean {
 function wireVariantMember(
   variant: AbiVariant,
   typeDef: AbiVariantDef,
-  manifest: AbiManifest,
+  typeOf: (payload: AbiTypeRef) => string,
 ): string {
-  const payload =
-    variant.payload && generateTypeRef(variant.payload, manifest, false);
+  const payload = variant.payload && typeOf(variant.payload);
   if (typeDef.untagged) return payload ?? 'null';
   const tag = `${propertyKey(typeDef.tag!)}: ${JSON.stringify(variant.name)}`;
   if (!payload) return `{ ${tag} }`;
@@ -404,6 +403,59 @@ function wireVariantMember(
     return `{ ${tag}; ${propertyKey(typeDef.content)}: ${payload} }`;
   }
   return `({ ${tag} } & ${payload})`;
+}
+
+// The type of a value left exactly as serde wrote it, for where nothing decodes
+// it: bytes stay number arrays and a `{ name, payload }` enum stays tagged.
+function wireTypeRef(
+  typeRef: AbiTypeRef,
+  manifest: AbiManifest,
+  seen: Set<string> = new Set(),
+): string {
+  if (!decodeExpr(typeRef, manifest, 'value', seen)) {
+    return generateTypeRef(typeRef, manifest, false);
+  }
+  const wire = (ref: AbiTypeRef, next = seen) =>
+    wireTypeRef(ref, manifest, next);
+
+  if ('$ref' in typeRef) {
+    const typeDef = manifest.types[typeRef.$ref];
+    const next = new Set(seen).add(typeRef.$ref);
+    if (typeDef.kind === 'alias') return wire(typeDef.target, next);
+    if (typeDef.kind !== 'variant') return wire(typeDef, next);
+    const members = typeDef.variants.map((variant) => {
+      if (typeDef.tag) {
+        return wireVariantMember(variant, typeDef, (ref) => wire(ref, next));
+      }
+      return variant.payload
+        ? `{ ${propertyKey(variant.name)}: ${wire(variant.payload, next)} }`
+        : JSON.stringify(variant.name);
+    });
+    return `(${members.join(' | ')})`;
+  }
+
+  switch (typeRef.kind) {
+    case 'bytes':
+      return 'number[]';
+    case 'list':
+      return `Array<${wire(typeRef.items)}>`;
+    case 'map':
+      return `Record<${generateTypeRef(typeRef.key, manifest)}, ${wire(typeRef.value)}>`;
+    case 'tuple':
+      return `[${typeRef.elements.map((el) => wire(el)).join(', ')}]`;
+    case 'record': {
+      if (typeRef.crdt_type && typeRef.inner_type) {
+        return wire(typeRef.inner_type);
+      }
+      const fields = typeRef.fields.map((field) => {
+        const type = wire(field.type);
+        return `${propertyKey(field.name)}: ${field.nullable ? `${type} | null` : type}`;
+      });
+      return `{ ${fields.join('; ')} }`;
+    }
+    default:
+      return generateTypeRef(typeRef, manifest, false);
+  }
 }
 
 /**
@@ -611,8 +663,13 @@ function generateTypeDefinition(
     lines.push('}');
   } else if (typeDef.kind === 'variant') {
     if (typeDef.tag || typeDef.untagged) {
+      // Nothing decodes an untagged value, so its payloads keep their wire types.
+      const typeOf = (payload: AbiTypeRef) =>
+        typeDef.untagged
+          ? wireTypeRef(payload, manifest)
+          : generateTypeRef(payload, manifest, false);
       const members = typeDef.variants.map(
-        (variant) => `  | ${wireVariantMember(variant, typeDef, manifest)}`,
+        (variant) => `  | ${wireVariantMember(variant, typeDef, typeOf)}`,
       );
       lines.push(`export type ${safeName} =`, ...members);
       lines[lines.length - 1] += ';';

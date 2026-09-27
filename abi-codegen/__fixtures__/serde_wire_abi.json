@@ -274,6 +274,45 @@
           }
         }
       ]
+    },
+    "Chunk": {
+      "kind": "variant",
+      "untagged": true,
+      "variants": [
+        {
+          "name": "Blob",
+          "payload": {
+            "$ref": "Chunk_Blob"
+          }
+        },
+        {
+          "name": "Raw",
+          "payload": {
+            "kind": "bytes"
+          }
+        },
+        {
+          "name": "Text",
+          "payload": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "Empty"
+        }
+      ]
+    },
+    "Chunk_Blob": {
+      "kind": "record",
+      "fields": [
+        {
+          "name": "hash",
+          "type": {
+            "kind": "bytes",
+            "size": 2
+          }
+        }
+      ]
     }
   },
   "methods": [
@@ -345,6 +384,13 @@
       ],
       "returns": {
         "$ref": "Style"
+      }
+    },
+    {
+      "name": "chunk",
+      "params": [],
+      "returns": {
+        "$ref": "Chunk"
       }
     }
   ],

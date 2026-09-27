@@ -187,7 +187,7 @@ export type Outcome =
 ```
 
 `content` requires `tag`, and `untagged` excludes both; the schema rejects other combinations.
-Bytes inside an untagged payload are not converted to `CalimeroBytes`, because the value does not say which variant it is.
+Bytes inside an untagged payload are not converted to `CalimeroBytes`, because the value does not say which variant it is, so the generated type keeps them as `number[]`.
 
 ### Aliases are newtypes, and they are branded
 

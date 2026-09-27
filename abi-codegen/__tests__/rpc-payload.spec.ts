@@ -2,8 +2,9 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
 import { pathToFileURL } from 'url';
-import { loadAbiManifestFromFile } from '../src/parse.js';
+import { loadAbiManifestFromFile, parseAbiManifest } from '../src/parse.js';
 import { generateClient } from '../src/generate/client.js';
+import { mockMeroImport, typecheckGeneratedClient } from './tsc.js';
 
 // The rest of the suite asserts the emitted *source text*. That cannot tell a
 // correct payload from a renamed field, so this one actually runs a generated
@@ -17,10 +18,7 @@ async function importClient(fixture: string, clientName: string): Promise<any> {
   const manifest = loadAbiManifestFromFile(
     path.join(__dirname, '../__fixtures__', fixture),
   );
-  const source = generateClient(manifest, clientName).replace(
-    `import {\n  MeroJs,\n} from '@calimero-network/mero-react';`,
-    `type MeroJs = { rpc: { execute: (params: any) => Promise<any> } };`,
-  );
+  const source = mockMeroImport(generateClient(manifest, clientName));
 
   const dir = path.join(__dirname, '../tmp/rpc-payload', clientName);
   fs.mkdirSync(dir, { recursive: true });
@@ -268,6 +266,91 @@ describe('serde enum tagging', () => {
     expect(
       await callWithResponse('receipt', { kind: 'Missing' }, wire.Wire),
     ).toEqual({ kind: 'Missing' });
+  });
+
+  // An untagged value names no variant, so nothing in it can be decoded: its type
+  // must be what arrives, including a null unit member and raw byte arrays.
+  it('types an untagged enum as the raw value it arrives as', async () => {
+    for (const chunk of [{ hash: [0, 255] }, [1, 2], 'hi', null]) {
+      expect(await callWithResponse('chunk', chunk, wire.Wire)).toEqual(chunk);
+    }
+    const manifest = loadAbiManifestFromFile(
+      path.join(__dirname, '../__fixtures__/serde_wire_abi.json'),
+    );
+    typecheckGeneratedClient(
+      generateClient(manifest, 'Wire'),
+      `
+const chunks: Chunk[] = [{ hash: [0, 255] }, [1, 2], 'hi', null];
+export type _Used = typeof chunks;
+`,
+      'untagged-wire',
+    );
+  });
+
+  it('types bytes nested anywhere in an untagged payload as number arrays', () => {
+    const bytes = { kind: 'bytes' };
+    const manifest = parseAbiManifest({
+      schema_version: 'wasm-abi/1',
+      types: {
+        Hash: { kind: 'alias', target: { kind: 'bytes', size: 1 } },
+        Ext: {
+          kind: 'variant',
+          variants: [{ name: 'Put', payload: bytes }, { name: 'Clear' }],
+        },
+        Int: {
+          kind: 'variant',
+          tag: 'kind',
+          variants: [{ name: 'File', payload: { $ref: 'Int_File' } }],
+        },
+        Int_File: { kind: 'record', fields: [{ name: 'hash', type: bytes }] },
+        Rec: {
+          kind: 'record',
+          fields: [
+            { name: 'h', type: { $ref: 'Hash' } },
+            { name: 'list', type: { kind: 'list', items: bytes } },
+            {
+              name: 'map',
+              type: { kind: 'map', key: { kind: 'string' }, value: bytes },
+            },
+            {
+              name: 'pair',
+              type: { kind: 'tuple', elements: [bytes, { kind: 'u32' }] },
+            },
+            { name: 'opt', type: bytes, nullable: true },
+            {
+              name: 'reg',
+              type: {
+                kind: 'record',
+                fields: [],
+                crdt_type: 'lww_register',
+                inner_type: bytes,
+              },
+            },
+            { name: 'ext', type: { $ref: 'Ext' } },
+            { name: 'int', type: { $ref: 'Int' } },
+          ],
+        },
+        Wrapped: {
+          kind: 'variant',
+          untagged: true,
+          variants: [{ name: 'Rec', payload: { $ref: 'Rec' } }],
+        },
+      },
+      methods: [{ name: 'wrapped', params: [], returns: { $ref: 'Wrapped' } }],
+      events: [],
+    });
+    typecheckGeneratedClient(
+      generateClient(manifest, 'Nested'),
+      `
+const base = { h: [1], list: [[1]], map: { a: [1] }, pair: [[1], 2] as [number[], number], opt: null, reg: [1] };
+const values: Wrapped[] = [
+  { ...base, ext: { Put: [1] }, int: { kind: 'File', hash: [1] } },
+  { ...base, ext: 'Clear', int: { kind: 'File', hash: [1] } },
+];
+export type _Used = typeof values;
+`,
+      'untagged-nested-wire',
+    );
   });
 
   it('keeps a non-identifier field name as its wire key', async () => {

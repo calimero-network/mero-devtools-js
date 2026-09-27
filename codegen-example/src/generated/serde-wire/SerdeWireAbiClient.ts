@@ -75,6 +75,16 @@ export interface Style {
   "line-cap": string;
 }
 
+export type Chunk =
+  | { hash: number[] }
+  | number[]
+  | string
+  | null;
+
+export interface Chunk_Blob {
+  hash: CalimeroBytes;
+}
+
 
 /**
  * Utility class for handling byte conversions in Calimero
@@ -173,6 +183,14 @@ export class SerdeWireAbiClient {
   public async setStyle(params: { style: Style }): Promise<Style> {
     const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'set_style', argsJson: params });
     return response as Style;
+  }
+
+  /**
+   * chunk
+   */
+  public async chunk(): Promise<Chunk> {
+    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'chunk', argsJson: {} });
+    return response as Chunk;
   }
 
 }
