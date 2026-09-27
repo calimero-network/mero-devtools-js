@@ -16,9 +16,9 @@ describe('WASM-ABI v1 Parser', () => {
       );
 
       expect(manifest.schema_version).toBe('wasm-abi/1');
-      expect(manifest.methods).toHaveLength(41);
+      expect(manifest.methods).toHaveLength(42);
       expect(manifest.events).toHaveLength(7);
-      expect(Object.keys(manifest.types)).toHaveLength(17);
+      expect(Object.keys(manifest.types)).toHaveLength(22);
 
       // Check specific types
       expect(manifest.types.AbiState).toBeDefined();

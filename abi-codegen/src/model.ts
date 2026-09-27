@@ -126,6 +126,14 @@ export interface AbiVariantDef {
   kind: 'variant';
   variants: AbiVariant[];
   doc?: string;
+  // Serde's enum representation. None of them: externally tagged, the default
+  // (`"Unit"` / `{ "Variant": payload }`).
+  // `tag` alone: internally tagged, `{ [tag]: "Variant", ...payload }`.
+  // `tag` and `content`: adjacently tagged, `{ [tag]: "Variant", [content]: payload }`.
+  // `untagged`: the bare payload, a unit variant as `null`.
+  tag?: string;
+  content?: string;
+  untagged?: true;
 }
 
 // Method definition

@@ -221,7 +221,7 @@ export class NewtypesAbiClient {
    * dispatch_action
    */
   public async dispatchAction(params: { action: ActionPayload }): Promise<void> {
-    // Serde tags a payload-bearing variant as { Variant: payload }
+    // Rewrite each { name, payload } variant into the wire form its serde tagging expects
     const convertedParams = { ...params } as any;
     if (convertedParams.action && typeof convertedParams.action === 'object' && 'name' in convertedParams.action) {
       if ('payload' in convertedParams.action) {
@@ -258,7 +258,7 @@ export class NewtypesAbiClient {
    * run_command
    */
   public async runCommand(params: { cmd: CommandPayload; label: string }): Promise<void> {
-    // Serde tags a payload-bearing variant as { Variant: payload }
+    // Rewrite each { name, payload } variant into the wire form its serde tagging expects
     const convertedParams = { ...params } as any;
     if (convertedParams.cmd && typeof convertedParams.cmd === 'object' && 'name' in convertedParams.cmd) {
       if ('payload' in convertedParams.cmd) {
@@ -288,7 +288,7 @@ export class NewtypesAbiClient {
    * run_aliased_command
    */
   public async runAliasedCommand(params: { cmd: AliasOfCommand }): Promise<void> {
-    // Serde tags a payload-bearing variant as { Variant: payload }
+    // Rewrite each { name, payload } variant into the wire form its serde tagging expects
     const convertedParams = { ...params } as any;
     if (convertedParams.cmd && typeof convertedParams.cmd === 'object' && 'name' in convertedParams.cmd) {
       if ('payload' in convertedParams.cmd) {

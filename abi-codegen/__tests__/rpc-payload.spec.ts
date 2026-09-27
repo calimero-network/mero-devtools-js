@@ -4,6 +4,7 @@ import * as path from 'path';
 import { pathToFileURL } from 'url';
 import { loadAbiManifestFromFile } from '../src/parse.js';
 import { generateClient } from '../src/generate/client.js';
+import type { AbiManifest } from '../src/model.js';
 
 // The rest of the suite asserts the emitted *source text*. That cannot tell a
 // correct payload from a renamed field, so this one actually runs a generated
@@ -16,6 +17,13 @@ async function importClient(fixture: string, clientName: string): Promise<any> {
   const manifest = loadAbiManifestFromFile(
     path.join(__dirname, '../__fixtures__', fixture),
   );
+  return importGenerated(manifest, clientName);
+}
+
+async function importGenerated(
+  manifest: AbiManifest,
+  clientName: string,
+): Promise<any> {
   const source = generateClient(manifest, clientName).replace(
     `import {\n  MeroJs,\n} from '@calimero-network/mero-react';`,
     `type MeroJs = { rpc: { execute: (params: any) => Promise<any> } };`,
@@ -191,5 +199,131 @@ describe('rpc.execute response decode', () => {
     expect(command.name).toBe('Store');
     expect(command.payload).toBeInstanceOf(newtypes.CalimeroBytes);
     expect(command.payload.toArray()).toEqual([0, 255]);
+  });
+});
+
+// The three non-default serde enum representations: internally tagged
+// (`WireShape`, tag "kind"), adjacently tagged (`WireOutcome`, tag "kind",
+// content "data") and untagged (`WireStep`). All three reach the client inside
+// `echo_wire`'s record, so it exercises the recursive decode.
+describe('tagged and untagged enums', () => {
+  it('decodes an internally tagged payload variant without its tag', async () => {
+    const w = await callWithResponse('echoWire', {
+      strokeWidth: 1,
+      blobId: 'b',
+      shape: { kind: 'text', fontSize: 12 },
+      step: { retain: 3 },
+      outcome: { kind: 'Failed', data: 'x' },
+    });
+    expect(w.shape).toEqual({ name: 'text', payload: { fontSize: 12 } });
+    expect(w.outcome).toEqual({ name: 'Failed', payload: 'x' });
+    expect(w.step).toEqual({ retain: 3 });
+    expect(w.strokeWidth).toBe(1);
+  });
+
+  it('decodes tagged unit variants to a bare name', async () => {
+    const w = await callWithResponse('echoWire', {
+      strokeWidth: 1,
+      blobId: 'b',
+      shape: { kind: 'rect' },
+      step: { insert: 'hi' },
+      outcome: { kind: 'Done' },
+    });
+    expect(w.shape).toEqual({ name: 'rect' });
+    expect(w.outcome).toEqual({ name: 'Done' });
+    expect(w.step).toEqual({ insert: 'hi' });
+  });
+
+  it('keeps an unknown tagged variant rather than dropping it', async () => {
+    const w = await callWithResponse('echoWire', {
+      strokeWidth: 1,
+      blobId: 'b',
+      shape: { kind: 'circle', r: 2 },
+      step: { retain: 0 },
+      outcome: { kind: 'Pending', data: 7 },
+    });
+    expect(w.shape).toEqual({ name: 'circle', payload: { r: 2 } });
+    expect(w.outcome).toEqual({ name: 'Pending', payload: 7 });
+  });
+
+  describe('as top-level params', () => {
+    let Tagged: any;
+
+    beforeAll(async () => {
+      const text = { $ref: 'Shape_Text' };
+      const manifest: AbiManifest = {
+        schema_version: 'wasm-abi/1',
+        types: {
+          Shape: {
+            kind: 'variant',
+            tag: 'kind',
+            variants: [{ name: 'rect' }, { name: 'text', payload: text }],
+          },
+          Shape_Text: {
+            kind: 'record',
+            fields: [{ name: 'fontSize', type: { kind: 'u32' } }],
+          },
+          Outcome: {
+            kind: 'variant',
+            tag: 't',
+            content: 'c',
+            variants: [
+              { name: 'Done' },
+              { name: 'Failed', payload: { kind: 'string' } },
+            ],
+          },
+          Step: {
+            kind: 'variant',
+            untagged: true,
+            variants: [
+              { name: 'Retain', payload: { kind: 'u32' } },
+              { name: 'Skip' },
+            ],
+          },
+        },
+        methods: [
+          {
+            name: 'draw',
+            params: [
+              { name: 's', type: { $ref: 'Shape' } },
+              { name: 'o', type: { $ref: 'Outcome' } },
+              { name: 'st', type: { $ref: 'Step' } },
+            ],
+          },
+        ],
+        events: [],
+      };
+      Tagged = (await importGenerated(manifest, 'Tagged')).Tagged;
+    });
+
+    it('sends internal, adjacent and untagged variants in their wire shape', async () => {
+      const payload = await callAndCapture(
+        'draw',
+        {
+          s: { name: 'text', payload: { fontSize: 9 } },
+          o: { name: 'Failed', payload: 'boom' },
+          st: 4,
+        },
+        Tagged,
+      );
+      expect(payload.argsJson).toEqual({
+        s: { kind: 'text', fontSize: 9 },
+        o: { t: 'Failed', c: 'boom' },
+        st: 4,
+      });
+    });
+
+    it('sends tagged unit variants as an object carrying only the tag', async () => {
+      const payload = await callAndCapture(
+        'draw',
+        { s: { name: 'rect' }, o: { name: 'Done' }, st: null },
+        Tagged,
+      );
+      expect(payload.argsJson).toEqual({
+        s: { kind: 'rect' },
+        o: { t: 'Done' },
+        st: null,
+      });
+    });
   });
 });

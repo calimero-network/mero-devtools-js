@@ -659,6 +659,48 @@ describe('Codegen', () => {
       expect(typesContent).not.toContain('MatchStatusPayload');
     });
 
+    it('keeps a tagged all-unit enum as a discriminated union', () => {
+      // Internally tagged, a unit variant is `{ "kind": "Pending" }`, not a
+      // bare string, so a string-literal union would describe the wrong wire.
+      const parsed = parseAbiManifest({
+        ...allUnitAbi,
+        types: {
+          ...allUnitAbi.types,
+          MatchStatus: { ...allUnitAbi.types.MatchStatus, tag: 'kind' },
+        },
+      });
+      const clientContent = generateClient(parsed, 'TestClient');
+      expect(clientContent).not.toContain(
+        "export type MatchStatus = 'Pending' | 'Active' | 'Finished';",
+      );
+      expect(clientContent).toContain('MatchStatusPayload');
+    });
+
+    it('emits an untagged enum as the union of its payloads', () => {
+      const parsed = parseAbiManifest({
+        schema_version: 'wasm-abi/1',
+        types: {
+          Step: {
+            kind: 'variant',
+            untagged: true,
+            variants: [
+              { name: 'Retain', payload: { kind: 'u32' } },
+              { name: 'Insert', payload: { kind: 'string' } },
+              { name: 'Skip' },
+            ],
+          },
+        },
+        methods: [{ name: 'next', params: [], returns: { $ref: 'Step' } }],
+        events: [],
+      });
+      const clientContent = generateClient(parsed, 'TestClient');
+      expect(clientContent).toContain(
+        'export type Step = number | string | null;',
+      );
+      expect(clientContent).not.toContain('StepPayload');
+      expect(clientContent).toContain('Promise<Step>');
+    });
+
     it('should reference all-unit variant by bare name in record fields', () => {
       const parsed = parseAbiManifest(allUnitAbi);
       const clientContent = generateClient(parsed, 'TestClient');

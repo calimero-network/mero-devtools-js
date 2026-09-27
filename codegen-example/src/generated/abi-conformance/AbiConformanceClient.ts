@@ -19,25 +19,20 @@ export type ActionPayload =
   | { name: 'Ping' }
   | { name: 'SetName'; payload: string }
   | { name: 'Update'; payload: UpdatePayload }
-  | { name: 'MultiTuple'; payload: Action_MultiTuple }
+  | { name: 'MultiTuple'; payload: [number, string] }
   | { name: 'MultiStruct'; payload: Action_MultiStruct }
 
 export const Action = {
   Ping: (): ActionPayload => ({ name: 'Ping' }),
   SetName: (setname: string): ActionPayload => ({ name: 'SetName', payload: setname }),
   Update: (update: UpdatePayload): ActionPayload => ({ name: 'Update', payload: update }),
-  MultiTuple: (multituple: Action_MultiTuple): ActionPayload => ({ name: 'MultiTuple', payload: multituple }),
+  MultiTuple: (multituple: [number, string]): ActionPayload => ({ name: 'MultiTuple', payload: multituple }),
   MultiStruct: (multistruct: Action_MultiStruct): ActionPayload => ({ name: 'MultiStruct', payload: multistruct }),
 } as const;
 
 export interface Action_MultiStruct {
   x: number;
   y: string;
-}
-
-export interface Action_MultiTuple {
-  field_0: number;
-  field_1: string;
 }
 
 /**
@@ -62,11 +57,6 @@ export interface CustomRecord {
 export interface Event_StructEvent {
   id: number;
   name: string;
-}
-
-export interface Event_TupleEvent {
-  field_0: number;
-  field_1: string;
 }
 
 export type Hash64 = CalimeroBytes;
@@ -133,6 +123,46 @@ export interface UpdatePayload {
 
 export type UserId32 = CalimeroBytes;
 
+export type WireOutcomePayload =
+  | { name: 'Done' }
+  | { name: 'Failed'; payload: string }
+
+export const WireOutcome = {
+  Done: (): WireOutcomePayload => ({ name: 'Done' }),
+  Failed: (failed: string): WireOutcomePayload => ({ name: 'Failed', payload: failed }),
+} as const;
+
+export interface WireRecord {
+  strokeWidth: number;
+  blobId: string;
+  shape: WireShapePayload;
+  step: WireStep;
+  outcome: WireOutcomePayload;
+}
+
+export type WireShapePayload =
+  | { name: 'rect' }
+  | { name: 'text'; payload: WireShape_Text }
+
+export const WireShape = {
+  rect: (): WireShapePayload => ({ name: 'rect' }),
+  text: (text: WireShape_Text): WireShapePayload => ({ name: 'text', payload: text }),
+} as const;
+
+export interface WireShape_Text {
+  fontSize: number;
+}
+
+export type WireStep = WireStep_Retain | WireStep_Insert;
+
+export interface WireStep_Insert {
+  insert: string;
+}
+
+export interface WireStep_Retain {
+  retain: number;
+}
+
 
 export type DataPayload = CalimeroBytes;
 
@@ -141,6 +171,7 @@ export type NamedPayload = string;
 
 
 
+export type TupleEventPayload = [number, string];
 
 export type AbiEvent =
   | { name: "ActionTaken"; payload: ActionPayload }
@@ -154,7 +185,7 @@ export type AbiEvent =
     name: "Ping";
   }
   | { name: "StructEvent"; payload: Event_StructEvent }
-  | { name: "TupleEvent"; payload: Event_TupleEvent }
+  | { name: "TupleEvent"; payload: [number, string] }
 ;
 
 
@@ -240,7 +271,7 @@ export class AbiConformanceClient {
    * act
    */
   public async act(params: { a: ActionPayload }): Promise<number> {
-    // Serde tags a payload-bearing variant as { Variant: payload }
+    // Rewrite each { name, payload } variant into the wire form its serde tagging expects
     const convertedParams = { ...params } as any;
     if (convertedParams.a && typeof convertedParams.a === 'object' && 'name' in convertedParams.a) {
       if ('payload' in convertedParams.a) {
@@ -358,6 +389,14 @@ export class AbiConformanceClient {
   }
 
   /**
+   * echo_wire
+   */
+  public async echoWire(params: { w: WireRecord }): Promise<WireRecord> {
+    const response: any = await this._mero.rpc.execute({ contextId: this._contextId, method: 'echo_wire', argsJson: params });
+    return (response == null ? null : ({ ...response, shape: (response['shape']["kind"] === "rect" ? { name: "rect" } : response['shape']["kind"] === "text" ? { name: "text", payload: (({ ["kind"]: _tag, ...rest }: any) => rest)(response['shape']) } : { name: response['shape']["kind"], payload: (({ ["kind"]: _tag, ...rest }: any) => rest)(response['shape']) }), outcome: (response['outcome']["kind"] === "Done" ? { name: "Done" } : response['outcome']["kind"] === "Failed" ? { name: "Failed", payload: response['outcome']["data"] } : { name: response['outcome']["kind"], payload: response['outcome']["data"] }) })) as WireRecord;
+  }
+
+  /**
    * find_person
    */
   public async findPerson(params: { name: string }): Promise<Person> {
@@ -403,7 +442,7 @@ export class AbiConformanceClient {
    * handle_multi_struct
    */
   public async handleMultiStruct(params: { a: ActionPayload }): Promise<number> {
-    // Serde tags a payload-bearing variant as { Variant: payload }
+    // Rewrite each { name, payload } variant into the wire form its serde tagging expects
     const convertedParams = { ...params } as any;
     if (convertedParams.a && typeof convertedParams.a === 'object' && 'name' in convertedParams.a) {
       if ('payload' in convertedParams.a) {
@@ -420,7 +459,7 @@ export class AbiConformanceClient {
    * handle_multi_tuple
    */
   public async handleMultiTuple(params: { a: ActionPayload }): Promise<string> {
-    // Serde tags a payload-bearing variant as { Variant: payload }
+    // Rewrite each { name, payload } variant into the wire form its serde tagging expects
     const convertedParams = { ...params } as any;
     if (convertedParams.a && typeof convertedParams.a === 'object' && 'name' in convertedParams.a) {
       if ('payload' in convertedParams.a) {
