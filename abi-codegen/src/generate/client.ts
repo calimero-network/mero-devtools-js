@@ -1013,10 +1013,7 @@ function generateTypeRef(
       return 'CalimeroBytes'; // Return CalimeroBytes for bytes types
     }
 
-    // For variant types, choose between string-literal union and discriminated
-    // union based on whether all variants are unit (no payload):
-    //   - all-unit  → bare name is the type alias (e.g. type Status = 'A' | 'B')
-    //   - mixed     → use {Name}Payload (the discriminated union)
+    // Only a `{ name, payload }` enum is referenced by its {Name}Payload union.
     if (typeDef && typeDef.kind === 'variant') {
       if (!hasNamePayloadShape(typeDef)) {
         return useTypesNamespace ? `Types.${typeName}` : typeName;
