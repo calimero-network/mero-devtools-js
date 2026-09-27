@@ -3,7 +3,7 @@
   "schema": {
     "name": "wasm-abi.schema.json",
     "source": "core/crates/wasm-abi/wasm-abi.schema.json",
-    "sha256": "1bbb4d1a0d13fc217a17e4c77174e11aa883b20180098708e650f942033cbc53"
+    "sha256": "8ec102cfeb14bd89fbeca38daec1b946547cf42ee02e6136f17e989c1d69667e"
   },
   "abis": [
     {

@@ -472,4 +472,42 @@ describe('WASM-ABI v1 Parser', () => {
       );
     });
   });
+
+  describe('enum tagging keys', () => {
+    const withEnum = (variant: object) => ({
+      schema_version: 'wasm-abi/1',
+      types: { E: variant },
+      methods: [],
+      events: [],
+    });
+
+    it('accepts each serde representation', () => {
+      for (const variant of [
+        { kind: 'variant', variants: [{ name: 'A' }] },
+        { kind: 'variant', variants: [{ name: 'A' }], tag: 'kind' },
+        {
+          kind: 'variant',
+          variants: [{ name: 'A' }],
+          tag: 'kind',
+          content: 'data',
+        },
+        { kind: 'variant', variants: [{ name: 'A' }], untagged: true },
+      ]) {
+        expect(parseAbiManifest(withEnum(variant)).types.E).toEqual(variant);
+      }
+    });
+
+    it('rejects combinations serde cannot produce', () => {
+      for (const variant of [
+        { kind: 'variant', variants: [], content: 'data' },
+        { kind: 'variant', variants: [], tag: 'kind', untagged: true },
+        { kind: 'variant', variants: [], untagged: false },
+        { kind: 'variant', variants: [], tagged: 'kind' },
+      ]) {
+        expect(() => parseAbiManifest(withEnum(variant))).toThrow(
+          /ABI schema validation failed/,
+        );
+      }
+    });
+  });
 });

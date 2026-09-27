@@ -126,6 +126,10 @@ export interface AbiVariantDef {
   kind: 'variant';
   variants: AbiVariant[];
   doc?: string;
+  // serde's enum representation; all absent means externally tagged.
+  tag?: string;
+  content?: string;
+  untagged?: true;
 }
 
 // Method definition
