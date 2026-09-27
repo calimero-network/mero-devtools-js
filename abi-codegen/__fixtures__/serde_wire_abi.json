@@ -215,7 +215,8 @@
           "name": "NotFound",
           "payload": {
             "kind": "string"
-          }
+          },
+          "doc": "No document has this id."
         },
         {
           "name": "Done"

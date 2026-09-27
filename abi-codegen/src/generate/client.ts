@@ -389,20 +389,36 @@ function hasNamePayloadShape(typeDef: AbiTypeDef): boolean {
   );
 }
 
+// An object type as a union member. A doc goes on its first property, where
+// narrowing or constructing the member surfaces it; one on the member does not.
+function unionObjectType(members: string[], doc?: string): string {
+  if (!doc) return `{ ${members.join('; ')} }`;
+  return [
+    '{',
+    ...jsdocBlock(doc, '    '),
+    ...members.map((member) => `    ${member};`),
+    '  }',
+  ].join('\n');
+}
+
 // One member of a tagged or untagged enum's union, as serde writes it.
 function wireVariantMember(
   variant: AbiVariant,
   typeDef: AbiVariantDef,
   typeOf: (payload: AbiTypeRef) => string,
+  doc?: string,
 ): string {
   const payload = variant.payload && typeOf(variant.payload);
   if (typeDef.untagged) return payload ?? 'null';
   const tag = `${propertyKey(typeDef.tag!)}: ${JSON.stringify(variant.name)}`;
-  if (!payload) return `{ ${tag} }`;
+  if (!payload) return unionObjectType([tag], doc);
   if (typeDef.content) {
-    return `{ ${tag}; ${propertyKey(typeDef.content)}: ${payload} }`;
+    return unionObjectType(
+      [tag, `${propertyKey(typeDef.content)}: ${payload}`],
+      doc,
+    );
   }
-  return `({ ${tag} } & ${payload})`;
+  return `(${unionObjectType([tag], doc)} & ${payload})`;
 }
 
 // The type of a value left exactly as serde wrote it, for where nothing decodes
@@ -669,7 +685,8 @@ function generateTypeDefinition(
           ? wireTypeRef(payload, manifest)
           : generateTypeRef(payload, manifest, false);
       const members = typeDef.variants.map(
-        (variant) => `  | ${wireVariantMember(variant, typeDef, typeOf)}`,
+        (variant) =>
+          `  | ${wireVariantMember(variant, typeDef, typeOf, variant.doc)}`,
       );
       lines.push(`export type ${safeName} =`, ...members);
       lines[lines.length - 1] += ';';
@@ -833,17 +850,9 @@ function generateAbiEventUnion(
     if (event.payload && !isInlineUnit) {
       members.push(`payload: ${generateTypeRef(event.payload, manifest)}`);
     }
-    if (!event.doc) return [`  | { ${members.join('; ')} }`];
-    // On `name`, where narrowing or constructing the event surfaces it; a doc
-    // on the union member itself is not shown by TypeScript tooling.
-    return [
-      '  | {',
-      ...jsdocBlock(event.doc, '    '),
-      ...members.map((member) => `    ${member};`),
-      '  }',
-    ];
+    return `  | ${unionObjectType(members, event.doc)}`;
   });
-  lines.push(...eventLines.flat());
+  lines.push(...eventLines);
   lines.push(';');
 
   return lines;

@@ -56,7 +56,13 @@ export interface Change_Delete {
 }
 
 export type Outcome =
-  | { kind: "NotFound"; data: string }
+  | {
+    /**
+     * No document has this id.
+     */
+    kind: "NotFound";
+    data: string;
+  }
   | { kind: "Done" };
 
 export type Attachment =

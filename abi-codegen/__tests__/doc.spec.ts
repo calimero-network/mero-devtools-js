@@ -218,4 +218,50 @@ describe('doc emission as JSDoc', () => {
       '/**\n * Something happened.\n */\nexport type Action =',
     );
   });
+
+  it('puts a tagged variant member doc on its tag property', () => {
+    const m = documented();
+    m.types.Adjacent = {
+      kind: 'variant',
+      tag: 'kind',
+      content: 'data',
+      variants: [
+        { name: 'Ping', payload: { kind: 'string' }, doc: 'Carries a note.' },
+        { name: 'Stop', doc: 'Ends the session.' },
+      ],
+    };
+    m.types.Internal = {
+      kind: 'variant',
+      tag: 'kind',
+      variants: [
+        { name: 'Put', payload: { $ref: 'Entry' }, doc: 'Stores it.' },
+      ],
+    };
+    const rendered = generateClient(parseAbiManifest(m), 'DocClient');
+    expect(rendered).toContain(
+      '  | {\n    /**\n     * Carries a note.\n     */\n    kind: "Ping";\n    data: string;\n  }',
+    );
+    expect(rendered).toContain(
+      '  | {\n    /**\n     * Ends the session.\n     */\n    kind: "Stop";\n  }',
+    );
+    expect(rendered).toContain(
+      '  | ({\n    /**\n     * Stores it.\n     */\n    kind: "Put";\n  } & Entry)',
+    );
+  });
+
+  // An untagged member is its bare payload type, which has no property of its
+  // own to carry the doc.
+  it('emits no member doc for an untagged variant', () => {
+    const m = documented();
+    m.types.Loose = {
+      kind: 'variant',
+      untagged: true,
+      variants: [
+        { name: 'Text', payload: { kind: 'string' }, doc: 'Free text.' },
+      ],
+    };
+    const rendered = generateClient(parseAbiManifest(m), 'DocClient');
+    expect(rendered).toContain('export type Loose =\n  | string;');
+    expect(rendered).not.toContain('Free text.');
+  });
 });
