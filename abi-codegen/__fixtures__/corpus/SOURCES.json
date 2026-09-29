@@ -3,13 +3,13 @@
   "schema": {
     "name": "wasm-abi.schema.json",
     "source": "core/crates/wasm-abi/wasm-abi.schema.json",
-    "sha256": "8ec102cfeb14bd89fbeca38daec1b946547cf42ee02e6136f17e989c1d69667e"
+    "sha256": "edf4e3ab7c3c7fc8662e4b5299905449973ea6ac53eb668d2f931bdd56b9d59b"
   },
   "abis": [
     {
       "name": "core-abi_conformance-expected.json",
       "source": "core/apps/abi_conformance/abi.expected.json",
-      "sha256": "051f7a1ce877787fd77cf2532d04d444e0c1af24571e43704af36c37048b0926"
+      "sha256": "7e9d58aae9cfc6131e71e5367dcf5333f6303c4de34aaafb4b7db3406bcfec06"
     }
   ]
 }

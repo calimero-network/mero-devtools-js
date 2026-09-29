@@ -429,7 +429,7 @@ The generator emits these as JSDoc, so editors show them on hover:
  */
 ```
 
-A method may also carry `returns_doc` (its `# Returns` section), `destructive: true` and `idempotent: true`; each is absent otherwise.
+A method may also carry `returns_doc` (its `# Returns` section), `destructive: true`, `idempotent: true` and `handler: true` (an `#[app::handler]` event handler); each is absent otherwise.
 They are emitted as `@returns <returns_doc>` and one `@remarks` line naming the flags that are set, e.g. `@remarks destructive, idempotent`.
 
 Type and field docs are emitted above the declaration they describe.

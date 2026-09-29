@@ -465,6 +465,20 @@ export class AbiConformanceClient {
   }
 
   /**
+   * handler_noop
+   *
+   * Event handler - must surface `handler: true` in the ABI.
+   *
+   * @remarks handler
+   *
+   * @intent mutating
+   */
+  public async handlerNoop(): Promise<void> {
+    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'handler_noop', argsJson: {} });
+    return response as void;
+  }
+
+  /**
    * init
    */
   public async init(): Promise<void> {
