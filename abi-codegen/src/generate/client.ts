@@ -880,6 +880,7 @@ function generateMethod(
   const remarks = [
     method.destructive && 'destructive',
     method.idempotent && 'idempotent',
+    method.handler && 'handler',
   ].filter(Boolean);
   const tags = [
     ...method.params.map(

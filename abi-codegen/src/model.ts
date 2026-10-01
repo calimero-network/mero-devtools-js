@@ -160,6 +160,7 @@ export interface AbiMethod {
   returns_doc?: string;
   destructive?: boolean;
   idempotent?: boolean;
+  handler?: boolean;
 }
 
 // Parameter definition

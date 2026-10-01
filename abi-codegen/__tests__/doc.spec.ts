@@ -48,6 +48,7 @@ const documented = (): any => ({
       destructive: true,
       idempotent: true,
     },
+    { name: 'on_stored', params: [], handler: true },
     { name: 'plain', params: [] },
   ],
   events: [
@@ -136,6 +137,12 @@ describe('doc emission as JSDoc', () => {
         '   */',
         '  public async remove(',
       ].join('\n'),
+    );
+  });
+
+  it('renders the handler flag as a remark', () => {
+    expect(out).toContain(
+      ['   * on_stored', '   *', '   * @remarks handler', '   */'].join('\n'),
     );
   });
 
