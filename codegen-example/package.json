@@ -11,7 +11,7 @@
     "regenerate:abi-conformance": "cd ../abi-codegen && npm run build && npm run generate:example"
   },
   "dependencies": {
-    "@calimero-network/mero-react": "^6.0.3",
+    "@calimero-network/mero-react": "^9.6.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },

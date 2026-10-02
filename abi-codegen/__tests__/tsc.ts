@@ -6,8 +6,8 @@ import { execSync } from 'child_process';
 // and runs without the dependency installed.
 export function mockMeroImport(clientContent: string): string {
   return clientContent.replace(
-    `import {\n  MeroJs,\n} from '@calimero-network/mero-react';`,
-    `type MeroJs = { rpc: { execute: (params: any) => Promise<any> } };`,
+    `import type {\n  ExecuteTransport,\n} from '@calimero-network/mero-react';`,
+    `type ExecuteTransport = { execute: (params: any) => Promise<any> };`,
   );
 }
 

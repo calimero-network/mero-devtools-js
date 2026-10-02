@@ -123,8 +123,10 @@ export function generateClient(
   lines.push('');
 
   // Add imports
-  lines.push('import {');
-  lines.push('  MeroJs,');
+  // `import type`: the only binding taken from the SDK is an interface, and a
+  // value import of it breaks under `verbatimModuleSyntax`.
+  lines.push('import type {');
+  lines.push('  ExecuteTransport,');
 
   lines.push(`} from '${importPath}';`);
   lines.push('');
@@ -248,11 +250,27 @@ export function generateClient(
 
   // Add Client class
   lines.push(`export class ${clientName} {`);
-  lines.push(`  private _mero: MeroJs;`);
+  // What a generated client actually needs is one method: `execute`. Depending
+  // on the concrete `MeroJs` instead made the transport part of this client's
+  // public contract, so a relay-transport client -- which answers `execute`
+  // identically -- could not be passed without a cast at the call site.
+  lines.push(`  private _transport: ExecuteTransport;`);
   lines.push(`  private _contextId: string;`);
   lines.push('');
-  lines.push(`  constructor(mero: MeroJs, contextId: string) {`);
-  lines.push(`    this._mero = mero;`);
+  lines.push(`  /**`);
+  lines.push(
+    `   * @param client Anything that can execute: a node client, a relay client,`,
+  );
+  lines.push(
+    `   *   or a bare {@link ExecuteTransport}. Which one it is stays hidden here.`,
+  );
+  lines.push(`   */`);
+  lines.push(
+    `  constructor(client: ExecuteTransport | { readonly rpc: ExecuteTransport }, contextId: string) {`,
+  );
+  lines.push(
+    `    this._transport = 'execute' in client ? client : client.rpc;`,
+  );
   lines.push(`    this._contextId = contextId;`);
   lines.push(`  }`);
   lines.push('');
@@ -980,7 +998,7 @@ function generateMethod(
       `  public async ${methodName}(): Promise<${nullableReturnType}> {`,
     );
     lines.push(
-      `    ${responseDecl}await this._mero.rpc.execute({ contextId: this._contextId, method: '${method.name}', argsJson: {} });`,
+      `    ${responseDecl}await this._transport.execute({ contextId: this._contextId, method: '${method.name}', argsJson: {} });`,
     );
   } else {
     // 1+ parameters - build object type and expose single params argument
@@ -1030,7 +1048,7 @@ function generateMethod(
       ? `convertCalimeroBytesForWasm(${args})`
       : args;
     lines.push(
-      `    ${responseDecl}await this._mero.rpc.execute({ contextId: this._contextId, method: '${method.name}', argsJson: ${argsJson} });`,
+      `    ${responseDecl}await this._transport.execute({ contextId: this._contextId, method: '${method.name}', argsJson: ${argsJson} });`,
     );
   }
 
