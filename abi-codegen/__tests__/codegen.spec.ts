@@ -44,9 +44,12 @@ describe('Codegen', () => {
       expect(typesContent).toContain(
         '| { name: "PersonUpdated"; payload: Person }',
       );
-      // Unit events should not have payload property
-      expect(typesContent).toContain('| { name: "Ping" }');
-      expect(typesContent).not.toContain('| { name: "Ping"; payload:');
+      // Unit events should not have payload property. Ping is documented, so
+      // its member carries the event's doc above `name`.
+      expect(typesContent).toContain(
+        '  | {\n    /**\n     * Liveness signal with no payload.\n     */\n    name: "Ping";\n  }',
+      );
+      expect(typesContent).not.toMatch(/name: "Ping";\s*payload:/);
     });
 
     it('should handle nullable fields correctly', () => {
@@ -84,8 +87,8 @@ describe('Codegen', () => {
       const typesContent = generateClient(manifest, 'Types');
 
       // Unit events should not have payload property in the union
-      expect(typesContent).toContain('| { name: "Ping" }');
-      expect(typesContent).not.toContain('| { name: "Ping"; payload:');
+      expect(typesContent).toContain('    name: "Ping";\n  }');
+      expect(typesContent).not.toMatch(/name: "Ping";\s*payload:/);
 
       // Unit events should not generate payload type aliases
       expect(typesContent).not.toContain('export type PingPayload =');
@@ -781,7 +784,7 @@ describe('Codegen', () => {
       });
       const clientContent = generateClient(parsed, 'TestClient');
       expect(clientContent).toContain(
-        'convertedParams.cmd = { [convertedParams.cmd.name]: convertedParams.cmd.payload };',
+        'convertedParams["cmd"] = { [convertedParams["cmd"].name]: convertedParams["cmd"].payload };',
       );
       expect(clientContent).toContain(
         "method: 'run', argsJson: convertedParams });",
@@ -830,7 +833,7 @@ describe('Codegen', () => {
       });
       const clientContent = generateClient(parsed, 'TestClient');
       expect(clientContent).toContain(
-        'convertedParams.cmd = { [convertedParams.cmd.name]: convertedParams.cmd.payload };',
+        'convertedParams["cmd"] = { [convertedParams["cmd"].name]: convertedParams["cmd"].payload };',
       );
       expect(clientContent).toContain(
         "method: 'run', argsJson: convertedParams });",
@@ -851,7 +854,7 @@ describe('Codegen', () => {
       });
       const clientContent = generateClient(parsed, 'TestClient');
       expect(clientContent).toContain(
-        'convertedParams.cmd = { [convertedParams.cmd.name]: convertedParams.cmd.payload };',
+        'convertedParams["cmd"] = { [convertedParams["cmd"].name]: convertedParams["cmd"].payload };',
       );
       expect(clientContent).toContain(
         "method: 'run', argsJson: convertedParams });",
@@ -1094,7 +1097,7 @@ describe('Codegen', () => {
       );
     });
 
-    it('should decode a field whose name is a TypeScript keyword at its wire key', () => {
+    it('should declare and decode a keyword-named field under its wire key', () => {
       const parsed = parseAbiManifest({
         schema_version: 'wasm-abi/1',
         types: {
@@ -1107,14 +1110,13 @@ describe('Codegen', () => {
         events: [],
       });
       const clientContent = generateClient(parsed, 'TestClient');
-      // The interface declares `default_`, but the node sends `default`.
-      expect(clientContent).toContain('default_: CalimeroBytes;');
+      expect(clientContent).toContain('default: CalimeroBytes;');
       expect(clientContent).toContain(
-        "default_: new CalimeroBytes(response['default'])",
+        "default: new CalimeroBytes(response['default'])",
       );
     });
 
-    it('should copy a sanitised field to its declared name even with nothing to decode', () => {
+    it('should quote a non-identifier field name instead of renaming it', () => {
       const parsed = parseAbiManifest({
         schema_version: 'wasm-abi/1',
         types: {
@@ -1130,14 +1132,10 @@ describe('Codegen', () => {
         events: [],
       });
       const clientContent = generateClient(parsed, 'TestClient');
-      // Without the copy, `rec.my_field` reads undefined: the value only ever
-      // arrives under the wire key the interface does not declare.
-      expect(clientContent).toContain('my_field: string;');
-      expect(clientContent).toContain(
-        "({ ...response, my_field: response['my-field'] })",
-      );
-      // A field needing neither sanitising nor decoding stays on the spread.
-      expect(clientContent).not.toContain("plain: response['plain']");
+      // A renamed key would be sent under a name the node does not know.
+      expect(clientContent).toContain('"my-field": string;');
+      expect(clientContent).not.toContain('my_field');
+      expect(clientContent).toContain('return response as Rec;');
     });
 
     // The bundled schema rejects crdt_type on a named typedef, but `AbiRecord`

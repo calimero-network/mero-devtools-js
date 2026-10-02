@@ -16,9 +16,9 @@ describe('WASM-ABI v1 Parser', () => {
       );
 
       expect(manifest.schema_version).toBe('wasm-abi/1');
-      expect(manifest.methods).toHaveLength(40);
+      expect(manifest.methods).toHaveLength(43);
       expect(manifest.events).toHaveLength(7);
-      expect(Object.keys(manifest.types)).toHaveLength(17);
+      expect(Object.keys(manifest.types)).toHaveLength(22);
 
       // Check specific types
       expect(manifest.types.AbiState).toBeDefined();
@@ -470,6 +470,44 @@ describe('WASM-ABI v1 Parser', () => {
         'pattern',
         '^/[a-z]+(/[a-z]+)*$',
       );
+    });
+  });
+
+  describe('enum tagging keys', () => {
+    const withEnum = (variant: object) => ({
+      schema_version: 'wasm-abi/1',
+      types: { E: variant },
+      methods: [],
+      events: [],
+    });
+
+    it('accepts each serde representation', () => {
+      for (const variant of [
+        { kind: 'variant', variants: [{ name: 'A' }] },
+        { kind: 'variant', variants: [{ name: 'A' }], tag: 'kind' },
+        {
+          kind: 'variant',
+          variants: [{ name: 'A' }],
+          tag: 'kind',
+          content: 'data',
+        },
+        { kind: 'variant', variants: [{ name: 'A' }], untagged: true },
+      ]) {
+        expect(() => parseAbiManifest(withEnum(variant))).not.toThrow();
+      }
+    });
+
+    it('rejects combinations serde cannot produce', () => {
+      for (const variant of [
+        { kind: 'variant', variants: [], content: 'data' },
+        { kind: 'variant', variants: [], tag: 'kind', untagged: true },
+        { kind: 'variant', variants: [], untagged: false },
+        { kind: 'variant', variants: [], tagged: 'kind' },
+      ]) {
+        expect(() => parseAbiManifest(withEnum(variant))).toThrow(
+          /ABI schema validation failed/,
+        );
+      }
     });
   });
 });

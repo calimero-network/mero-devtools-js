@@ -63,6 +63,7 @@
         "unordered_map",
         "sorted_map",
         "authored_map",
+        "authored_sorted_map",
         "unordered_set",
         "sorted_set",
         "replicated_growable_array",
@@ -223,6 +224,9 @@
         },
         "nullable": {
           "type": "boolean"
+        },
+        "doc": {
+          "type": "string"
         }
       }
     },
@@ -239,6 +243,9 @@
         },
         "payload": {
           "$ref": "#/definitions/TypeRef"
+        },
+        "doc": {
+          "type": "string"
         }
       }
     },
@@ -257,6 +264,9 @@
               "items": {
                 "$ref": "#/definitions/Field"
               }
+            },
+            "doc": {
+              "type": "string"
             }
           }
         },
@@ -273,7 +283,28 @@
               "items": {
                 "$ref": "#/definitions/Variant"
               }
+            },
+            "doc": {
+              "type": "string"
+            },
+            "tag": {
+              "type": "string",
+              "description": "Key naming the variant inside the object (#[serde(tag)]). Absent: externally tagged."
+            },
+            "content": {
+              "type": "string",
+              "description": "Key holding the payload of an adjacently tagged enum (#[serde(content)]). Requires tag."
+            },
+            "untagged": {
+              "const": true,
+              "description": "The bare payload, a unit variant as null (#[serde(untagged)]). Excludes tag and content."
             }
+          },
+          "dependencies": {
+            "content": ["tag"]
+          },
+          "not": {
+            "required": ["untagged", "tag"]
           }
         },
         {
@@ -291,6 +322,9 @@
               "type": "string",
               "format": "regex",
               "minLength": 1
+            },
+            "doc": {
+              "type": "string"
             }
           }
         },
@@ -312,6 +346,9 @@
         },
         "nullable": {
           "type": "boolean"
+        },
+        "doc": {
+          "type": "string"
         }
       }
     },
@@ -348,6 +385,10 @@
         "returns_nullable": {
           "type": "boolean"
         },
+        "returns_doc": {
+          "type": "string",
+          "description": "What the return value means, from the method's # Returns doc section. Absent when there is none."
+        },
         "errors": {
           "type": "array",
           "items": {
@@ -364,6 +405,25 @@
         "xcall_callers": {
           "type": "string",
           "enum": ["any_in_namespace", "same_app"]
+        },
+        "tee_every_secs": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "destructive": {
+          "type": "boolean",
+          "description": "Deletes or irreversibly overwrites data (#[app::destructive]). Emitted only when true; a hint, not enforced."
+        },
+        "idempotent": {
+          "type": "boolean",
+          "description": "Repeating the call with the same arguments has no further effect (#[app::idempotent]). Emitted only when true; a hint, not enforced."
+        },
+        "handler": {
+          "type": "boolean",
+          "description": "Declared event handler (#[app::handler]). The node runs an event's handler only if its method sets this. Emitted only when true."
+        },
+        "doc": {
+          "type": "string"
         }
       }
     },
@@ -377,6 +437,9 @@
         },
         "payload": {
           "$ref": "#/definitions/TypeRef"
+        },
+        "doc": {
+          "type": "string"
         }
       }
     }

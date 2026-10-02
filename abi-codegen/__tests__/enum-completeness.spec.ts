@@ -26,6 +26,7 @@ const CANONICAL_CRDT_TYPES = [
   'unordered_map',
   'sorted_map',
   'authored_map',
+  'authored_sorted_map',
   'unordered_set',
   'sorted_set',
   'replicated_growable_array',

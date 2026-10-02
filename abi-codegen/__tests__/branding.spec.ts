@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import fs from 'fs';
 import path from 'path';
-import { execSync } from 'child_process';
 import { loadAbiManifestFromFile } from '../src/parse.js';
 import { generateClient } from '../src/generate/client.js';
 import { parseAbiManifest } from '../src/parse.js';
 import { brandBaseType } from '../src/generate/emit.js';
+import { mockMeroImport, typecheckGeneratedClient } from './tsc.js';
 
 const newtypesAbiPath = path.join(
   __dirname,
@@ -80,13 +80,6 @@ export type _Used = [
 ];
 `;
 
-function mockMeroImport(clientContent: string): string {
-  return clientContent.replace(
-    `import type {\n  ExecuteTransport,\n} from '@calimero-network/mero-react';`,
-    `type ExecuteTransport = { execute: (params: any) => Promise<any> };`,
-  );
-}
-
 // Import the generated client for real, so the emitted validation is executed
 // rather than only string-matched.
 async function importGeneratedClient(
@@ -100,56 +93,15 @@ async function importGeneratedClient(
   return import(/* @vite-ignore */ file);
 }
 
-function typecheckGeneratedClient(
-  clientContent: string,
-  dirName: string,
-): void {
-  const tmpDir = path.join(__dirname, '../tmp', dirName);
-  fs.mkdirSync(tmpDir, { recursive: true });
-
-  fs.writeFileSync(
-    path.join(tmpDir, 'client.ts'),
-    mockMeroImport(clientContent) + TYPE_ASSERTIONS,
-  );
-  fs.writeFileSync(
-    path.join(tmpDir, 'tsconfig.json'),
-    JSON.stringify({
-      compilerOptions: {
-        target: 'ES2020',
-        module: 'ESNext',
-        moduleResolution: 'node',
-        strict: true,
-        noEmit: true,
-        skipLibCheck: true,
-        // codegen-example's tsconfig sets noUnusedLocals, so an unused `response`
-        // binding on a void-returning method must fail here too
-        noUnusedLocals: true,
-      },
-      include: ['*.ts'],
-    }),
-  );
-
-  // `-p` with an explicit path is required: without it tsc walks up and picks
-  // abi-codegen's own tsconfig, compiling src/ and never seeing this file.
-  const tsconfigPath = path.join(tmpDir, 'tsconfig.json');
-  try {
-    execSync(`npx tsc --noEmit -p ${tsconfigPath}`, {
-      cwd: tmpDir,
-      stdio: 'pipe',
-      encoding: 'utf-8',
-    });
-  } catch (error: any) {
-    throw new Error(
-      `tsc rejected the branded client:\n${error.stdout || error.stderr}`,
-    );
-  }
-}
-
 describe('newtype branding', () => {
   const manifest = loadAbiManifestFromFile(newtypesAbiPath);
 
   it('makes bare strings and sibling newtypes mutually unassignable', () => {
-    typecheckGeneratedClient(generateClient(manifest, 'NT'), 'branding');
+    typecheckGeneratedClient(
+      generateClient(manifest, 'NT'),
+      TYPE_ASSERTIONS,
+      'branding',
+    );
   });
 
   it('emits a brand and a constructor for string and numeric newtypes', () => {

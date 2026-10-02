@@ -5,6 +5,7 @@ import {
   AbiTypeDef,
   AbiEvent,
   AbiField,
+  AbiVariant,
   AbiVariantDef,
 } from '../model.js';
 import {
@@ -16,6 +17,8 @@ import {
   sanitizeClassName,
   toCamelCase,
 } from './emit.js';
+
+const IDENTIFIER = /^[A-Za-z_$][A-Za-z0-9_$]*$/; // keys that need no quoting
 
 /**
  * Utility class for handling byte conversions in Calimero
@@ -382,6 +385,107 @@ function resolveNamedType(
   return undefined;
 }
 
+// A wire name as an object key: bare when it is an identifier, else quoted.
+function propertyKey(name: string): string {
+  return IDENTIFIER.test(name) ? name : JSON.stringify(name);
+}
+
+// Only an externally tagged enum with a payload is rewritten to and from the
+// `{ name, payload }` shape; every other enum's TS type is its wire shape.
+function hasNamePayloadShape(typeDef: AbiTypeDef): boolean {
+  return (
+    typeDef.kind === 'variant' &&
+    !typeDef.tag &&
+    !typeDef.untagged &&
+    !isAllUnitVariant(typeDef)
+  );
+}
+
+// An object type as a union member. A doc goes on its first property, where
+// narrowing or constructing the member surfaces it; one on the member does not.
+function unionObjectType(members: string[], doc?: string): string {
+  if (!doc) return `{ ${members.join('; ')} }`;
+  return [
+    '{',
+    ...jsdocBlock(doc, '    '),
+    ...members.map((member) => `    ${member};`),
+    '  }',
+  ].join('\n');
+}
+
+// One member of a tagged or untagged enum's union, as serde writes it.
+function wireVariantMember(
+  variant: AbiVariant,
+  typeDef: AbiVariantDef,
+  typeOf: (payload: AbiTypeRef) => string,
+  doc?: string,
+): string {
+  const payload = variant.payload && typeOf(variant.payload);
+  if (typeDef.untagged) return payload ?? 'null';
+  const tag = `${propertyKey(typeDef.tag!)}: ${JSON.stringify(variant.name)}`;
+  if (!payload) return unionObjectType([tag], doc);
+  if (typeDef.content) {
+    return unionObjectType(
+      [tag, `${propertyKey(typeDef.content)}: ${payload}`],
+      doc,
+    );
+  }
+  return `(${unionObjectType([tag], doc)} & ${payload})`;
+}
+
+// The type of a value left exactly as serde wrote it, for where nothing decodes
+// it: bytes stay number arrays and a `{ name, payload }` enum stays tagged.
+function wireTypeRef(
+  typeRef: AbiTypeRef,
+  manifest: AbiManifest,
+  seen: Set<string> = new Set(),
+): string {
+  if (!decodeExpr(typeRef, manifest, 'value', seen)) {
+    return generateTypeRef(typeRef, manifest, false);
+  }
+  const wire = (ref: AbiTypeRef, next = seen) =>
+    wireTypeRef(ref, manifest, next);
+
+  if ('$ref' in typeRef) {
+    const typeDef = manifest.types[typeRef.$ref];
+    const next = new Set(seen).add(typeRef.$ref);
+    if (typeDef.kind === 'alias') return wire(typeDef.target, next);
+    if (typeDef.kind !== 'variant') return wire(typeDef, next);
+    const members = typeDef.variants.map((variant) => {
+      if (typeDef.tag) {
+        return wireVariantMember(variant, typeDef, (ref) => wire(ref, next));
+      }
+      return variant.payload
+        ? `{ ${propertyKey(variant.name)}: ${wire(variant.payload, next)} }`
+        : JSON.stringify(variant.name);
+    });
+    return `(${members.join(' | ')})`;
+  }
+
+  switch (typeRef.kind) {
+    case 'bytes':
+      return 'number[]';
+    case 'list':
+      return `Array<${wire(typeRef.items)}>`;
+    case 'map':
+      return `Record<${generateTypeRef(typeRef.key, manifest)}, ${wire(typeRef.value)}>`;
+    case 'tuple':
+      return `[${typeRef.elements.map((el) => wire(el)).join(', ')}]`;
+    case 'record': {
+      if (typeRef.crdt_type && typeRef.inner_type) {
+        return wire(typeRef.inner_type);
+      }
+      const fields = typeRef.fields.map((field) => {
+        const type = wire(field.type);
+        return `${propertyKey(field.name)}: ${field.nullable ? `${type} | null` : type}`;
+      });
+      return `{ ${fields.join('; ')} }`;
+    }
+    default:
+      return generateTypeRef(typeRef, manifest, false);
+  }
+}
+
 /**
  * Check whether every variant in a variant typedef is unit (no payload).
  * Serde's default for such enums is to serialize as bare strings, so we
@@ -467,12 +571,10 @@ function decodeRecord(
   seen: Set<string>,
 ): string | null {
   const decoded = fields.flatMap((field) => {
-    // Read the wire key but emit the sanitised one the interface declares. A
-    // sanitised field is copied across even when it needs no decoding.
     const read = `${expr}['${field.name}']`;
-    const name = formatIdentifier(field.name);
+    const name = propertyKey(field.name);
     const inner = decodeExpr(field.type, manifest, read, seen);
-    if (!inner) return name === field.name ? [] : [`${name}: ${read}`];
+    if (!inner) return [];
     return field.nullable
       ? [`${name}: ${read} == null ? null : ${inner}`]
       : [`${name}: ${inner}`];
@@ -504,6 +606,9 @@ function decodeVariant(
   expr: string,
   seen: Set<string>,
 ): string | null {
+  // An untagged value names no variant, so bytes in its payload stay arrays.
+  if (typeDef.untagged) return null;
+  if (typeDef.tag) return decodeTaggedVariant(typeDef, manifest, expr, seen);
   if (isAllUnitVariant(typeDef)) return null;
 
   const payloadBranches = typeDef.variants
@@ -528,6 +633,42 @@ function decodeVariant(
   );
 }
 
+// ABI doc text as JSDoc body lines at `indent`. A literal `*/` in the text
+// would close the comment, so it is escaped.
+function jsdocLines(doc: string, indent: string): string[] {
+  return doc
+    .replace(/\*\//g, '*\\/')
+    .split(/\r\n?|\n/)
+    .map((line) => (line ? `${indent} * ${line}` : `${indent} *`));
+}
+
+function jsdocBlock(doc: string, indent: string): string[] {
+  return [`${indent}/**`, ...jsdocLines(doc, indent), `${indent} */`];
+}
+
+// Internally tagged payload fields sit beside the tag; adjacent ones under `content`.
+function decodeTaggedVariant(
+  typeDef: AbiVariantDef,
+  manifest: AbiManifest,
+  expr: string,
+  seen: Set<string>,
+): string | null {
+  const content = typeDef.content;
+  const read = content ? `${expr}[${JSON.stringify(content)}]` : expr;
+  const branches = typeDef.variants
+    .map((variant) => {
+      if (!variant.payload) return '';
+      const inner = decodeExpr(variant.payload, manifest, read, seen);
+      if (!inner) return '';
+      const value = content
+        ? `{ ...${expr}, ${propertyKey(content)}: ${inner} }`
+        : inner;
+      return `${expr}[${JSON.stringify(typeDef.tag)}] === ${JSON.stringify(variant.name)} ? ${value} : `;
+    })
+    .join('');
+  return branches ? `(${branches}${expr})` : null;
+}
+
 /**
  * Generate a single type definition
  */
@@ -542,19 +683,33 @@ function generateTypeDefinition(
   if (typeDef.kind === 'record') {
     lines.push(`export interface ${safeName} {`);
     for (const field of typeDef.fields) {
+      if (field.doc) lines.push(...jsdocBlock(field.doc, '  '));
       const fieldType = generateTypeRef(field.type, manifest, false);
       const nullableType = field.nullable ? `${fieldType} | null` : fieldType;
-      lines.push(`  ${formatIdentifier(field.name)}: ${nullableType};`);
+      lines.push(`  ${propertyKey(field.name)}: ${nullableType};`);
     }
     lines.push('}');
   } else if (typeDef.kind === 'variant') {
-    if (isAllUnitVariant(typeDef)) {
+    if (typeDef.tag || typeDef.untagged) {
+      // Nothing decodes an untagged value, so its payloads keep their wire types.
+      const typeOf = (payload: AbiTypeRef) =>
+        typeDef.untagged
+          ? wireTypeRef(payload, manifest)
+          : generateTypeRef(payload, manifest, false);
+      const members = typeDef.variants.map(
+        (variant) =>
+          `  | ${wireVariantMember(variant, typeDef, typeOf, variant.doc)}`,
+      );
+      lines.push(`export type ${safeName} =`, ...members);
+      lines[lines.length - 1] += ';';
+    } else if (isAllUnitVariant(typeDef)) {
       // Unit-only variants — serde serializes these as bare strings.
       // Emit a string-literal union type that matches the wire format.
       const literals = typeDef.variants.map((v) => `'${v.name}'`).join(' | ');
       lines.push(`export type ${safeName} = ${literals};`);
     } else {
       // Mixed/payload variants — emit a discriminated union and factory.
+      // The type doc goes on the factory below, the one users actually call.
       lines.push(`export type ${safeName}Payload =`);
       const variantLines = typeDef.variants.map((variant) => {
         if (variant.payload) {
@@ -568,9 +723,11 @@ function generateTypeDefinition(
 
       // Generate factory object for variants
       lines.push('');
+      if (typeDef.doc) lines.push(...jsdocBlock(typeDef.doc, ''));
       lines.push(`export const ${safeName} = {`);
       typeDef.variants.forEach((variant) => {
         const variantName = formatIdentifier(variant.name);
+        if (variant.doc) lines.push(...jsdocBlock(variant.doc, '  '));
         if (variant.payload) {
           const payloadType = generateTypeRef(variant.payload, manifest, false);
           lines.push(
@@ -617,7 +774,13 @@ function generateTypeDefinition(
     }
   }
 
-  return lines;
+  // A mixed variant's doc is already placed above its factory const.
+  const docAlreadyPlaced = hasNamePayloadShape(typeDef);
+  // A bytes type carries no doc: it declares nothing a doc could attach to.
+  const doc = typeDef.kind === 'bytes' ? undefined : typeDef.doc;
+  return doc && lines.length > 0 && !docAlreadyPlaced
+    ? [...jsdocBlock(doc, ''), ...lines]
+    : lines;
 }
 
 /**
@@ -695,12 +858,11 @@ function generateAbiEventUnion(
       event.payload &&
       !('$ref' in event.payload) &&
       event.payload.kind === 'unit';
+    const members = [`name: "${event.name}"`];
     if (event.payload && !isInlineUnit) {
-      const payloadType = generateTypeRef(event.payload, manifest);
-      return `  | { name: "${event.name}"; payload: ${payloadType} }`;
-    } else {
-      return `  | { name: "${event.name}" }`;
+      members.push(`payload: ${generateTypeRef(event.payload, manifest)}`);
     }
+    return `  | ${unionObjectType(members, event.doc)}`;
   });
   lines.push(...eventLines);
   lines.push(';');
@@ -723,6 +885,26 @@ function generateMethod(
   lines.push('  /**');
   lines.push(`   * ${method.name}`);
 
+  if (method.doc) {
+    lines.push('   *', ...jsdocLines(method.doc, '  '));
+  }
+
+  const remarks = [
+    method.destructive && 'destructive',
+    method.idempotent && 'idempotent',
+    method.handler && 'handler',
+  ].filter(Boolean);
+  const tags = [
+    ...method.params.map(
+      (param) => param.doc && `@param params.${param.name} ${param.doc}`,
+    ),
+    method.returns_doc && `@returns ${method.returns_doc}`,
+    remarks.length > 0 && `@remarks ${remarks.join(', ')}`,
+  ].filter(Boolean) as string[];
+  if (tags.length > 0) {
+    lines.push('   *', ...tags.flatMap((tag) => jsdocLines(tag, '  ')));
+  }
+
   // Surface the app-declared read/write intent when present. mero-js has no
   // read transport yet, so this is documentation only — not a routing hint.
   if (method.intent && method.intent !== 'unspecified') {
@@ -741,6 +923,15 @@ function generateMethod(
         : 'callable by any context in the namespace';
     lines.push('   *');
     lines.push(`   * @xcall ${callers} (${note})`);
+  }
+
+  // TEE timer. The node's TEE scheduler fires it; a call from anywhere else
+  // is refused inside the method, which the signature would never tell you.
+  if (method.tee_every_secs !== undefined) {
+    lines.push('   *');
+    lines.push(
+      `   * @tee every ${method.tee_every_secs}s (fired by the node's TEE scheduler; other callers are refused)`,
+    );
   }
 
   // Declared migration edge. The node drives these during an upgrade; app code
@@ -813,7 +1004,7 @@ function generateMethod(
         true,
       );
       const nullableType = param.nullable ? `${paramType} | null` : paramType;
-      return `${formatIdentifier(param.name)}: ${nullableType}`;
+      return `${propertyKey(param.name)}: ${nullableType}`;
     });
 
     lines.push(
@@ -824,11 +1015,7 @@ function generateMethod(
     // serde expects `{ Variant: payload }`, so rewrite those params before the call.
     const variantParams = method.params.filter((param) => {
       const typeDef = resolveNamedType(param.type, manifest);
-      return (
-        typeDef !== undefined &&
-        typeDef.kind === 'variant' &&
-        !isAllUnitVariant(typeDef)
-      );
+      return typeDef !== undefined && hasNamePayloadShape(typeDef);
     });
 
     if (variantParams.length > 0) {
@@ -837,13 +1024,13 @@ function generateMethod(
       );
       lines.push(`    const convertedParams = { ...params } as any;`);
       for (const param of variantParams) {
-        const paramName = formatIdentifier(param.name);
+        const ref = `convertedParams[${JSON.stringify(param.name)}]`;
         lines.push(
-          `    if (convertedParams.${paramName} && typeof convertedParams.${paramName} === 'object' && 'name' in convertedParams.${paramName}) {`,
-          `      if ('payload' in convertedParams.${paramName}) {`,
-          `        convertedParams.${paramName} = { [convertedParams.${paramName}.name]: convertedParams.${paramName}.payload };`,
+          `    if (${ref} && typeof ${ref} === 'object' && 'name' in ${ref}) {`,
+          `      if ('payload' in ${ref}) {`,
+          `        ${ref} = { [${ref}.name]: ${ref}.payload };`,
           `      } else {`,
-          `        convertedParams.${paramName} = convertedParams.${paramName}.name;`,
+          `        ${ref} = ${ref}.name;`,
           `      }`,
           `    }`,
         );
@@ -899,12 +1086,9 @@ function generateTypeRef(
       return 'CalimeroBytes'; // Return CalimeroBytes for bytes types
     }
 
-    // For variant types, choose between string-literal union and discriminated
-    // union based on whether all variants are unit (no payload):
-    //   - all-unit  → bare name is the type alias (e.g. type Status = 'A' | 'B')
-    //   - mixed     → use {Name}Payload (the discriminated union)
+    // Only a `{ name, payload }` enum is referenced by its {Name}Payload union.
     if (typeDef && typeDef.kind === 'variant') {
-      if (isAllUnitVariant(typeDef)) {
+      if (!hasNamePayloadShape(typeDef)) {
         return useTypesNamespace ? `Types.${typeName}` : typeName;
       }
       const payloadType = useTypesNamespace
@@ -978,7 +1162,7 @@ function generateTypeRef(
           forUserApi,
         );
         const nullableType = field.nullable ? `${fieldType} | null` : fieldType;
-        return `${formatIdentifier(field.name)}: ${nullableType}`;
+        return `${propertyKey(field.name)}: ${nullableType}`;
       });
       return `{ ${fields.join('; ')} }`;
     default:

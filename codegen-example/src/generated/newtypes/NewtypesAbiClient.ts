@@ -6,6 +6,9 @@ import {
 
 // Generated types
 
+/**
+ * Opaque folder handle, unique within a context.
+ */
 export type FolderId = string & { readonly __brand: 'FolderId' };
 export const FolderId = (value: string): FolderId => value as FolderId;
 
@@ -39,8 +42,14 @@ export type ActionPayload =
   | { name: 'Noop' }
   | { name: 'Rename'; payload: string }
 
+/**
+ * A change a member asks for.
+ */
 export const Action = {
   Noop: (): ActionPayload => ({ name: 'Noop' }),
+  /**
+   * Give the folder this new name.
+   */
   Rename: (rename: string): ActionPayload => ({ name: 'Rename', payload: rename }),
 } as const;
 
@@ -57,7 +66,13 @@ export const Command = {
 
 export type AliasOfCommand = CommandPayload;
 
+/**
+ * One folder as the app stores it.
+ */
 export interface FolderEntry {
+  /**
+   * Handle of this folder.
+   */
   id: FolderId;
   member: string;
   height: Height;
@@ -72,6 +87,9 @@ export const Sha256Hex = (value: string): Sha256Hex => {
   return value as Sha256Hex;
 };
 
+/**
+ * An absolute path such as /docs/*\/drafts, where * matches one segment.
+ */
 export type RoutePath = string & { readonly __brand: 'RoutePath' };
 export const RoutePath = (value: string): RoutePath => {
   if (!new RegExp("^/[a-z]+(/[a-z]+)*$").test(value)) {
@@ -164,6 +182,13 @@ export class NewtypesAbiClient {
 
   /**
    * get_folder
+   *
+   * Look up one folder.
+   *
+   * # Errors
+   * Fails when no folder has this id.
+   *
+   * @param params.id Handle returned by an earlier call.
    */
   public async getFolder(params: { id: FolderId }): Promise<FolderEntry> {
     const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'get_folder', argsJson: params });
@@ -198,11 +223,11 @@ export class NewtypesAbiClient {
   public async dispatchAction(params: { action: ActionPayload }): Promise<void> {
     // Serde tags a payload-bearing variant as { Variant: payload }
     const convertedParams = { ...params } as any;
-    if (convertedParams.action && typeof convertedParams.action === 'object' && 'name' in convertedParams.action) {
-      if ('payload' in convertedParams.action) {
-        convertedParams.action = { [convertedParams.action.name]: convertedParams.action.payload };
+    if (convertedParams["action"] && typeof convertedParams["action"] === 'object' && 'name' in convertedParams["action"]) {
+      if ('payload' in convertedParams["action"]) {
+        convertedParams["action"] = { [convertedParams["action"].name]: convertedParams["action"].payload };
       } else {
-        convertedParams.action = convertedParams.action.name;
+        convertedParams["action"] = convertedParams["action"].name;
       }
     }
     await this._mero.rpc.execute({ contextId: this._contextId, method: 'dispatch_action', argsJson: convertedParams });
@@ -235,11 +260,11 @@ export class NewtypesAbiClient {
   public async runCommand(params: { cmd: CommandPayload; label: string }): Promise<void> {
     // Serde tags a payload-bearing variant as { Variant: payload }
     const convertedParams = { ...params } as any;
-    if (convertedParams.cmd && typeof convertedParams.cmd === 'object' && 'name' in convertedParams.cmd) {
-      if ('payload' in convertedParams.cmd) {
-        convertedParams.cmd = { [convertedParams.cmd.name]: convertedParams.cmd.payload };
+    if (convertedParams["cmd"] && typeof convertedParams["cmd"] === 'object' && 'name' in convertedParams["cmd"]) {
+      if ('payload' in convertedParams["cmd"]) {
+        convertedParams["cmd"] = { [convertedParams["cmd"].name]: convertedParams["cmd"].payload };
       } else {
-        convertedParams.cmd = convertedParams.cmd.name;
+        convertedParams["cmd"] = convertedParams["cmd"].name;
       }
     }
     await this._mero.rpc.execute({ contextId: this._contextId, method: 'run_command', argsJson: convertCalimeroBytesForWasm(convertedParams) });
@@ -265,11 +290,11 @@ export class NewtypesAbiClient {
   public async runAliasedCommand(params: { cmd: AliasOfCommand }): Promise<void> {
     // Serde tags a payload-bearing variant as { Variant: payload }
     const convertedParams = { ...params } as any;
-    if (convertedParams.cmd && typeof convertedParams.cmd === 'object' && 'name' in convertedParams.cmd) {
-      if ('payload' in convertedParams.cmd) {
-        convertedParams.cmd = { [convertedParams.cmd.name]: convertedParams.cmd.payload };
+    if (convertedParams["cmd"] && typeof convertedParams["cmd"] === 'object' && 'name' in convertedParams["cmd"]) {
+      if ('payload' in convertedParams["cmd"]) {
+        convertedParams["cmd"] = { [convertedParams["cmd"].name]: convertedParams["cmd"].payload };
       } else {
-        convertedParams.cmd = convertedParams.cmd.name;
+        convertedParams["cmd"] = convertedParams["cmd"].name;
       }
     }
     await this._mero.rpc.execute({ contextId: this._contextId, method: 'run_aliased_command', argsJson: convertCalimeroBytesForWasm(convertedParams) });

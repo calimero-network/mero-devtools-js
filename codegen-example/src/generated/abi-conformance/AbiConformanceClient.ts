@@ -19,14 +19,14 @@ export type ActionPayload =
   | { name: 'Ping' }
   | { name: 'SetName'; payload: string }
   | { name: 'Update'; payload: UpdatePayload }
-  | { name: 'MultiTuple'; payload: Action_MultiTuple }
+  | { name: 'MultiTuple'; payload: [number, string] }
   | { name: 'MultiStruct'; payload: Action_MultiStruct }
 
 export const Action = {
   Ping: (): ActionPayload => ({ name: 'Ping' }),
   SetName: (setname: string): ActionPayload => ({ name: 'SetName', payload: setname }),
   Update: (update: UpdatePayload): ActionPayload => ({ name: 'Update', payload: update }),
-  MultiTuple: (multituple: Action_MultiTuple): ActionPayload => ({ name: 'MultiTuple', payload: multituple }),
+  MultiTuple: (multituple: [number, string]): ActionPayload => ({ name: 'MultiTuple', payload: multituple }),
   MultiStruct: (multistruct: Action_MultiStruct): ActionPayload => ({ name: 'MultiStruct', payload: multistruct }),
 } as const;
 
@@ -35,25 +35,28 @@ export interface Action_MultiStruct {
   y: string;
 }
 
-export interface Action_MultiTuple {
-  field_0: number;
-  field_1: string;
-}
-
+/**
+ * A custom struct defined in a separate module
+ * This tests that the ABI generator can discover types from module files
+ */
 export interface CustomRecord {
+  /**
+   * A string field
+   */
   name: string;
+  /**
+   * A numeric counter
+   */
   value: number;
+  /**
+   * A flag
+   */
   active: boolean;
 }
 
 export interface Event_StructEvent {
   id: number;
   name: string;
-}
-
-export interface Event_TupleEvent {
-  field_0: number;
-  field_1: string;
 }
 
 export type Hash64 = CalimeroBytes;
@@ -63,8 +66,17 @@ export interface InternalResult {
   calculated: number;
 }
 
+/**
+ * Another custom type to test nested references
+ */
 export interface NestedRecord {
+  /**
+   * Reference to CustomRecord
+   */
   record: CustomRecord;
+  /**
+   * A list of strings
+   */
   tags: string[];
 }
 
@@ -85,7 +97,13 @@ export type StatusPayload =
   | { name: 'Active'; payload: Status_Active }
   | { name: 'Completed'; payload: Status_Completed }
 
+/**
+ * Custom enum in module
+ */
 export const Status = {
+  /**
+   * Waiting to start.
+   */
   Pending: (): StatusPayload => ({ name: 'Pending' }),
   Active: (active: Status_Active): StatusPayload => ({ name: 'Active', payload: active }),
   Completed: (completed: Status_Completed): StatusPayload => ({ name: 'Completed', payload: completed }),
@@ -105,6 +123,38 @@ export interface UpdatePayload {
 
 export type UserId32 = CalimeroBytes;
 
+export type WireOutcome =
+  | { kind: "Done" }
+  | { kind: "Failed"; data: string };
+
+export interface WireRecord {
+  strokeWidth: number;
+  blobId: string;
+  shape: WireShape;
+  step: WireStep;
+  outcome: WireOutcome;
+}
+
+export type WireShape =
+  | { kind: "rect" }
+  | ({ kind: "text" } & WireShape_Text);
+
+export interface WireShape_Text {
+  fontSize: number;
+}
+
+export type WireStep =
+  | WireStep_Retain
+  | WireStep_Insert;
+
+export interface WireStep_Insert {
+  insert: string;
+}
+
+export interface WireStep_Retain {
+  retain: number;
+}
+
 
 export type DataPayload = CalimeroBytes;
 
@@ -113,15 +163,21 @@ export type NamedPayload = string;
 
 
 
+export type TupleEventPayload = [number, string];
 
 export type AbiEvent =
   | { name: "ActionTaken"; payload: ActionPayload }
   | { name: "Data"; payload: CalimeroBytes }
   | { name: "Named"; payload: string }
   | { name: "PersonUpdated"; payload: Person }
-  | { name: "Ping" }
+  | {
+    /**
+     * Liveness signal with no payload.
+     */
+    name: "Ping";
+  }
   | { name: "StructEvent"; payload: Event_StructEvent }
-  | { name: "TupleEvent"; payload: Event_TupleEvent }
+  | { name: "TupleEvent"; payload: [number, string] }
 ;
 
 
@@ -209,11 +265,11 @@ export class AbiConformanceClient {
   public async act(params: { a: ActionPayload }): Promise<number> {
     // Serde tags a payload-bearing variant as { Variant: payload }
     const convertedParams = { ...params } as any;
-    if (convertedParams.a && typeof convertedParams.a === 'object' && 'name' in convertedParams.a) {
-      if ('payload' in convertedParams.a) {
-        convertedParams.a = { [convertedParams.a.name]: convertedParams.a.payload };
+    if (convertedParams["a"] && typeof convertedParams["a"] === 'object' && 'name' in convertedParams["a"]) {
+      if ('payload' in convertedParams["a"]) {
+        convertedParams["a"] = { [convertedParams["a"].name]: convertedParams["a"].payload };
       } else {
-        convertedParams.a = convertedParams.a.name;
+        convertedParams["a"] = convertedParams["a"].name;
       }
     }
     const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'act', argsJson: convertedParams });
@@ -223,11 +279,33 @@ export class AbiConformanceClient {
   /**
    * create_custom_record
    *
+   * Create a custom record from module.
+   *
+   * # Errors
+   * Never fails; the `Result` exercises the unwrap rule.
+   *
+   * @param params.name display name stored on the record.
+   * @param params.value initial counter value; the record starts active regardless.
+   *
    * @intent read_only
    */
   public async createCustomRecord(params: { name: string; value: number }): Promise<CustomRecord> {
     const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'create_custom_record', argsJson: params });
     return response as CustomRecord;
+  }
+
+  /**
+   * drop_counter
+   *
+   * Remove a counter; its value is gone for good.
+   *
+   * @remarks destructive
+   *
+   * @intent mutating
+   */
+  public async dropCounter(params: { key: string }): Promise<void> {
+    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'drop_counter', argsJson: params });
+    return response as void;
   }
 
   /**
@@ -303,6 +381,14 @@ export class AbiConformanceClient {
   }
 
   /**
+   * echo_wire
+   */
+  public async echoWire(params: { w: WireRecord }): Promise<WireRecord> {
+    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'echo_wire', argsJson: params });
+    return response as WireRecord;
+  }
+
+  /**
    * find_person
    */
   public async findPerson(params: { name: string }): Promise<Person> {
@@ -321,6 +407,8 @@ export class AbiConformanceClient {
   /**
    * get_nested_record
    *
+   * Get a nested record from module
+   *
    * @intent read_only
    */
   public async getNestedRecord(params: { name: string }): Promise<NestedRecord> {
@@ -330,6 +418,10 @@ export class AbiConformanceClient {
 
   /**
    * get_status
+   *
+   * Get status from module
+   *
+   * @returns The `Active` status stamped with `timestamp`.
    *
    * @intent read_only
    */
@@ -344,11 +436,11 @@ export class AbiConformanceClient {
   public async handleMultiStruct(params: { a: ActionPayload }): Promise<number> {
     // Serde tags a payload-bearing variant as { Variant: payload }
     const convertedParams = { ...params } as any;
-    if (convertedParams.a && typeof convertedParams.a === 'object' && 'name' in convertedParams.a) {
-      if ('payload' in convertedParams.a) {
-        convertedParams.a = { [convertedParams.a.name]: convertedParams.a.payload };
+    if (convertedParams["a"] && typeof convertedParams["a"] === 'object' && 'name' in convertedParams["a"]) {
+      if ('payload' in convertedParams["a"]) {
+        convertedParams["a"] = { [convertedParams["a"].name]: convertedParams["a"].payload };
       } else {
-        convertedParams.a = convertedParams.a.name;
+        convertedParams["a"] = convertedParams["a"].name;
       }
     }
     const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'handle_multi_struct', argsJson: convertedParams });
@@ -361,15 +453,29 @@ export class AbiConformanceClient {
   public async handleMultiTuple(params: { a: ActionPayload }): Promise<string> {
     // Serde tags a payload-bearing variant as { Variant: payload }
     const convertedParams = { ...params } as any;
-    if (convertedParams.a && typeof convertedParams.a === 'object' && 'name' in convertedParams.a) {
-      if ('payload' in convertedParams.a) {
-        convertedParams.a = { [convertedParams.a.name]: convertedParams.a.payload };
+    if (convertedParams["a"] && typeof convertedParams["a"] === 'object' && 'name' in convertedParams["a"]) {
+      if ('payload' in convertedParams["a"]) {
+        convertedParams["a"] = { [convertedParams["a"].name]: convertedParams["a"].payload };
       } else {
-        convertedParams.a = convertedParams.a.name;
+        convertedParams["a"] = convertedParams["a"].name;
       }
     }
     const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'handle_multi_tuple', argsJson: convertedParams });
     return response as string;
+  }
+
+  /**
+   * handler_noop
+   *
+   * Event handler - must surface `handler: true` in the ABI.
+   *
+   * @remarks handler
+   *
+   * @intent mutating
+   */
+  public async handlerNoop(): Promise<void> {
+    const response = await this._mero.rpc.execute({ contextId: this._contextId, method: 'handler_noop', argsJson: {} });
+    return response as void;
   }
 
   /**
@@ -543,6 +649,8 @@ export class AbiConformanceClient {
   /**
    * view_constant
    *
+   * Read-only method - must surface `intent: read_only` in the ABI.
+   *
    * @intent read_only
    */
   public async viewConstant(): Promise<number> {
@@ -552,6 +660,10 @@ export class AbiConformanceClient {
 
   /**
    * xcall_noop
+   *
+   * Cross-context entry point - must surface `xcall_callable: true` in the ABI.
+   *
+   * @remarks idempotent
    *
    * @intent mutating
    *

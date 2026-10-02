@@ -80,6 +80,7 @@ export interface AbiRecord {
   fields: AbiField[];
   crdt_type?: string;
   inner_type?: AbiTypeRef;
+  doc?: string;
 }
 
 export interface AbiTuple {
@@ -92,6 +93,7 @@ export interface AbiField {
   name: string;
   type: AbiTypeRef;
   nullable?: boolean;
+  doc?: string;
 }
 
 // Variant definition
@@ -99,6 +101,7 @@ export interface AbiVariant {
   name: string;
   code?: string;
   payload?: AbiTypeRef;
+  doc?: string;
 }
 
 // Alias type definition
@@ -108,6 +111,7 @@ export interface AbiAlias {
   // ECMA-262 source text describing what the newtype accepts. Descriptive only:
   // the node does not enforce it, so it constrains the client boundary alone.
   pattern?: string;
+  doc?: string;
 }
 
 // Type definitions (what goes in the types object)
@@ -121,6 +125,11 @@ export type AbiTypeDef =
 export interface AbiVariantDef {
   kind: 'variant';
   variants: AbiVariant[];
+  doc?: string;
+  // serde's enum representation; all absent means externally tagged.
+  tag?: string;
+  content?: string;
+  untagged?: true;
 }
 
 // Method definition
@@ -141,6 +150,17 @@ export interface AbiMethod {
   // historical behaviour; 'same_app' (#[app::xcall(from_same_app)]) restricts
   // callers to contexts running the same application id. Enforced by the node.
   xcall_callers?: 'any_in_namespace' | 'same_app';
+  // Period, in seconds, of a timer-driven TEE trigger declared via
+  // #[app::tee(every = "..")]. The node's TEE scheduler fires the method once
+  // per period on one TEE authority; any other caller is refused. Absent for
+  // every other method.
+  tee_every_secs?: number;
+  // Author's rustdoc; its `# Arguments` entries are moved onto each param's doc.
+  doc?: string;
+  returns_doc?: string;
+  destructive?: boolean;
+  idempotent?: boolean;
+  handler?: boolean;
 }
 
 // Parameter definition
@@ -148,6 +168,7 @@ export interface AbiParameter {
   name: string;
   type: AbiTypeRef;
   nullable?: boolean;
+  doc?: string;
 }
 
 // Error definition
@@ -160,4 +181,5 @@ export interface AbiError {
 export interface AbiEvent {
   name: string;
   payload?: AbiTypeRef;
+  doc?: string;
 }

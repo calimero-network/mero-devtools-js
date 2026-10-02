@@ -5,7 +5,8 @@
       "kind": "alias",
       "target": {
         "kind": "string"
-      }
+      },
+      "doc": "Opaque folder handle, unique within a context."
     },
     "ContextId": {
       "kind": "alias",
@@ -90,6 +91,7 @@
     },
     "Action": {
       "kind": "variant",
+      "doc": "A change a member asks for.",
       "variants": [
         {
           "name": "Noop"
@@ -98,7 +100,8 @@
           "name": "Rename",
           "payload": {
             "kind": "string"
-          }
+          },
+          "doc": "Give the folder this new name."
         }
       ]
     },
@@ -133,12 +136,14 @@
     },
     "FolderEntry": {
       "kind": "record",
+      "doc": "One folder as the app stores it.",
       "fields": [
         {
           "name": "id",
           "type": {
             "$ref": "FolderId"
-          }
+          },
+          "doc": "Handle of this folder."
         },
         {
           "name": "member",
@@ -172,7 +177,8 @@
       "target": {
         "kind": "string"
       },
-      "pattern": "^/[a-z]+(/[a-z]+)*$"
+      "pattern": "^/[a-z]+(/[a-z]+)*$",
+      "doc": "An absolute path such as /docs/*/drafts, where * matches one segment."
     },
     "OddHeight": {
       "kind": "alias",
@@ -185,12 +191,14 @@
   "methods": [
     {
       "name": "get_folder",
+      "doc": "Look up one folder.\n\n# Errors\nFails when no folder has this id.",
       "params": [
         {
           "name": "id",
           "type": {
             "$ref": "FolderId"
-          }
+          },
+          "doc": "Handle returned by an earlier call."
         }
       ],
       "returns": {
