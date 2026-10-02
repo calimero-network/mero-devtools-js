@@ -258,13 +258,19 @@ export function generateClient(
   lines.push(`  private _contextId: string;`);
   lines.push('');
   lines.push(`  /**`);
-  lines.push(`   * @param client Anything that can execute: a node client, a relay client,`);
-  lines.push(`   *   or a bare {@link ExecuteTransport}. Which one it is stays hidden here.`);
+  lines.push(
+    `   * @param client Anything that can execute: a node client, a relay client,`,
+  );
+  lines.push(
+    `   *   or a bare {@link ExecuteTransport}. Which one it is stays hidden here.`,
+  );
   lines.push(`   */`);
   lines.push(
     `  constructor(client: ExecuteTransport | { readonly rpc: ExecuteTransport }, contextId: string) {`,
   );
-  lines.push(`    this._transport = 'execute' in client ? client : client.rpc;`);
+  lines.push(
+    `    this._transport = 'execute' in client ? client : client.rpc;`,
+  );
   lines.push(`    this._contextId = contextId;`);
   lines.push(`  }`);
   lines.push('');
