@@ -391,7 +391,9 @@ function resolveNamedType(
 }
 
 // A wire name as an object key: bare when it is an identifier, else quoted.
+// `__proto__` is computed, since a literal key of that name sets the prototype.
 function propertyKey(name: string): string {
+  if (name === '__proto__') return `[${JSON.stringify(name)}]`;
   return IDENTIFIER.test(name) ? name : JSON.stringify(name);
 }
 
@@ -887,6 +889,10 @@ function generateMethod(
 ): string[] {
   const lines: string[] = [];
   const methodName = toCamelCase(method.name);
+  // The name is written as a bare identifier, so check it for callers that skip parseAbiManifest.
+  if (!IDENTIFIER.test(methodName)) {
+    throw new Error(`Invalid method name ${JSON.stringify(method.name)}`);
+  }
 
   // Generate JSDoc comment
   lines.push('  /**');

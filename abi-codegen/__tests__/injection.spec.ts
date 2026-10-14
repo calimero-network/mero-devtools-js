@@ -124,3 +124,51 @@ describe('a field name with serde-rename characters', () => {
     );
   });
 });
+
+describe('generateClient without parseAbiManifest', () => {
+  it('refuses a method name that is not an identifier once camel-cased', () => {
+    const manifest = {
+      ...base(),
+      methods: [{ name: METHOD, params: [] }],
+    };
+    expect(() => generateClient(manifest as any, 'Direct')).toThrow(
+      'Invalid method name',
+    );
+  });
+
+  it('refuses a method name that camel-cases to nothing', () => {
+    const manifest = { ...base(), methods: [{ name: '_', params: [] }] };
+    expect(() => generateClient(manifest as any, 'Direct')).toThrow(
+      'Invalid method name',
+    );
+  });
+});
+
+describe('a __proto__ field name', () => {
+  it('stays a data key on the decoded record', async () => {
+    const abi = {
+      ...base(),
+      types: {
+        Blob: {
+          kind: 'record',
+          fields: [{ name: '__proto__', type: { kind: 'bytes' } }],
+        },
+      },
+      methods: [{ name: 'get_blob', params: [], returns: { $ref: 'Blob' } }],
+    };
+    const source = generateClient(parseAbiManifest(abi), 'Proto');
+    const dir = path.join(__dirname, '../tmp/injection');
+    fs.mkdirSync(dir, { recursive: true });
+    const file = path.join(dir, 'proto.ts');
+    fs.writeFileSync(file, mockMeroImport(source));
+
+    const mod: any = await import(/* @vite-ignore */ pathToFileURL(file).href);
+    const wire = JSON.parse('{"__proto__": [1, 2, 3]}');
+    const blob = await new mod.Proto(
+      { execute: async () => wire },
+      'c',
+    ).getBlob();
+    expect(Object.getPrototypeOf(blob)).toBe(Object.prototype);
+    expect(Object.keys(blob)).toEqual(['__proto__']);
+  });
+});
