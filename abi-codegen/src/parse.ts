@@ -5,7 +5,7 @@ import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { AbiManifest, AbiTypeRef } from './model.js';
-import { mapRustTypeToTs } from './generate/emit.js';
+import { IDENTIFIER, mapRustTypeToTs } from './generate/emit.js';
 import { deepFreeze } from './utils/deepFreeze.js';
 import { formatAjvErrors } from './utils/ajvFormat.js';
 
@@ -67,10 +67,13 @@ export function parseAbiManifest(json: unknown): AbiManifest {
   // Step 4: Check for duplicate names
   assertUniqueNames(manifest);
 
-  // Step 5: Drop alias patterns that risk catastrophic backtracking
+  // Step 5: Refuse names the generator writes into code as bare identifiers
+  assertIdentifierNames(manifest);
+
+  // Step 6: Drop alias patterns that risk catastrophic backtracking
   dropUnsafePatterns(manifest);
 
-  // Step 6: Return deeply frozen manifest to prevent mutation
+  // Step 7: Return deeply frozen manifest to prevent mutation
   return deepFreeze(manifest);
 }
 
@@ -128,6 +131,32 @@ function hasKind(
   obj: AbiTypeRef,
 ): obj is Exclude<AbiTypeRef, { $ref: string }> {
   return !isTypeRef(obj) && 'kind' in obj;
+}
+
+/**
+ * Method, parameter, variant, event and error names land in generated code as
+ * identifiers and literals. Field names do not: serde renames them freely and
+ * the generator quotes them.
+ */
+function assertIdentifierNames(manifest: AbiManifest): void {
+  const check = (what: string, name: string): void => {
+    if (!IDENTIFIER.test(name)) {
+      throw new Error(
+        `Invalid ${what} name ${JSON.stringify(name)}: expected ${IDENTIFIER}`,
+      );
+    }
+  };
+
+  for (const method of manifest.methods) {
+    check('method', method.name);
+    for (const param of method.params) check('parameter', param.name);
+    for (const error of method.errors ?? []) check('error code', error.code);
+  }
+  for (const event of manifest.events) check('event', event.name);
+  for (const typeDef of Object.values(manifest.types)) {
+    if (typeDef.kind !== 'variant') continue;
+    for (const variant of typeDef.variants) check('variant', variant.name);
+  }
 }
 
 /**

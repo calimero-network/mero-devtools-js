@@ -43,7 +43,7 @@ describe('Real-ABI end-to-end (core conformance manifest)', () => {
 
     // Every ABI method must surface verbatim in an rpc.execute call.
     for (const method of manifest.methods) {
-      expect(client).toContain(`method: '${method.name}'`);
+      expect(client).toContain(`method: ${JSON.stringify(method.name)}`);
     }
   });
 });

@@ -151,7 +151,7 @@ export class SerdeWireAbiClient {
    * add_element
    */
   public async addElement(params: { element: Element }): Promise<Element> {
-    const response = await this._transport.execute({ contextId: this._contextId, method: 'add_element', argsJson: params });
+    const response = await this._transport.execute({ contextId: this._contextId, method: "add_element", argsJson: params });
     return response as Element;
   }
 
@@ -159,7 +159,7 @@ export class SerdeWireAbiClient {
    * apply_delta
    */
   public async applyDelta(params: { change: Change }): Promise<Change> {
-    const response = await this._transport.execute({ contextId: this._contextId, method: 'apply_delta', argsJson: params });
+    const response = await this._transport.execute({ contextId: this._contextId, method: "apply_delta", argsJson: params });
     return response as Change;
   }
 
@@ -167,7 +167,7 @@ export class SerdeWireAbiClient {
    * settle
    */
   public async settle(params: { outcome: Outcome }): Promise<Outcome> {
-    const response = await this._transport.execute({ contextId: this._contextId, method: 'settle', argsJson: params });
+    const response = await this._transport.execute({ contextId: this._contextId, method: "settle", argsJson: params });
     return response as Outcome;
   }
 
@@ -175,15 +175,15 @@ export class SerdeWireAbiClient {
    * attachment
    */
   public async attachment(): Promise<Attachment> {
-    const response: any = await this._transport.execute({ contextId: this._contextId, method: 'attachment', argsJson: {} });
-    return (response == null ? null : (response["kind"] === "file" ? ({ ...response, hash: new CalimeroBytes(response['hash']) }) : response)) as Attachment;
+    const response: any = await this._transport.execute({ contextId: this._contextId, method: "attachment", argsJson: {} });
+    return (response == null ? null : (response["kind"] === "file" ? ({ ...response, hash: new CalimeroBytes(response["hash"]) }) : response)) as Attachment;
   }
 
   /**
    * receipt
    */
   public async receipt(): Promise<Receipt> {
-    const response: any = await this._transport.execute({ contextId: this._contextId, method: 'receipt', argsJson: {} });
+    const response: any = await this._transport.execute({ contextId: this._contextId, method: "receipt", argsJson: {} });
     return (response == null ? null : (response["kind"] === "Stored" ? { ...response, data: new CalimeroBytes(response["data"]) } : response)) as Receipt;
   }
 
@@ -191,7 +191,7 @@ export class SerdeWireAbiClient {
    * set_style
    */
   public async setStyle(params: { style: Style }): Promise<Style> {
-    const response = await this._transport.execute({ contextId: this._contextId, method: 'set_style', argsJson: params });
+    const response = await this._transport.execute({ contextId: this._contextId, method: "set_style", argsJson: params });
     return response as Style;
   }
 
@@ -199,7 +199,7 @@ export class SerdeWireAbiClient {
    * chunk
    */
   public async chunk(): Promise<Chunk> {
-    const response = await this._transport.execute({ contextId: this._contextId, method: 'chunk', argsJson: {} });
+    const response = await this._transport.execute({ contextId: this._contextId, method: "chunk", argsJson: {} });
     return response as Chunk;
   }
 

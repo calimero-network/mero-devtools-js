@@ -34,34 +34,34 @@ export type Index = Record<string, string>;
 export type AliasOfFolderId = string & { readonly __brand: 'AliasOfFolderId' };
 export const AliasOfFolderId = (value: string): AliasOfFolderId => value as AliasOfFolderId;
 
-export type Role = 'Viewer' | 'Editor';
+export type Role = "Viewer" | "Editor";
 
 export type AliasOfRecord = FolderEntry;
 
 export type ActionPayload =
-  | { name: 'Noop' }
-  | { name: 'Rename'; payload: string }
+  | { name: "Noop" }
+  | { name: "Rename"; payload: string }
 
 /**
  * A change a member asks for.
  */
 export const Action = {
-  Noop: (): ActionPayload => ({ name: 'Noop' }),
+  Noop: (): ActionPayload => ({ name: "Noop" }),
   /**
    * Give the folder this new name.
    */
-  Rename: (rename: string): ActionPayload => ({ name: 'Rename', payload: rename }),
+  Rename: (rename: string): ActionPayload => ({ name: "Rename", payload: rename }),
 } as const;
 
 export type CommandPayload =
-  | { name: 'Cancel' }
-  | { name: 'Store'; payload: Digest }
-  | { name: 'Scores'; payload: number[] }
+  | { name: "Cancel" }
+  | { name: "Store"; payload: Digest }
+  | { name: "Scores"; payload: number[] }
 
 export const Command = {
-  Cancel: (): CommandPayload => ({ name: 'Cancel' }),
-  Store: (store: Digest): CommandPayload => ({ name: 'Store', payload: store }),
-  Scores: (scores: number[]): CommandPayload => ({ name: 'Scores', payload: scores }),
+  Cancel: (): CommandPayload => ({ name: "Cancel" }),
+  Store: (store: Digest): CommandPayload => ({ name: "Store", payload: store }),
+  Scores: (scores: number[]): CommandPayload => ({ name: "Scores", payload: scores }),
 } as const;
 
 export type AliasOfCommand = CommandPayload;
@@ -195,7 +195,7 @@ export class NewtypesAbiClient {
    * @param params.id Handle returned by an earlier call.
    */
   public async getFolder(params: { id: FolderId }): Promise<FolderEntry> {
-    const response = await this._transport.execute({ contextId: this._contextId, method: 'get_folder', argsJson: params });
+    const response = await this._transport.execute({ contextId: this._contextId, method: "get_folder", argsJson: params });
     return response as FolderEntry;
   }
 
@@ -203,14 +203,14 @@ export class NewtypesAbiClient {
    * bind_context
    */
   public async bindContext(params: { folder_id: FolderId; context_id: ContextId }): Promise<void> {
-    await this._transport.execute({ contextId: this._contextId, method: 'bind_context', argsJson: params });
+    await this._transport.execute({ contextId: this._contextId, method: "bind_context", argsJson: params });
   }
 
   /**
    * current_height
    */
   public async currentHeight(): Promise<Height> {
-    const response = await this._transport.execute({ contextId: this._contextId, method: 'current_height', argsJson: {} });
+    const response = await this._transport.execute({ contextId: this._contextId, method: "current_height", argsJson: {} });
     return response as Height;
   }
 
@@ -218,7 +218,7 @@ export class NewtypesAbiClient {
    * reset_index
    */
   public async resetIndex(): Promise<void> {
-    await this._transport.execute({ contextId: this._contextId, method: 'reset_index', argsJson: {} });
+    await this._transport.execute({ contextId: this._contextId, method: "reset_index", argsJson: {} });
   }
 
   /**
@@ -234,28 +234,28 @@ export class NewtypesAbiClient {
         convertedParams["action"] = convertedParams["action"].name;
       }
     }
-    await this._transport.execute({ contextId: this._contextId, method: 'dispatch_action', argsJson: convertedParams });
+    await this._transport.execute({ contextId: this._contextId, method: "dispatch_action", argsJson: convertedParams });
   }
 
   /**
    * store_hash
    */
   public async storeHash(params: { hash: Hash32 }): Promise<void> {
-    await this._transport.execute({ contextId: this._contextId, method: 'store_hash', argsJson: convertCalimeroBytesForWasm(params) });
+    await this._transport.execute({ contextId: this._contextId, method: "store_hash", argsJson: convertCalimeroBytesForWasm(params) });
   }
 
   /**
    * rename_folder
    */
   public async renameFolder(params: { id: FolderId }): Promise<void> {
-    await this._transport.execute({ contextId: this._contextId, method: 'rename_folder', argsJson: params });
+    await this._transport.execute({ contextId: this._contextId, method: "rename_folder", argsJson: params });
   }
 
   /**
    * tag_hash
    */
   public async tagHash(params: { hash: Hash32; label: string }): Promise<void> {
-    await this._transport.execute({ contextId: this._contextId, method: 'tag_hash', argsJson: convertCalimeroBytesForWasm(params) });
+    await this._transport.execute({ contextId: this._contextId, method: "tag_hash", argsJson: convertCalimeroBytesForWasm(params) });
   }
 
   /**
@@ -271,21 +271,21 @@ export class NewtypesAbiClient {
         convertedParams["cmd"] = convertedParams["cmd"].name;
       }
     }
-    await this._transport.execute({ contextId: this._contextId, method: 'run_command', argsJson: convertCalimeroBytesForWasm(convertedParams) });
+    await this._transport.execute({ contextId: this._contextId, method: "run_command", argsJson: convertCalimeroBytesForWasm(convertedParams) });
   }
 
   /**
    * set_role
    */
   public async setRole(params: { role: Role }): Promise<void> {
-    await this._transport.execute({ contextId: this._contextId, method: 'set_role', argsJson: params });
+    await this._transport.execute({ contextId: this._contextId, method: "set_role", argsJson: params });
   }
 
   /**
    * store_digest
    */
   public async storeDigest(params: { d: Digest }): Promise<void> {
-    await this._transport.execute({ contextId: this._contextId, method: 'store_digest', argsJson: convertCalimeroBytesForWasm(params) });
+    await this._transport.execute({ contextId: this._contextId, method: "store_digest", argsJson: convertCalimeroBytesForWasm(params) });
   }
 
   /**
@@ -301,14 +301,14 @@ export class NewtypesAbiClient {
         convertedParams["cmd"] = convertedParams["cmd"].name;
       }
     }
-    await this._transport.execute({ contextId: this._contextId, method: 'run_aliased_command', argsJson: convertCalimeroBytesForWasm(convertedParams) });
+    await this._transport.execute({ contextId: this._contextId, method: "run_aliased_command", argsJson: convertCalimeroBytesForWasm(convertedParams) });
   }
 
   /**
    * get_role
    */
   public async getRole(): Promise<Role> {
-    const response = await this._transport.execute({ contextId: this._contextId, method: 'get_role', argsJson: {} });
+    const response = await this._transport.execute({ contextId: this._contextId, method: "get_role", argsJson: {} });
     return response as Role;
   }
 
@@ -316,8 +316,8 @@ export class NewtypesAbiClient {
    * last_command
    */
   public async lastCommand(): Promise<CommandPayload> {
-    const response: any = await this._transport.execute({ contextId: this._contextId, method: 'last_command', argsJson: {} });
-    return (response == null ? null : (typeof response === 'string' ? { name: response } : 'Store' in response ? { name: 'Store', payload: new CalimeroBytes(response['Store']) } : { name: Object.keys(response)[0], payload: Object.values(response)[0] })) as CommandPayload;
+    const response: any = await this._transport.execute({ contextId: this._contextId, method: "last_command", argsJson: {} });
+    return (response == null ? null : (typeof response === 'string' ? { name: response } : "Store" in response ? { name: "Store", payload: new CalimeroBytes(response["Store"]) } : { name: Object.keys(response)[0], payload: Object.values(response)[0] })) as CommandPayload;
   }
 
 }

@@ -8,6 +8,7 @@ import { AbiManifest, AbiTypeDef } from '../model.js';
 // foreign value, so they stay plain aliases.
 // A hand-written or malformed manifest can point an alias at itself.
 export const MAX_ALIAS_DEPTH = 16;
+export const IDENTIFIER = /^[A-Za-z_$][A-Za-z0-9_$]*$/; // names that need no quoting
 const BRANDABLE_SCALARS: Record<string, 'string' | 'number'> = {
   string: 'string',
   i32: 'number',
