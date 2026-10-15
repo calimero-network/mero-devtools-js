@@ -2,8 +2,6 @@
 import { Command } from 'commander';
 import path from 'node:path';
 import fs from 'node:fs/promises';
-import os from 'node:os';
-import { execFile } from 'node:child_process';
 import { green, red, cyan, dim } from 'kolorist';
 import validate from 'validate-npm-package-name';
 import {
@@ -15,30 +13,9 @@ import {
   planExtendsRewrite,
   resolveCatalogSpecifiers,
 } from './monorepo.js';
+import { TEMPLATE, sparseCloneToTemp } from './template.js';
 
 const program = new Command();
-
-/**
- * The starter is a directory inside `calimero-network/apps`, not a repo of its
- * own. The standalone `kv-store` and `kv-store-js` repos this CLI used to clone
- * were archived when every app moved into that monorepo; cloning them kept
- * working, which is exactly why the rot went unnoticed — a scaffolded project
- * silently tracked an abandoned tree.
- *
- * Two things follow, and between them they are most of this file:
- *
- *  1. Only one directory is wanted out of a large repo, so the checkout is
- *     sparse rather than a full clone.
- *  2. A monorepo app is not a standalone project — see `monorepo.ts`. Its
- *     `catalog:` and `workspace = true` references are resolved against the
- *     checkout on the way out.
- */
-const TEMPLATE = {
-  repoUrl: 'https://github.com/calimero-network/apps',
-  /** Directory within the repo that becomes the project. */
-  subdir: 'apps/kv-store',
-  display: 'Rust (kv-store)',
-} as const;
 
 /** Templates that used to exist, kept only to explain themselves once. */
 const RETIRED_TEMPLATES: Record<string, string> = {
@@ -79,46 +56,6 @@ async function copyDir(srcDir: string, destDir: string): Promise<void> {
       await fs.copyFile(srcPath, destPath);
     }
   }
-}
-
-function runGit(args: string[], cwd?: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const child = execFile('git', args, { cwd }, (error) => {
-      if (error) reject(error);
-      else resolve();
-    });
-    child.stdout?.pipe(process.stdout);
-    child.stderr?.pipe(process.stderr);
-  });
-}
-
-/**
- * Check out just `subdir`, plus the repo-root files.
- *
- * Cone-mode sparse checkout always materializes the files at the repository
- * root, which is what makes this work: `Cargo.toml` and `pnpm-workspace.yaml`
- * arrive alongside the app directory, and those are exactly the two files the
- * inherited references have to be resolved against.
- */
-async function sparseCloneToTemp(
-  repoUrl: string,
-  subdir: string,
-): Promise<string> {
-  const tmpBase = await fs.mkdtemp(path.join(os.tmpdir(), 'mero-create-'));
-  const cloneDir = path.join(tmpBase, 'repo');
-
-  await runGit([
-    'clone',
-    '--depth',
-    '1',
-    '--filter=blob:none',
-    '--sparse',
-    repoUrl,
-    cloneDir,
-  ]);
-  await runGit(['sparse-checkout', 'set', subdir], cloneDir);
-
-  return cloneDir;
 }
 
 /**
@@ -373,10 +310,9 @@ pnpm test             # the generated client against the ABI
 
 The template is \`apps/kv-store\` in
 [calimero-network/apps](https://github.com/calimero-network/apps), extracted as
-a standalone project: its \`catalog:\` frontend dependencies and inherited
+a standalone project at commit ${TEMPLATE.commit}: its \`catalog:\` frontend dependencies and inherited
 \`workspace = true\` crate fields were resolved to concrete versions at scaffold
-time, so this project is pinned to whatever the monorepo shipped that day and
-upgrades on its own schedule.
+time, so this project upgrades on its own schedule.
 `;
   await fs.writeFile(path.join(targetDir, 'README.md'), readme, 'utf8');
 }
@@ -431,6 +367,7 @@ async function main() {
         const checkout = await sparseCloneToTemp(
           TEMPLATE.repoUrl,
           TEMPLATE.subdir,
+          TEMPLATE.commit,
         );
         try {
           const source = path.join(checkout, TEMPLATE.subdir);
