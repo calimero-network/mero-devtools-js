@@ -4,12 +4,13 @@
 // against that same node and asserted on the values it really returns.
 //
 // Needs no Rust toolchain and no core checkout - merod and the app bundle are
-// both release assets. Override the release with CORE_RELEASE_TAG, or point
-// MEROD_BINARY at a merod you already have.
+// both assets of the pinned core release, checked against their sha256. Point
+// MEROD_BINARY at a merod you already have to skip the download.
 //
 //   pnpm --filter codegen-example e2e
 
 import { execFileSync, spawn } from 'child_process';
+import { createHash } from 'crypto';
 import {
   existsSync,
   mkdirSync,
@@ -29,11 +30,20 @@ const ADMIN_USER = 'dev'; // throwaway node; embedded auth enforces an 8-charact
 const ADMIN_PASSWORD = 'dev-password';
 const APP_ASSET = 'kv-store-test-fixture.mpk'; // the one prebuilt, signed app a core release ships
 const CLIENT_NAME = 'KvStoreClient';
-const RELEASES_API =
-  'https://api.github.com/repos/calimero-network/core/releases?per_page=1';
 const DOWNLOAD_BASE =
   'https://github.com/calimero-network/core/releases/download';
 const HEALTH_ATTEMPTS = 60;
+const CORE_RELEASE = '0.11.0-rc.75'; // bump together with RELEASE_SHA256
+const RELEASE_SHA256 = {
+  'merod_aarch64-apple-darwin.tar.gz':
+    'c76dc632e60cd79a611cb64984d12f99f25410cafae06aaa18b3a2ab40a4b70a',
+  'merod_x86_64-unknown-linux-gnu.tar.gz':
+    '5f04358779aad60f65ee5d50d7db9942e4369926342ba06cbd6309919719e023',
+  'merod_aarch64-unknown-linux-gnu.tar.gz':
+    '491bbbc2e673b0e283c25a1abef8f1314ca65524b037020b673885e571e031a8',
+  [APP_ASSET]:
+    '367c9821b17f794ebb84cc9ed743d5a52878e2dbc16515ea1e88f80eff6a0300',
+};
 const MEROD_TARGETS = {
   'darwin-arm64': 'aarch64-apple-darwin',
   'linux-x64': 'x86_64-unknown-linux-gnu',
@@ -54,29 +64,18 @@ class E2eError extends Error {}
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-async function resolveTag() {
-  if (process.env.CORE_RELEASE_TAG?.trim()) {
-    return process.env.CORE_RELEASE_TAG.trim();
-  }
-  // Includes pre-releases on purpose: core currently publishes only release
-  // candidates, so there is no GitHub "latest" to ask for.
-  const res = await fetch(RELEASES_API, {
-    headers: { 'User-Agent': 'mero-devtools-js-e2e' },
-  });
-  if (!res.ok) {
-    throw new E2eError(
-      `could not list core releases (${res.status}). Set CORE_RELEASE_TAG to pin one.`,
-    );
-  }
-  const tag = (await res.json())[0]?.tag_name;
-  if (!tag) throw new E2eError('calimero-network/core published no releases');
-  return tag;
-}
-
-async function download(url, dest) {
+async function downloadAsset(asset, dest) {
+  const url = `${DOWNLOAD_BASE}/${CORE_RELEASE}/${asset}`;
   const res = await fetch(url);
   if (!res.ok) throw new E2eError(`GET ${url} -> ${res.status}`);
-  writeFileSync(dest, Buffer.from(await res.arrayBuffer()));
+  const bytes = Buffer.from(await res.arrayBuffer());
+  const actual = createHash('sha256').update(bytes).digest('hex');
+  if (actual !== RELEASE_SHA256[asset]) {
+    throw new E2eError(
+      `${asset} @ ${CORE_RELEASE} has sha256 ${actual}, expected ${RELEASE_SHA256[asset]}`,
+    );
+  }
+  writeFileSync(dest, bytes);
 }
 
 async function resolveMerod(tag) {
@@ -105,7 +104,7 @@ async function resolveMerod(tag) {
   mkdirSync(dir, { recursive: true });
   const tarball = join(dir, 'merod.tar.gz');
   console.log(`  downloading merod_${target} @ ${tag}`);
-  await download(`${DOWNLOAD_BASE}/${tag}/merod_${target}.tar.gz`, tarball);
+  await downloadAsset(`merod_${target}.tar.gz`, tarball);
   execFileSync('tar', ['xzf', tarball, '-C', dir]);
   rmSync(tarball);
   return binary;
@@ -118,7 +117,7 @@ async function resolveAppBundle(tag) {
 
   mkdirSync(dir, { recursive: true });
   console.log(`  downloading ${APP_ASSET} @ ${tag}`);
-  await download(`${DOWNLOAD_BASE}/${tag}/${APP_ASSET}`, bundle);
+  await downloadAsset(APP_ASSET, bundle);
   return bundle;
 }
 
@@ -389,7 +388,7 @@ async function rejection(fn, what) {
 }
 
 async function main() {
-  const tag = await resolveTag();
+  const tag = CORE_RELEASE;
   console.log(`core release: ${tag}`);
   const merod = await resolveMerod(tag);
   const bundle = await resolveAppBundle(tag);
