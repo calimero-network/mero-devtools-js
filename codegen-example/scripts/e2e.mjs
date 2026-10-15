@@ -64,6 +64,15 @@ class E2eError extends Error {}
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+/** Each asset is cached under its pinned sha256, so only a verified download is ever reused. */
+function assetDir(asset) {
+  const sha256 = RELEASE_SHA256[asset];
+  if (!sha256) {
+    throw new E2eError(`no pinned sha256 for ${asset} @ ${CORE_RELEASE}`);
+  }
+  return join(cacheDir, sha256);
+}
+
 async function downloadAsset(asset, dest) {
   const url = `${DOWNLOAD_BASE}/${CORE_RELEASE}/${asset}`;
   const res = await fetch(url);
@@ -78,7 +87,7 @@ async function downloadAsset(asset, dest) {
   writeFileSync(dest, bytes);
 }
 
-async function resolveMerod(tag) {
+async function resolveMerod() {
   if (process.env.MEROD_BINARY?.trim()) {
     const path = process.env.MEROD_BINARY.trim();
     if (!existsSync(path)) {
@@ -97,26 +106,27 @@ async function resolveMerod(tag) {
     );
   }
 
-  const dir = join(cacheDir, tag);
+  const asset = `merod_${target}.tar.gz`;
+  const dir = assetDir(asset);
   const binary = join(dir, 'merod');
   if (existsSync(binary)) return binary;
 
   mkdirSync(dir, { recursive: true });
   const tarball = join(dir, 'merod.tar.gz');
-  console.log(`  downloading merod_${target} @ ${tag}`);
-  await downloadAsset(`merod_${target}.tar.gz`, tarball);
+  console.log(`  downloading ${asset} @ ${CORE_RELEASE}`);
+  await downloadAsset(asset, tarball);
   execFileSync('tar', ['xzf', tarball, '-C', dir]);
   rmSync(tarball);
   return binary;
 }
 
-async function resolveAppBundle(tag) {
-  const dir = join(cacheDir, tag);
+async function resolveAppBundle() {
+  const dir = assetDir(APP_ASSET);
   const bundle = join(dir, APP_ASSET);
   if (existsSync(bundle)) return bundle;
 
   mkdirSync(dir, { recursive: true });
-  console.log(`  downloading ${APP_ASSET} @ ${tag}`);
+  console.log(`  downloading ${APP_ASSET} @ ${CORE_RELEASE}`);
   await downloadAsset(APP_ASSET, bundle);
   return bundle;
 }
@@ -388,10 +398,9 @@ async function rejection(fn, what) {
 }
 
 async function main() {
-  const tag = CORE_RELEASE;
-  console.log(`core release: ${tag}`);
-  const merod = await resolveMerod(tag);
-  const bundle = await resolveAppBundle(tag);
+  console.log(`core release: ${CORE_RELEASE}`);
+  const merod = await resolveMerod();
+  const bundle = await resolveAppBundle();
 
   const node = await bootNode(merod);
   try {
