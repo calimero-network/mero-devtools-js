@@ -33,6 +33,8 @@ jobs:
       - run: pnpm format:check
       - run: pnpm build
       - run: pnpm test
+      - name: Scaffold from the pinned template
+        run: node create-mero-app/dist/cli.mjs "$RUNNER_TEMP/scaffold"
       - name: Validate ABI
         run: cd abi-codegen && pnpm run validate:abi
       # Proves in one step that the generator runs, that its output matches what
@@ -134,9 +136,9 @@ jobs:
   # The only job that drives a GENERATED client against a real node: the other
   # jobs stop at "the emitted TypeScript typechecks", which a client that answers
   # every call with garbage would also pass. Needs no Rust toolchain - merod and
-  # the app bundle are both binary assets on the same release the schema-parity
-  # job resolves. In `release`'s `needs`: a generator whose client cannot drive
-  # a real node must not publish.
+  # the app bundle are sha256-pinned assets of the core release e2e.mjs pins.
+  # In `release`'s `needs`: a generator whose client cannot drive a real node
+  # must not publish.
   e2e-generated-client:
     name: E2E (generated client vs released merod)
     runs-on: ubuntu-latest
@@ -144,19 +146,6 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
-
-      - name: Resolve latest core release tag
-        id: coretag
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          TAG=$(gh release list --repo calimero-network/core --limit 1 --json tagName --jq '.[0].tagName')
-          if [ -z "$TAG" ]; then
-            echo "::error::could not resolve a latest core release tag from calimero-network/core"
-            exit 1
-          fi
-          echo "Latest core release: $TAG"
-          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
 
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v7
@@ -168,7 +157,6 @@ jobs:
 
       - name: Generated client e2e
         env:
-          CORE_RELEASE_TAG: ${{ steps.coretag.outputs.tag }}
           NO_COLOR: '1'
         run: |
           set -eo pipefail

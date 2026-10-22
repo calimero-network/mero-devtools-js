@@ -29,7 +29,9 @@ accepted but never necessary.
 ## Where the template comes from
 
 `apps/kv-store` in
-[calimero-network/apps](https://github.com/calimero-network/apps).
+[calimero-network/apps](https://github.com/calimero-network/apps), at the commit
+pinned in `src/template.ts`.
+Each release of this CLI scaffolds exactly that commit and refuses a checkout at any other.
 
 It is a directory inside a monorepo, not a repository of its own. The standalone
 `calimero-network/kv-store` and `calimero-network/kv-store-js` repos this CLI
@@ -43,8 +45,8 @@ replacement. For a JavaScript contract, see the examples in
 
 1. Validates the project name as an npm package name, and refuses a non-empty
    existing directory.
-2. Sparse-checks-out `apps/kv-store` into a temp directory. Cone mode also
-   materializes the repo-root files, which step 4 needs.
+2. Sparse-checks-out `apps/kv-store` at the pinned commit into a temp directory.
+   Cone mode also materializes the repo-root files, which step 4 needs.
 3. Copies the app in, excluding `.git`, `.github`, `.gitignore`,
    `.gitattributes`, `.gitmodules`, and `node_modules`.
 4. Detaches it from the monorepo (below).
@@ -79,9 +81,9 @@ is catalogued as `^1.2.2`, and 1.3.0 dropped a parameter from the constructor it
 generates — scaffolding from the range gave a project whose first `pnpm codegen`
 produced a client its own app code no longer compiled against.
 
-Nothing is hardcoded in this CLI. The values come from the commit that was
-cloned, so a core bump or a frontend release in `apps` reaches newly scaffolded
-projects on its own.
+Nothing but the commit is hardcoded in this CLI. The values come from the pinned
+commit, so a core bump or a frontend release in `apps` reaches newly scaffolded
+projects when the pin is bumped.
 
 > **A scaffolded project does not track the template.** Versions are pinned at
 > scaffold time and the project upgrades on its own schedule from then on. It is
