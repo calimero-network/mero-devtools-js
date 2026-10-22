@@ -32,9 +32,9 @@ describe('Codegen', () => {
       // Assert key patterns
       expect(typesContent).toContain('export interface Person {');
       expect(typesContent).toContain('export type ActionPayload =');
-      expect(typesContent).toContain("| { name: 'SetName'; payload: string }");
+      expect(typesContent).toContain('| { name: "SetName"; payload: string }');
       expect(typesContent).toContain(
-        "| { name: 'Update'; payload: UpdatePayload }",
+        '| { name: "Update"; payload: UpdatePayload }',
       );
       expect(typesContent).toContain('export type UserId32 = CalimeroBytes;');
       // JSDoc comments are no longer included in the new format
@@ -107,7 +107,7 @@ describe('Codegen', () => {
 
       // The Action variant "Update" has a reference to UpdatePayload
       expect(typesContent).toContain(
-        "| { name: 'Update'; payload: UpdatePayload }",
+        '| { name: "Update"; payload: UpdatePayload }',
       );
     });
 
@@ -115,9 +115,9 @@ describe('Codegen', () => {
       const typesContent = generateClient(manifest, 'Types');
 
       // The Action variant "SetName" has a string payload
-      expect(typesContent).toContain("| { name: 'SetName'; payload: string }");
+      expect(typesContent).toContain('| { name: "SetName"; payload: string }');
       // The Action variant "Ping" has no payload
-      expect(typesContent).toContain("| { name: 'Ping' }");
+      expect(typesContent).toContain('| { name: "Ping" }');
     });
   });
 
@@ -141,13 +141,13 @@ describe('Codegen', () => {
         'async optU32(params: { x: number | null }): Promise<number | null> {',
       );
       expect(clientContent).toContain(
-        "const response = await this._transport.execute({ contextId: this._contextId, method: 'opt_u32', argsJson: params });",
+        'const response = await this._transport.execute({ contextId: this._contextId, method: "opt_u32", argsJson: params });',
       );
       expect(clientContent).toContain(
         'async makePerson(params: { p: Person }): Promise<Person> {',
       );
       expect(clientContent).toContain(
-        "const response: any = await this._transport.execute({ contextId: this._contextId, method: 'make_person', argsJson: convertCalimeroBytesForWasm(params) });",
+        'const response: any = await this._transport.execute({ contextId: this._contextId, method: "make_person", argsJson: convertCalimeroBytesForWasm(params) });',
       );
       // Error documentation is now handled through standard error response pattern
     });
@@ -167,13 +167,13 @@ describe('Codegen', () => {
         'async roundtripId(params: { x: UserId32 }): Promise<UserId32> {',
       );
       expect(clientContent).toContain(
-        "const response: any = await this._transport.execute({ contextId: this._contextId, method: 'roundtrip_id', argsJson: convertCalimeroBytesForWasm(params) });",
+        'const response: any = await this._transport.execute({ contextId: this._contextId, method: "roundtrip_id", argsJson: convertCalimeroBytesForWasm(params) });',
       );
       expect(clientContent).toContain(
         'async optU32(params: { x: number | null }): Promise<number | null> {',
       );
       expect(clientContent).toContain(
-        "const response = await this._transport.execute({ contextId: this._contextId, method: 'opt_u32', argsJson: params });",
+        'const response = await this._transport.execute({ contextId: this._contextId, method: "opt_u32", argsJson: params });',
       );
     });
 
@@ -185,7 +185,7 @@ describe('Codegen', () => {
         'async makePerson(params: { p: Person }): Promise<Person> {',
       );
       expect(clientContent).toContain(
-        "const response: any = await this._transport.execute({ contextId: this._contextId, method: 'make_person', argsJson: convertCalimeroBytesForWasm(params) });",
+        'const response: any = await this._transport.execute({ contextId: this._contextId, method: "make_person", argsJson: convertCalimeroBytesForWasm(params) });',
       );
     });
 
@@ -193,15 +193,15 @@ describe('Codegen', () => {
       const clientContent = generateClient(manifest);
 
       // Check that ABI method names are used exactly as they appear in the ABI
-      expect(clientContent).toContain("'opt_u32'");
-      expect(clientContent).toContain("'list_u32'");
-      expect(clientContent).toContain("'map_u32'");
-      expect(clientContent).toContain("'make_person'");
-      expect(clientContent).toContain("'profile_roundtrip'");
-      expect(clientContent).toContain("'roundtrip_id'");
-      expect(clientContent).toContain("'roundtrip_hash'");
-      expect(clientContent).toContain("'may_fail'");
-      expect(clientContent).toContain("'find_person'");
+      expect(clientContent).toContain('"opt_u32"');
+      expect(clientContent).toContain('"list_u32"');
+      expect(clientContent).toContain('"map_u32"');
+      expect(clientContent).toContain('"make_person"');
+      expect(clientContent).toContain('"profile_roundtrip"');
+      expect(clientContent).toContain('"roundtrip_id"');
+      expect(clientContent).toContain('"roundtrip_hash"');
+      expect(clientContent).toContain('"may_fail"');
+      expect(clientContent).toContain('"find_person"');
     });
 
     it('should handle methods with errors correctly', () => {
@@ -230,7 +230,7 @@ describe('Codegen', () => {
         'async makePerson(params: { p: Person }): Promise<Person> {',
       );
       expect(clientContent).toContain(
-        "const response: any = await this._transport.execute({ contextId: this._contextId, method: 'make_person', argsJson: convertCalimeroBytesForWasm(params) });",
+        'const response: any = await this._transport.execute({ contextId: this._contextId, method: "make_person", argsJson: convertCalimeroBytesForWasm(params) });',
       );
     });
 
@@ -643,7 +643,7 @@ describe('Codegen', () => {
       const parsed = parseAbiManifest(allUnitAbi);
       const clientContent = generateClient(parsed, 'TestClient');
       expect(clientContent).toContain(
-        "export type MatchStatus = 'Pending' | 'Active' | 'Finished';",
+        'export type MatchStatus = "Pending" | "Active" | "Finished";',
       );
       // No Payload type, no const factory
       expect(clientContent).not.toContain('MatchStatusPayload');
@@ -654,7 +654,7 @@ describe('Codegen', () => {
       const parsed = parseAbiManifest(allUnitAbi);
       const typesContent = generateClient(parsed, 'Types');
       expect(typesContent).toContain(
-        "export type MatchStatus = 'Pending' | 'Active' | 'Finished';",
+        'export type MatchStatus = "Pending" | "Active" | "Finished";',
       );
       expect(typesContent).not.toContain('MatchStatusPayload');
     });
@@ -758,8 +758,8 @@ describe('Codegen', () => {
       const parsed = parseAbiManifest(mixedAbi);
       const clientContent = generateClient(parsed, 'TestClient');
       expect(clientContent).toContain('export type ActionPayload =');
-      expect(clientContent).toContain("| { name: 'Ping' }");
-      expect(clientContent).toContain("| { name: 'SetName'; payload: string }");
+      expect(clientContent).toContain('| { name: "Ping" }');
+      expect(clientContent).toContain('| { name: "SetName"; payload: string }');
       expect(clientContent).toContain('export const Action = {');
     });
   });
@@ -787,7 +787,7 @@ describe('Codegen', () => {
         'convertedParams["cmd"] = { [convertedParams["cmd"].name]: convertedParams["cmd"].payload };',
       );
       expect(clientContent).toContain(
-        "method: 'run', argsJson: convertedParams });",
+        'method: "run", argsJson: convertedParams });',
       );
     });
 
@@ -812,7 +812,7 @@ describe('Codegen', () => {
       const clientContent = generateClient(parsed, 'TestClient');
       expect(clientContent).not.toContain('convertedParams');
       expect(clientContent).toContain(
-        "method: 'apply', argsJson: convertCalimeroBytesForWasm(params) });",
+        'method: "apply", argsJson: convertCalimeroBytesForWasm(params) });',
       );
     });
 
@@ -836,7 +836,7 @@ describe('Codegen', () => {
         'convertedParams["cmd"] = { [convertedParams["cmd"].name]: convertedParams["cmd"].payload };',
       );
       expect(clientContent).toContain(
-        "method: 'run', argsJson: convertedParams });",
+        'method: "run", argsJson: convertedParams });',
       );
     });
 
@@ -857,7 +857,7 @@ describe('Codegen', () => {
         'convertedParams["cmd"] = { [convertedParams["cmd"].name]: convertedParams["cmd"].payload };',
       );
       expect(clientContent).toContain(
-        "method: 'run', argsJson: convertedParams });",
+        'method: "run", argsJson: convertedParams });',
       );
     });
 
@@ -881,7 +881,7 @@ describe('Codegen', () => {
       const clientContent = generateClient(parsed, 'TestClient');
       expect(clientContent).not.toContain('convertedParams');
       expect(clientContent).toContain(
-        "method: 'set_role', argsJson: params });",
+        'method: "set_role", argsJson: params });',
       );
     });
   });
@@ -1009,7 +1009,7 @@ describe('Codegen', () => {
       const clientContent = generateClient(parsed, 'TestClient');
       expect(clientContent).toContain('function convertCalimeroBytesForWasm');
       expect(clientContent).toContain(
-        "method: 'run', argsJson: convertCalimeroBytesForWasm(convertedParams) });",
+        'method: "run", argsJson: convertCalimeroBytesForWasm(convertedParams) });',
       );
     });
 
@@ -1034,10 +1034,10 @@ describe('Codegen', () => {
       const parsed = parseAbiManifest(abi);
       const clientContent = generateClient(parsed, 'TestClient');
       expect(clientContent).toContain(
-        "'Digest' in response ? { name: 'Digest', payload: new CalimeroBytes(response['Digest']) }",
+        '"Digest" in response ? { name: "Digest", payload: new CalimeroBytes(response["Digest"]) }',
       );
       expect(clientContent).not.toContain(
-        "new CalimeroBytes(response['Scores']",
+        'new CalimeroBytes(response["Scores"]',
       );
     });
 
@@ -1056,7 +1056,7 @@ describe('Codegen', () => {
       const parsed = parseAbiManifest(abi);
       const clientContent = generateClient(parsed, 'TestClient');
       expect(clientContent).toContain(
-        "method: 'store', argsJson: convertCalimeroBytesForWasm(params) });",
+        'method: "store", argsJson: convertCalimeroBytesForWasm(params) });',
       );
     });
 
@@ -1093,7 +1093,7 @@ describe('Codegen', () => {
       });
       const clientContent = generateClient(parsed, 'TestClient');
       expect(clientContent).toContain(
-        "({ ...response, hash: new CalimeroBytes(response['hash']) })",
+        '({ ...response, hash: new CalimeroBytes(response["hash"]) })',
       );
     });
 
@@ -1112,7 +1112,7 @@ describe('Codegen', () => {
       const clientContent = generateClient(parsed, 'TestClient');
       expect(clientContent).toContain('default: CalimeroBytes;');
       expect(clientContent).toContain(
-        "default: new CalimeroBytes(response['default'])",
+        'default: new CalimeroBytes(response["default"])',
       );
     });
 

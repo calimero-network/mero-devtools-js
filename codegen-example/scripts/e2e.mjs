@@ -29,6 +29,7 @@ const ADMIN_USER = 'dev'; // throwaway node; embedded auth enforces an 8-charact
 const ADMIN_PASSWORD = 'dev-password';
 const APP_ASSET = 'kv-store-test-fixture.mpk'; // the one prebuilt, signed app a core release ships
 const CLIENT_NAME = 'KvStoreClient';
+const APP_ERROR_PREFIX = 'the method call returned an error: '; // core's text before the guest's own error
 const RELEASES_API =
   'https://api.github.com/repos/calimero-network/core/releases?per_page=1';
 const DOWNLOAD_BASE =
@@ -368,15 +369,15 @@ function eq(actual, expected, what) {
 }
 
 /**
- * The guest's own serialized error, which core renders into the message as a
- * byte-array literal. Absent for a call that failed before reaching the app.
+ * The guest's own serialized error, which core renders into the message after a
+ * fixed prefix. Absent for a call that failed before reaching the app.
  */
 function appError(err) {
-  const bytes = /\[([\d, ]+)\]/.exec(String(err.data));
-  if (!bytes) {
+  const message = String(err.data);
+  if (!message.startsWith(APP_ERROR_PREFIX)) {
     throw new Error(`no guest error payload in: ${JSON.stringify(err.data)}`);
   }
-  return JSON.parse(Buffer.from(bytes[1].split(',').map(Number)).toString());
+  return JSON.parse(message.slice(APP_ERROR_PREFIX.length));
 }
 
 async function rejection(fn, what) {

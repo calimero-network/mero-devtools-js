@@ -185,15 +185,15 @@ describe('CRDT type annotations', () => {
     });
 
     it('should preserve ABI method names in execute calls', () => {
-      expect(clientContent).toContain("'create_game'");
-      expect(clientContent).toContain("'join_game'");
-      expect(clientContent).toContain("'start_game'");
-      expect(clientContent).toContain("'roll_dice'");
-      expect(clientContent).toContain("'move_piece'");
-      expect(clientContent).toContain("'resign_game'");
-      expect(clientContent).toContain("'get_game'");
-      expect(clientContent).toContain("'get_pieces'");
-      expect(clientContent).toContain("'get_move_history'");
+      expect(clientContent).toContain('"create_game"');
+      expect(clientContent).toContain('"join_game"');
+      expect(clientContent).toContain('"start_game"');
+      expect(clientContent).toContain('"roll_dice"');
+      expect(clientContent).toContain('"move_piece"');
+      expect(clientContent).toContain('"resign_game"');
+      expect(clientContent).toContain('"get_game"');
+      expect(clientContent).toContain('"get_pieces"');
+      expect(clientContent).toContain('"get_move_history"');
     });
 
     it('should not contain CRDT wrapper types in generated output', () => {

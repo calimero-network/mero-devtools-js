@@ -12,13 +12,12 @@ import {
   brandBaseType,
   formatIdentifier,
   generateFileBanner,
+  IDENTIFIER,
   mapRustTypeToTs,
   MAX_ALIAS_DEPTH,
   sanitizeClassName,
   toCamelCase,
 } from './emit.js';
-
-const IDENTIFIER = /^[A-Za-z_$][A-Za-z0-9_$]*$/; // keys that need no quoting
 
 /**
  * Utility class for handling byte conversions in Calimero
@@ -392,7 +391,9 @@ function resolveNamedType(
 }
 
 // A wire name as an object key: bare when it is an identifier, else quoted.
+// `__proto__` is computed, since a literal key of that name sets the prototype.
 function propertyKey(name: string): string {
+  if (name === '__proto__') return `[${JSON.stringify(name)}]`;
   return IDENTIFIER.test(name) ? name : JSON.stringify(name);
 }
 
@@ -577,7 +578,7 @@ function decodeRecord(
   seen: Set<string>,
 ): string | null {
   const decoded = fields.flatMap((field) => {
-    const read = `${expr}['${field.name}']`;
+    const read = `${expr}[${JSON.stringify(field.name)}]`;
     const name = propertyKey(field.name);
     const inner = decodeExpr(field.type, manifest, read, seen);
     if (!inner) return [];
@@ -624,11 +625,11 @@ function decodeVariant(
         decodeExpr(
           variant.payload,
           manifest,
-          `${expr}['${variant.name}']`,
+          `${expr}[${JSON.stringify(variant.name)}]`,
           seen,
         );
       return inner
-        ? `'${variant.name}' in ${expr} ? { name: '${variant.name}', payload: ${inner} } : `
+        ? `${JSON.stringify(variant.name)} in ${expr} ? { name: ${JSON.stringify(variant.name)}, payload: ${inner} } : `
         : '';
     })
     .join('');
@@ -711,7 +712,9 @@ function generateTypeDefinition(
     } else if (isAllUnitVariant(typeDef)) {
       // Unit-only variants — serde serializes these as bare strings.
       // Emit a string-literal union type that matches the wire format.
-      const literals = typeDef.variants.map((v) => `'${v.name}'`).join(' | ');
+      const literals = typeDef.variants
+        .map((v) => JSON.stringify(v.name))
+        .join(' | ');
       lines.push(`export type ${safeName} = ${literals};`);
     } else {
       // Mixed/payload variants — emit a discriminated union and factory.
@@ -720,9 +723,9 @@ function generateTypeDefinition(
       const variantLines = typeDef.variants.map((variant) => {
         if (variant.payload) {
           const payloadType = generateTypeRef(variant.payload, manifest, false);
-          return `  | { name: '${variant.name}'; payload: ${payloadType} }`;
+          return `  | { name: ${JSON.stringify(variant.name)}; payload: ${payloadType} }`;
         } else {
-          return `  | { name: '${variant.name}' }`;
+          return `  | { name: ${JSON.stringify(variant.name)} }`;
         }
       });
       lines.push(...variantLines);
@@ -737,11 +740,11 @@ function generateTypeDefinition(
         if (variant.payload) {
           const payloadType = generateTypeRef(variant.payload, manifest, false);
           lines.push(
-            `  ${variantName}: (${formatIdentifier(variant.name.toLowerCase())}: ${payloadType}): ${safeName}Payload => ({ name: '${variant.name}', payload: ${formatIdentifier(variant.name.toLowerCase())} }),`,
+            `  ${variantName}: (${formatIdentifier(variant.name.toLowerCase())}: ${payloadType}): ${safeName}Payload => ({ name: ${JSON.stringify(variant.name)}, payload: ${formatIdentifier(variant.name.toLowerCase())} }),`,
           );
         } else {
           lines.push(
-            `  ${variantName}: (): ${safeName}Payload => ({ name: '${variant.name}' }),`,
+            `  ${variantName}: (): ${safeName}Payload => ({ name: ${JSON.stringify(variant.name)} }),`,
           );
         }
       });
@@ -801,7 +804,7 @@ function generateMethodErrorTypes(
 
   // Generate error code type
   const errorCodes = method
-    .errors!.map((error) => `"${error.code}"`)
+    .errors!.map((error) => JSON.stringify(error.code))
     .join(' | ');
   lines.push(`export type ${methodName}ErrorCode = ${errorCodes};`);
 
@@ -813,9 +816,9 @@ function generateMethodErrorTypes(
   const errorVariants = method.errors!.map((error) => {
     if (error.payload) {
       const payloadType = generateTypeRef(error.payload, manifest);
-      return `  | { code: "${error.code}"; payload: ${payloadType} }`;
+      return `  | { code: ${JSON.stringify(error.code)}; payload: ${payloadType} }`;
     } else {
-      return `  | { code: "${error.code}" }`;
+      return `  | { code: ${JSON.stringify(error.code)} }`;
     }
   });
 
@@ -864,7 +867,7 @@ function generateAbiEventUnion(
       event.payload &&
       !('$ref' in event.payload) &&
       event.payload.kind === 'unit';
-    const members = [`name: "${event.name}"`];
+    const members = [`name: ${JSON.stringify(event.name)}`];
     if (event.payload && !isInlineUnit) {
       members.push(`payload: ${generateTypeRef(event.payload, manifest)}`);
     }
@@ -886,10 +889,14 @@ function generateMethod(
 ): string[] {
   const lines: string[] = [];
   const methodName = toCamelCase(method.name);
+  // The name is written as a bare identifier, so check it for callers that skip parseAbiManifest.
+  if (!IDENTIFIER.test(methodName)) {
+    throw new Error(`Invalid method name ${JSON.stringify(method.name)}`);
+  }
 
   // Generate JSDoc comment
   lines.push('  /**');
-  lines.push(`   * ${method.name}`);
+  lines.push(...jsdocLines(method.name, '  '));
 
   if (method.doc) {
     lines.push('   *', ...jsdocLines(method.doc, '  '));
@@ -953,23 +960,24 @@ function generateMethod(
   // Add error documentation if method has errors
   if (method.errors && method.errors.length > 0) {
     lines.push('   *');
-    // Generate specific error type name
     const errorTypeName = `${method.name}Error`;
     const errorTypeRef = useTypesNamespace
       ? `Types.${errorTypeName}`
       : errorTypeName;
-    lines.push(
-      `   * @throws {${errorTypeRef}} May throw the following errors:`,
+    const errorDocs = method.errors.map((error) =>
+      error.payload
+        ? `- ${error.code}: ${generateTypeRef(error.payload, manifest, useTypesNamespace)}`
+        : `- ${error.code}`,
     );
-    for (const error of method.errors) {
-      if (error.payload) {
-        lines.push(
-          `   * - ${error.code}: ${generateTypeRef(error.payload, manifest, useTypesNamespace)}`,
-        );
-      } else {
-        lines.push(`   * - ${error.code}`);
-      }
-    }
+    lines.push(
+      ...jsdocLines(
+        [
+          `@throws {${errorTypeRef}} May throw the following errors:`,
+          ...errorDocs,
+        ].join('\n'),
+        '  ',
+      ),
+    );
   }
 
   lines.push('   */');
@@ -998,7 +1006,7 @@ function generateMethod(
       `  public async ${methodName}(): Promise<${nullableReturnType}> {`,
     );
     lines.push(
-      `    ${responseDecl}await this._transport.execute({ contextId: this._contextId, method: '${method.name}', argsJson: {} });`,
+      `    ${responseDecl}await this._transport.execute({ contextId: this._contextId, method: ${JSON.stringify(method.name)}, argsJson: {} });`,
     );
   } else {
     // 1+ parameters - build object type and expose single params argument
@@ -1048,7 +1056,7 @@ function generateMethod(
       ? `convertCalimeroBytesForWasm(${args})`
       : args;
     lines.push(
-      `    ${responseDecl}await this._transport.execute({ contextId: this._contextId, method: '${method.name}', argsJson: ${argsJson} });`,
+      `    ${responseDecl}await this._transport.execute({ contextId: this._contextId, method: ${JSON.stringify(method.name)}, argsJson: ${argsJson} });`,
     );
   }
 

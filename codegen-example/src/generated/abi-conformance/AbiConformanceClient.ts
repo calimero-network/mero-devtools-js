@@ -16,18 +16,18 @@ export interface AbiState {
 }
 
 export type ActionPayload =
-  | { name: 'Ping' }
-  | { name: 'SetName'; payload: string }
-  | { name: 'Update'; payload: UpdatePayload }
-  | { name: 'MultiTuple'; payload: [number, string] }
-  | { name: 'MultiStruct'; payload: Action_MultiStruct }
+  | { name: "Ping" }
+  | { name: "SetName"; payload: string }
+  | { name: "Update"; payload: UpdatePayload }
+  | { name: "MultiTuple"; payload: [number, string] }
+  | { name: "MultiStruct"; payload: Action_MultiStruct }
 
 export const Action = {
-  Ping: (): ActionPayload => ({ name: 'Ping' }),
-  SetName: (setname: string): ActionPayload => ({ name: 'SetName', payload: setname }),
-  Update: (update: UpdatePayload): ActionPayload => ({ name: 'Update', payload: update }),
-  MultiTuple: (multituple: [number, string]): ActionPayload => ({ name: 'MultiTuple', payload: multituple }),
-  MultiStruct: (multistruct: Action_MultiStruct): ActionPayload => ({ name: 'MultiStruct', payload: multistruct }),
+  Ping: (): ActionPayload => ({ name: "Ping" }),
+  SetName: (setname: string): ActionPayload => ({ name: "SetName", payload: setname }),
+  Update: (update: UpdatePayload): ActionPayload => ({ name: "Update", payload: update }),
+  MultiTuple: (multituple: [number, string]): ActionPayload => ({ name: "MultiTuple", payload: multituple }),
+  MultiStruct: (multistruct: Action_MultiStruct): ActionPayload => ({ name: "MultiStruct", payload: multistruct }),
 } as const;
 
 export interface Action_MultiStruct {
@@ -93,9 +93,9 @@ export interface Profile {
 }
 
 export type StatusPayload =
-  | { name: 'Pending' }
-  | { name: 'Active'; payload: Status_Active }
-  | { name: 'Completed'; payload: Status_Completed }
+  | { name: "Pending" }
+  | { name: "Active"; payload: Status_Active }
+  | { name: "Completed"; payload: Status_Completed }
 
 /**
  * Custom enum in module
@@ -104,9 +104,9 @@ export const Status = {
   /**
    * Waiting to start.
    */
-  Pending: (): StatusPayload => ({ name: 'Pending' }),
-  Active: (active: Status_Active): StatusPayload => ({ name: 'Active', payload: active }),
-  Completed: (completed: Status_Completed): StatusPayload => ({ name: 'Completed', payload: completed }),
+  Pending: (): StatusPayload => ({ name: "Pending" }),
+  Active: (active: Status_Active): StatusPayload => ({ name: "Active", payload: active }),
+  Completed: (completed: Status_Completed): StatusPayload => ({ name: "Completed", payload: completed }),
 } as const;
 
 export interface Status_Active {
@@ -276,7 +276,7 @@ export class AbiConformanceClient {
         convertedParams["a"] = convertedParams["a"].name;
       }
     }
-    const response = await this._transport.execute({ contextId: this._contextId, method: 'act', argsJson: convertedParams });
+    const response = await this._transport.execute({ contextId: this._contextId, method: "act", argsJson: convertedParams });
     return response as number;
   }
 
@@ -294,7 +294,7 @@ export class AbiConformanceClient {
    * @intent read_only
    */
   public async createCustomRecord(params: { name: string; value: number }): Promise<CustomRecord> {
-    const response = await this._transport.execute({ contextId: this._contextId, method: 'create_custom_record', argsJson: params });
+    const response = await this._transport.execute({ contextId: this._contextId, method: "create_custom_record", argsJson: params });
     return response as CustomRecord;
   }
 
@@ -308,7 +308,7 @@ export class AbiConformanceClient {
    * @intent mutating
    */
   public async dropCounter(params: { key: string }): Promise<void> {
-    const response = await this._transport.execute({ contextId: this._contextId, method: 'drop_counter', argsJson: params });
+    const response = await this._transport.execute({ contextId: this._contextId, method: "drop_counter", argsJson: params });
     return response as void;
   }
 
@@ -316,7 +316,7 @@ export class AbiConformanceClient {
    * echo_bool
    */
   public async echoBool(params: { b: boolean }): Promise<boolean> {
-    const response = await this._transport.execute({ contextId: this._contextId, method: 'echo_bool', argsJson: params });
+    const response = await this._transport.execute({ contextId: this._contextId, method: "echo_bool", argsJson: params });
     return response as boolean;
   }
 
@@ -324,7 +324,7 @@ export class AbiConformanceClient {
    * echo_bytes
    */
   public async echoBytes(params: { b: CalimeroBytes }): Promise<CalimeroBytes> {
-    const response: any = await this._transport.execute({ contextId: this._contextId, method: 'echo_bytes', argsJson: convertCalimeroBytesForWasm(params) });
+    const response: any = await this._transport.execute({ contextId: this._contextId, method: "echo_bytes", argsJson: convertCalimeroBytesForWasm(params) });
     return (response == null ? null : new CalimeroBytes(response)) as CalimeroBytes;
   }
 
@@ -332,7 +332,7 @@ export class AbiConformanceClient {
    * echo_f32
    */
   public async echoF32(params: { x: number }): Promise<number> {
-    const response = await this._transport.execute({ contextId: this._contextId, method: 'echo_f32', argsJson: params });
+    const response = await this._transport.execute({ contextId: this._contextId, method: "echo_f32", argsJson: params });
     return response as number;
   }
 
@@ -340,7 +340,7 @@ export class AbiConformanceClient {
    * echo_f64
    */
   public async echoF64(params: { x: number }): Promise<number> {
-    const response = await this._transport.execute({ contextId: this._contextId, method: 'echo_f64', argsJson: params });
+    const response = await this._transport.execute({ contextId: this._contextId, method: "echo_f64", argsJson: params });
     return response as number;
   }
 
@@ -348,7 +348,7 @@ export class AbiConformanceClient {
    * echo_i32
    */
   public async echoI32(params: { x: number }): Promise<number> {
-    const response = await this._transport.execute({ contextId: this._contextId, method: 'echo_i32', argsJson: params });
+    const response = await this._transport.execute({ contextId: this._contextId, method: "echo_i32", argsJson: params });
     return response as number;
   }
 
@@ -356,7 +356,7 @@ export class AbiConformanceClient {
    * echo_i64
    */
   public async echoI64(params: { x: number }): Promise<number> {
-    const response = await this._transport.execute({ contextId: this._contextId, method: 'echo_i64', argsJson: params });
+    const response = await this._transport.execute({ contextId: this._contextId, method: "echo_i64", argsJson: params });
     return response as number;
   }
 
@@ -364,7 +364,7 @@ export class AbiConformanceClient {
    * echo_string
    */
   public async echoString(params: { s: string }): Promise<string> {
-    const response = await this._transport.execute({ contextId: this._contextId, method: 'echo_string', argsJson: params });
+    const response = await this._transport.execute({ contextId: this._contextId, method: "echo_string", argsJson: params });
     return response as string;
   }
 
@@ -372,7 +372,7 @@ export class AbiConformanceClient {
    * echo_u32
    */
   public async echoU32(params: { x: number }): Promise<number> {
-    const response = await this._transport.execute({ contextId: this._contextId, method: 'echo_u32', argsJson: params });
+    const response = await this._transport.execute({ contextId: this._contextId, method: "echo_u32", argsJson: params });
     return response as number;
   }
 
@@ -380,7 +380,7 @@ export class AbiConformanceClient {
    * echo_u64
    */
   public async echoU64(params: { x: number }): Promise<number> {
-    const response = await this._transport.execute({ contextId: this._contextId, method: 'echo_u64', argsJson: params });
+    const response = await this._transport.execute({ contextId: this._contextId, method: "echo_u64", argsJson: params });
     return response as number;
   }
 
@@ -388,7 +388,7 @@ export class AbiConformanceClient {
    * echo_wire
    */
   public async echoWire(params: { w: WireRecord }): Promise<WireRecord> {
-    const response = await this._transport.execute({ contextId: this._contextId, method: 'echo_wire', argsJson: params });
+    const response = await this._transport.execute({ contextId: this._contextId, method: "echo_wire", argsJson: params });
     return response as WireRecord;
   }
 
@@ -396,15 +396,15 @@ export class AbiConformanceClient {
    * find_person
    */
   public async findPerson(params: { name: string }): Promise<Person> {
-    const response: any = await this._transport.execute({ contextId: this._contextId, method: 'find_person', argsJson: params });
-    return (response == null ? null : ({ ...response, id: new CalimeroBytes(response['id']) })) as Person;
+    const response: any = await this._transport.execute({ contextId: this._contextId, method: "find_person", argsJson: params });
+    return (response == null ? null : ({ ...response, id: new CalimeroBytes(response["id"]) })) as Person;
   }
 
   /**
    * get_internal_result
    */
   public async getInternalResult(params: { value: number }): Promise<InternalResult> {
-    const response = await this._transport.execute({ contextId: this._contextId, method: 'get_internal_result', argsJson: params });
+    const response = await this._transport.execute({ contextId: this._contextId, method: "get_internal_result", argsJson: params });
     return response as InternalResult;
   }
 
@@ -416,7 +416,7 @@ export class AbiConformanceClient {
    * @intent read_only
    */
   public async getNestedRecord(params: { name: string }): Promise<NestedRecord> {
-    const response = await this._transport.execute({ contextId: this._contextId, method: 'get_nested_record', argsJson: params });
+    const response = await this._transport.execute({ contextId: this._contextId, method: "get_nested_record", argsJson: params });
     return response as NestedRecord;
   }
 
@@ -430,7 +430,7 @@ export class AbiConformanceClient {
    * @intent read_only
    */
   public async getStatus(params: { timestamp: number }): Promise<StatusPayload> {
-    const response: any = await this._transport.execute({ contextId: this._contextId, method: 'get_status', argsJson: params });
+    const response: any = await this._transport.execute({ contextId: this._contextId, method: "get_status", argsJson: params });
     return (response == null ? null : (typeof response === 'string' ? { name: response } : { name: Object.keys(response)[0], payload: Object.values(response)[0] })) as StatusPayload;
   }
 
@@ -447,7 +447,7 @@ export class AbiConformanceClient {
         convertedParams["a"] = convertedParams["a"].name;
       }
     }
-    const response = await this._transport.execute({ contextId: this._contextId, method: 'handle_multi_struct', argsJson: convertedParams });
+    const response = await this._transport.execute({ contextId: this._contextId, method: "handle_multi_struct", argsJson: convertedParams });
     return response as number;
   }
 
@@ -464,7 +464,7 @@ export class AbiConformanceClient {
         convertedParams["a"] = convertedParams["a"].name;
       }
     }
-    const response = await this._transport.execute({ contextId: this._contextId, method: 'handle_multi_tuple', argsJson: convertedParams });
+    const response = await this._transport.execute({ contextId: this._contextId, method: "handle_multi_tuple", argsJson: convertedParams });
     return response as string;
   }
 
@@ -478,7 +478,7 @@ export class AbiConformanceClient {
    * @intent mutating
    */
   public async handlerNoop(): Promise<void> {
-    const response = await this._transport.execute({ contextId: this._contextId, method: 'handler_noop', argsJson: {} });
+    const response = await this._transport.execute({ contextId: this._contextId, method: "handler_noop", argsJson: {} });
     return response as void;
   }
 
@@ -486,7 +486,7 @@ export class AbiConformanceClient {
    * init
    */
   public async init(): Promise<void> {
-    const response = await this._transport.execute({ contextId: this._contextId, method: 'init', argsJson: {} });
+    const response = await this._transport.execute({ contextId: this._contextId, method: "init", argsJson: {} });
     return response as void;
   }
 
@@ -494,7 +494,7 @@ export class AbiConformanceClient {
    * list_ids
    */
   public async listIds(params: { xs: UserId32[] }): Promise<UserId32[]> {
-    const response: any = await this._transport.execute({ contextId: this._contextId, method: 'list_ids', argsJson: convertCalimeroBytesForWasm(params) });
+    const response: any = await this._transport.execute({ contextId: this._contextId, method: "list_ids", argsJson: convertCalimeroBytesForWasm(params) });
     return (response == null ? null : response.map((item: any) => new CalimeroBytes(item))) as UserId32[];
   }
 
@@ -502,15 +502,15 @@ export class AbiConformanceClient {
    * list_records
    */
   public async listRecords(params: { ps: Person[] }): Promise<Person[]> {
-    const response: any = await this._transport.execute({ contextId: this._contextId, method: 'list_records', argsJson: convertCalimeroBytesForWasm(params) });
-    return (response == null ? null : response.map((item: any) => ({ ...item, id: new CalimeroBytes(item['id']) }))) as Person[];
+    const response: any = await this._transport.execute({ contextId: this._contextId, method: "list_records", argsJson: convertCalimeroBytesForWasm(params) });
+    return (response == null ? null : response.map((item: any) => ({ ...item, id: new CalimeroBytes(item["id"]) }))) as Person[];
   }
 
   /**
    * list_strings
    */
   public async listStrings(params: { xs: string[] }): Promise<string[]> {
-    const response = await this._transport.execute({ contextId: this._contextId, method: 'list_strings', argsJson: params });
+    const response = await this._transport.execute({ contextId: this._contextId, method: "list_strings", argsJson: params });
     return response as string[];
   }
 
@@ -518,7 +518,7 @@ export class AbiConformanceClient {
    * list_tuples
    */
   public async listTuples(params: { xs: [string, number][] }): Promise<[string, number][]> {
-    const response = await this._transport.execute({ contextId: this._contextId, method: 'list_tuples', argsJson: params });
+    const response = await this._transport.execute({ contextId: this._contextId, method: "list_tuples", argsJson: params });
     return response as [string, number][];
   }
 
@@ -526,7 +526,7 @@ export class AbiConformanceClient {
    * list_u32
    */
   public async listU32(params: { xs: number[] }): Promise<number[]> {
-    const response = await this._transport.execute({ contextId: this._contextId, method: 'list_u32', argsJson: params });
+    const response = await this._transport.execute({ contextId: this._contextId, method: "list_u32", argsJson: params });
     return response as number[];
   }
 
@@ -534,15 +534,15 @@ export class AbiConformanceClient {
    * make_person
    */
   public async makePerson(params: { p: Person }): Promise<Person> {
-    const response: any = await this._transport.execute({ contextId: this._contextId, method: 'make_person', argsJson: convertCalimeroBytesForWasm(params) });
-    return (response == null ? null : ({ ...response, id: new CalimeroBytes(response['id']) })) as Person;
+    const response: any = await this._transport.execute({ contextId: this._contextId, method: "make_person", argsJson: convertCalimeroBytesForWasm(params) });
+    return (response == null ? null : ({ ...response, id: new CalimeroBytes(response["id"]) })) as Person;
   }
 
   /**
    * map_list_u32
    */
   public async mapListU32(params: { m: Record<string, number[]> }): Promise<Record<string, number[]>> {
-    const response = await this._transport.execute({ contextId: this._contextId, method: 'map_list_u32', argsJson: params });
+    const response = await this._transport.execute({ contextId: this._contextId, method: "map_list_u32", argsJson: params });
     return response as Record<string, number[]>;
   }
 
@@ -550,15 +550,15 @@ export class AbiConformanceClient {
    * map_record
    */
   public async mapRecord(params: { m: Record<string, Person> }): Promise<Record<string, Person>> {
-    const response: any = await this._transport.execute({ contextId: this._contextId, method: 'map_record', argsJson: convertCalimeroBytesForWasm(params) });
-    return (response == null ? null : Object.fromEntries(Object.entries(response).map(([k, v]: [string, any]) => [k, ({ ...v, id: new CalimeroBytes(v['id']) })]))) as Record<string, Person>;
+    const response: any = await this._transport.execute({ contextId: this._contextId, method: "map_record", argsJson: convertCalimeroBytesForWasm(params) });
+    return (response == null ? null : Object.fromEntries(Object.entries(response).map(([k, v]: [string, any]) => [k, ({ ...v, id: new CalimeroBytes(v["id"]) })]))) as Record<string, Person>;
   }
 
   /**
    * map_u32
    */
   public async mapU32(params: { m: Record<string, number> }): Promise<Record<string, number>> {
-    const response = await this._transport.execute({ contextId: this._contextId, method: 'map_u32', argsJson: params });
+    const response = await this._transport.execute({ contextId: this._contextId, method: "map_u32", argsJson: params });
     return response as Record<string, number>;
   }
 
@@ -566,7 +566,7 @@ export class AbiConformanceClient {
    * may_fail
    */
   public async mayFail(params: { flag: boolean }): Promise<number> {
-    const response = await this._transport.execute({ contextId: this._contextId, method: 'may_fail', argsJson: params });
+    const response = await this._transport.execute({ contextId: this._contextId, method: "may_fail", argsJson: params });
     return response as number;
   }
 
@@ -574,7 +574,7 @@ export class AbiConformanceClient {
    * noop
    */
   public async noop(): Promise<void> {
-    const response = await this._transport.execute({ contextId: this._contextId, method: 'noop', argsJson: {} });
+    const response = await this._transport.execute({ contextId: this._contextId, method: "noop", argsJson: {} });
     return response as void;
   }
 
@@ -582,7 +582,7 @@ export class AbiConformanceClient {
    * opt_id
    */
   public async optId(params: { x: UserId32 | null }): Promise<UserId32 | null> {
-    const response: any = await this._transport.execute({ contextId: this._contextId, method: 'opt_id', argsJson: convertCalimeroBytesForWasm(params) });
+    const response: any = await this._transport.execute({ contextId: this._contextId, method: "opt_id", argsJson: convertCalimeroBytesForWasm(params) });
     return (response == null ? null : new CalimeroBytes(response)) as UserId32 | null;
   }
 
@@ -590,15 +590,15 @@ export class AbiConformanceClient {
    * opt_record
    */
   public async optRecord(params: { p: Person | null }): Promise<Person | null> {
-    const response: any = await this._transport.execute({ contextId: this._contextId, method: 'opt_record', argsJson: convertCalimeroBytesForWasm(params) });
-    return (response == null ? null : ({ ...response, id: new CalimeroBytes(response['id']) })) as Person | null;
+    const response: any = await this._transport.execute({ contextId: this._contextId, method: "opt_record", argsJson: convertCalimeroBytesForWasm(params) });
+    return (response == null ? null : ({ ...response, id: new CalimeroBytes(response["id"]) })) as Person | null;
   }
 
   /**
    * opt_string
    */
   public async optString(params: { x: string | null }): Promise<string | null> {
-    const response = await this._transport.execute({ contextId: this._contextId, method: 'opt_string', argsJson: params });
+    const response = await this._transport.execute({ contextId: this._contextId, method: "opt_string", argsJson: params });
     return response as string | null;
   }
 
@@ -606,7 +606,7 @@ export class AbiConformanceClient {
    * opt_u32
    */
   public async optU32(params: { x: number | null }): Promise<number | null> {
-    const response = await this._transport.execute({ contextId: this._contextId, method: 'opt_u32', argsJson: params });
+    const response = await this._transport.execute({ contextId: this._contextId, method: "opt_u32", argsJson: params });
     return response as number | null;
   }
 
@@ -614,15 +614,15 @@ export class AbiConformanceClient {
    * profile_roundtrip
    */
   public async profileRoundtrip(params: { p: Profile }): Promise<Profile> {
-    const response: any = await this._transport.execute({ contextId: this._contextId, method: 'profile_roundtrip', argsJson: convertCalimeroBytesForWasm(params) });
-    return (response == null ? null : ({ ...response, avatar: response['avatar'] == null ? null : new CalimeroBytes(response['avatar']) })) as Profile;
+    const response: any = await this._transport.execute({ contextId: this._contextId, method: "profile_roundtrip", argsJson: convertCalimeroBytesForWasm(params) });
+    return (response == null ? null : ({ ...response, avatar: response["avatar"] == null ? null : new CalimeroBytes(response["avatar"]) })) as Profile;
   }
 
   /**
    * public_with_private_helper
    */
   public async publicWithPrivateHelper(params: { value: number }): Promise<number> {
-    const response = await this._transport.execute({ contextId: this._contextId, method: 'public_with_private_helper', argsJson: params });
+    const response = await this._transport.execute({ contextId: this._contextId, method: "public_with_private_helper", argsJson: params });
     return response as number;
   }
 
@@ -630,7 +630,7 @@ export class AbiConformanceClient {
    * roundtrip_hash
    */
   public async roundtripHash(params: { h: Hash64 }): Promise<Hash64> {
-    const response: any = await this._transport.execute({ contextId: this._contextId, method: 'roundtrip_hash', argsJson: convertCalimeroBytesForWasm(params) });
+    const response: any = await this._transport.execute({ contextId: this._contextId, method: "roundtrip_hash", argsJson: convertCalimeroBytesForWasm(params) });
     return (response == null ? null : new CalimeroBytes(response)) as Hash64;
   }
 
@@ -638,7 +638,7 @@ export class AbiConformanceClient {
    * roundtrip_id
    */
   public async roundtripId(params: { x: UserId32 }): Promise<UserId32> {
-    const response: any = await this._transport.execute({ contextId: this._contextId, method: 'roundtrip_id', argsJson: convertCalimeroBytesForWasm(params) });
+    const response: any = await this._transport.execute({ contextId: this._contextId, method: "roundtrip_id", argsJson: convertCalimeroBytesForWasm(params) });
     return (response == null ? null : new CalimeroBytes(response)) as UserId32;
   }
 
@@ -646,7 +646,7 @@ export class AbiConformanceClient {
    * tuple_pair
    */
   public async tuplePair(params: { t: [string, number] }): Promise<[string, number]> {
-    const response = await this._transport.execute({ contextId: this._contextId, method: 'tuple_pair', argsJson: params });
+    const response = await this._transport.execute({ contextId: this._contextId, method: "tuple_pair", argsJson: params });
     return response as [string, number];
   }
 
@@ -658,7 +658,7 @@ export class AbiConformanceClient {
    * @intent read_only
    */
   public async viewConstant(): Promise<number> {
-    const response = await this._transport.execute({ contextId: this._contextId, method: 'view_constant', argsJson: {} });
+    const response = await this._transport.execute({ contextId: this._contextId, method: "view_constant", argsJson: {} });
     return response as number;
   }
 
@@ -674,7 +674,7 @@ export class AbiConformanceClient {
    * @xcall any_in_namespace (callable by any context in the namespace)
    */
   public async xcallNoop(): Promise<void> {
-    const response = await this._transport.execute({ contextId: this._contextId, method: 'xcall_noop', argsJson: {} });
+    const response = await this._transport.execute({ contextId: this._contextId, method: "xcall_noop", argsJson: {} });
     return response as void;
   }
 
