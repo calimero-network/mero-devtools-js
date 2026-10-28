@@ -156,11 +156,14 @@ function docComment(doc: string | undefined, indent: string): string[] {
  * Generate a Swift client from a WASM-ABI v1 manifest
  * @param manifest - The parsed ABI manifest
  * @param clientName - The name of the generated client struct
+ * @param transportModule - A module that declares `ContextContractCalling`
+ *   (e.g. `MeroKit`); it is imported instead of declaring the protocol here
  * @returns Generated Swift source as a string
  */
 export function generateSwiftClient(
   manifest: AbiManifest,
   clientName: string = 'Client',
+  transportModule?: string,
 ): string {
   clientName = sanitizeClassName(clientName);
   const types = new NativeTypes(manifest, SWIFT);
@@ -180,8 +183,12 @@ export function generateSwiftClient(
     (def) => def.kind === 'variant' && variantStyle(def) !== 'unit',
   );
 
-  const lines: string[] = [BANNER, '', 'import Foundation', ''];
-  lines.push(...transportProtocol(), '');
+  const lines: string[] = [BANNER, '', 'import Foundation'];
+  if (transportModule) {
+    lines.push(`import ${transportModule}`, '');
+  } else {
+    lines.push('', ...transportProtocol(), '');
+  }
   lines.push(...client, '');
   lines.push('// MARK: - Types', '');
   for (const block of typeBlocks) lines.push(...block, '');

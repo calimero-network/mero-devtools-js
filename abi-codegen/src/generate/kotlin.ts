@@ -157,12 +157,15 @@ function docComment(doc: string | undefined, indent: string): string[] {
  * @param manifest - The parsed ABI manifest
  * @param clientName - The name of the generated client class
  * @param packageName - The file's package; omitted when not given
+ * @param transportImport - The fully qualified `ContextContractCalling` to
+ *   import (e.g. the SDK's) instead of declaring the interface here
  * @returns Generated Kotlin source as a string
  */
 export function generateKotlinClient(
   manifest: AbiManifest,
   clientName: string = 'Client',
   packageName?: string,
+  transportImport?: string,
 ): string {
   clientName = sanitizeClassName(clientName);
   const types = new NativeTypes(manifest, KOTLIN);
@@ -180,8 +183,11 @@ export function generateKotlinClient(
 
   const lines: string[] = [BANNER, ''];
   if (packageName) lines.push(`package ${packageName}`, '');
-  lines.push(...IMPORTS.map((i) => `import ${i}`), '');
-  lines.push(...transportInterface(), '');
+  const imports = transportImport
+    ? [...IMPORTS, transportImport].sort()
+    : IMPORTS;
+  lines.push(...imports.map((i) => `import ${i}`), '');
+  if (!transportImport) lines.push(...transportInterface(), '');
   lines.push(...client, '');
   for (const block of typeBlocks) lines.push(...block, '');
   for (const arity of [...types.tupleArities].sort((a, b) => a - b)) {

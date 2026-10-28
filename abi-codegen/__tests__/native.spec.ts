@@ -70,6 +70,30 @@ describe('native targets', () => {
       expect(kotlin).toContain('@SerialName("post_id") val postId: String,');
     });
 
+    it("imports the SDK's transport instead of declaring one", () => {
+      const sdkSwift = generateSwiftClient(manifest, 'ForumClient', 'MeroKit');
+      expect(sdkSwift).toContain('import MeroKit');
+      expect(sdkSwift).not.toContain('protocol ContextContractCalling');
+      expect(sdkSwift).toContain(
+        'public let transport: any ContextContractCalling',
+      );
+      expect(swift).toContain(
+        'public protocol ContextContractCalling: Sendable {',
+      );
+
+      const sdkKotlin = generateKotlinClient(
+        manifest,
+        'ForumClient',
+        PACKAGE,
+        'com.calimero.mero.app.ContextContractCalling',
+      );
+      expect(sdkKotlin).toContain(
+        'import com.calimero.mero.app.ContextContractCalling',
+      );
+      expect(sdkKotlin).not.toContain('interface ContextContractCalling');
+      expect(kotlin).toContain('interface ContextContractCalling {');
+    });
+
     it('drops a unit return', () => {
       expect(swift).toContain(
         'public func deleteComment(commentId: String) async throws {',

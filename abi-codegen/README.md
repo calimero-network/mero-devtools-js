@@ -124,6 +124,15 @@ than sent as `null`; the contract reads a missing `Option` as `None`.
 Generate one client per Swift module or Kotlin package: the transport and
 helper types are declared in every generated file.
 
+With the native SDKs, pass `--transport-import` to use their
+`ContextContractCalling` instead, so the SDK's bound contract is the transport
+with no adapter: `--transport-import MeroKit` (Swift) or
+`--transport-import com.calimero.mero.app.ContextContractCalling` (Kotlin).
+
+```swift
+let forum = ForumClient(transport: contract.bound(to: contextId))
+```
+
 ## Examples
 
 See the [codegen-example](../codegen-example) for a complete React example.

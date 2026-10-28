@@ -83,6 +83,9 @@ function showHelp() {
   );
   console.log(
     '  --package <name>          Kotlin package of the generated file (kotlin only)',
+    "  --transport-import <name> Use the SDK's ContextContractCalling instead of declaring one:",
+    '                            a Swift module (MeroKit) or a Kotlin FQN',
+    '                            (com.calimero.mero.app.ContextContractCalling)',
   );
   console.log(
     '  --validate                Validate ABI manifest only (no code generation)',
@@ -185,12 +188,17 @@ function main() {
       // Generate the client with derived filename (types are embedded)
       let clientContent: string;
       if (target === 'swift') {
-        clientContent = generateSwiftClient(manifest, clientName);
+        clientContent = generateSwiftClient(
+          manifest,
+          clientName,
+          args['transport-import'],
+        );
       } else if (target === 'kotlin') {
         clientContent = generateKotlinClient(
           manifest,
           clientName,
           args.package,
+          args['transport-import'],
         );
       } else {
         const importPath =
