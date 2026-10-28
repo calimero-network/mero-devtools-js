@@ -398,5 +398,45 @@ internal object ChunkSerializer : KSerializer<Chunk> {
 
 @Serializable
 data class Chunk_Blob(
-    val hash: String,
+    val hash: ContractBytes,
 )
+
+/**
+ * Fixed-size bytes. An id with its own spelling (`UserId`, `BlobId`) is [Text] —
+ * base58 or hex, exactly as the contract writes it — and a plain `[u8; N]` is
+ * [Raw], an array of numbers. Decoding takes whichever arrives; encoding writes
+ * the form this value holds.
+ */
+@Serializable(with = ContractBytesSerializer::class)
+sealed class ContractBytes {
+    data class Text(val value: String) : ContractBytes()
+
+    data class Raw(val value: List<UByte>) : ContractBytes()
+
+    /** The text form, if that is what this holds. */
+    val text: String? get() = (this as? Text)?.value
+
+    /** The array form, if that is what this holds. */
+    val raw: List<UByte>? get() = (this as? Raw)?.value
+}
+
+internal object ContractBytesSerializer : KSerializer<ContractBytes> {
+    override val descriptor: SerialDescriptor = JsonElement.serializer().descriptor
+
+    override fun serialize(encoder: Encoder, value: ContractBytes) {
+        val element = when (value) {
+            is ContractBytes.Text -> JsonPrimitive(value.value)
+            is ContractBytes.Raw -> JsonArray(value.value.map { JsonPrimitive(it.toInt()) })
+        }
+        (encoder as JsonEncoder).encodeJsonElement(element)
+    }
+
+    override fun deserialize(decoder: Decoder): ContractBytes {
+        val element = (decoder as JsonDecoder).decodeJsonElement()
+        return if (element is JsonPrimitive && element.isString) {
+            ContractBytes.Text(element.content)
+        } else {
+            ContractBytes.Raw(element.jsonArray.map { it.jsonPrimitive.content.toInt().toUByte() })
+        }
+    }
+}

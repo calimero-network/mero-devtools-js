@@ -2,9 +2,7 @@
  * What the Swift and Kotlin emitters share: type mapping, naming and routing.
  *
  * The wire shape is the TypeScript client's, which is the source of truth:
- * integers are JSON numbers, bytes are arrays of numbers (fixed-size bytes, such
- * as a 32-byte `UserId`, are text in the contract's own encoding — base58 or hex
- * — and pass through as strings), maps are objects and
+ * integers are JSON numbers, bytes are arrays of numbers, maps are objects and
  * enums follow serde's tagging. The one deliberate difference is that an absent
  * optional argument is left out of the args object rather than sent as `null`;
  * serde reads a missing `Option` as `None`, the same as `null`.
@@ -37,7 +35,10 @@ export interface NativeSyntax {
   // serde's unit (`null`) where a value is required, e.g. a record field.
   unit: string;
   bytes: string;
-  // Fixed-size bytes (`[u8; N]` ids): a string, kept exactly as the contract spells it.
+  // Fixed-size bytes. The ABI does not say how they are spelled: an id type with
+  // its own serde (`UserId`, `BlobId`) is text, base58 or hex, while a plain
+  // `[u8; N]` is an array of numbers. `ContractBytes` reads either and writes
+  // back the form it holds.
   fixedBytes: string;
   list(item: string): string;
   map(key: string, value: string): string;
@@ -60,6 +61,7 @@ export class NativeTypes {
   readonly inlineRecords: InlineRecord[] = [];
   readonly tupleArities = new Set<number>();
   usesUnit = false;
+  usesFixedBytes = false;
   private readonly inlineByShape = new Map<string, string>();
   private readonly takenNames: Set<string>;
 
@@ -96,7 +98,11 @@ export class NativeTypes {
         this.usesUnit = true;
         return s.unit;
       case 'bytes':
-        return 'size' in ref && ref.size !== undefined ? s.fixedBytes : s.bytes;
+        if ('size' in ref && ref.size !== undefined) {
+          this.usesFixedBytes = true;
+          return s.fixedBytes;
+        }
+        return s.bytes;
       case 'list':
         return s.list(this.typeRef(ref.items, `${hint}Item`));
       case 'map':

@@ -112,7 +112,7 @@ const KOTLIN: NativeSyntax = {
   // A JSON array of numbers, as the TS client sends bytes. ByteArray would
   // encode signed values, so 0xff would go out as -1.
   bytes: 'List<UByte>',
-  fixedBytes: 'String',
+  fixedBytes: 'ContractBytes',
   list: (item) => `List<${item}>`,
   map: (key, value) => `Map<${key}, ${value}>`,
   optional: (type) => (type.endsWith('?') ? type : `${type}?`),
@@ -190,6 +190,7 @@ export function generateKotlinClient(
   if (!transportImport) lines.push(...transportInterface(), '');
   lines.push(...client, '');
   for (const block of typeBlocks) lines.push(...block, '');
+  if (types.usesFixedBytes) lines.push(...contractBytesClass(), '');
   for (const arity of [...types.tupleArities].sort((a, b) => a - b)) {
     lines.push(...tupleClass(arity), '');
   }
@@ -244,7 +245,7 @@ function typeDefinition(
     case 'bytes': {
       const size =
         'size' in def
-          ? `${def.size} bytes, as the contract's own text (base58 or hex).`
+          ? `${def.size} bytes, text or an array of numbers; see ContractBytes.`
           : undefined;
       return [
         ...docComment(size, ''),
@@ -591,6 +592,50 @@ function tupleField(i: number): string {
 }
 
 // A Rust tuple, a JSON array of fixed length on the wire.
+function contractBytesClass(): string[] {
+  return [
+    '/**',
+    ' * Fixed-size bytes. An id with its own spelling (`UserId`, `BlobId`) is [Text] —',
+    ' * base58 or hex, exactly as the contract writes it — and a plain `[u8; N]` is',
+    ' * [Raw], an array of numbers. Decoding takes whichever arrives; encoding writes',
+    ' * the form this value holds.',
+    ' */',
+    '@Serializable(with = ContractBytesSerializer::class)',
+    'sealed class ContractBytes {',
+    '    data class Text(val value: String) : ContractBytes()',
+    '',
+    '    data class Raw(val value: List<UByte>) : ContractBytes()',
+    '',
+    '    /** The text form, if that is what this holds. */',
+    '    val text: String? get() = (this as? Text)?.value',
+    '',
+    '    /** The array form, if that is what this holds. */',
+    '    val raw: List<UByte>? get() = (this as? Raw)?.value',
+    '}',
+    '',
+    'internal object ContractBytesSerializer : KSerializer<ContractBytes> {',
+    '    override val descriptor: SerialDescriptor = JsonElement.serializer().descriptor',
+    '',
+    '    override fun serialize(encoder: Encoder, value: ContractBytes) {',
+    '        val element = when (value) {',
+    '            is ContractBytes.Text -> JsonPrimitive(value.value)',
+    '            is ContractBytes.Raw -> JsonArray(value.value.map { JsonPrimitive(it.toInt()) })',
+    '        }',
+    '        (encoder as JsonEncoder).encodeJsonElement(element)',
+    '    }',
+    '',
+    '    override fun deserialize(decoder: Decoder): ContractBytes {',
+    '        val element = (decoder as JsonDecoder).decodeJsonElement()',
+    '        return if (element is JsonPrimitive && element.isString) {',
+    '            ContractBytes.Text(element.content)',
+    '        } else {',
+    '            ContractBytes.Raw(element.jsonArray.map { it.jsonPrimitive.content.toInt().toUByte() })',
+    '        }',
+    '    }',
+    '}',
+  ];
+}
+
 function tupleClass(arity: number): string[] {
   const params = Array.from({ length: arity }, (_, i) =>
     String.fromCharCode(65 + i),

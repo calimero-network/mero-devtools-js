@@ -277,12 +277,12 @@ data class CalendarEvent(
     val id: String,
     val title: String,
     val description: String,
-    val owner: String,
+    val owner: ContractBytes,
     val start: String,
     val end: String,
     @SerialName("event_type") val eventType: String,
     val color: String,
-    val peers: List<String>,
+    val peers: List<ContractBytes>,
     val private: Boolean,
 )
 
@@ -295,13 +295,13 @@ data class CalendarEvent(
 data class CalendarEventState(
     val title: String,
     val description: String,
-    val owner: String,
+    val owner: ContractBytes,
     val start: String,
     val end: String,
     @SerialName("event_type") val eventType: String,
     val color: String,
     /** One `peers` index row per invitee. */
-    val peers: List<String>,
+    val peers: List<ContractBytes>,
     @SerialName("created_at") val createdAt: ULong,
     @SerialName("updated_at") val updatedAt: ULong,
 )
@@ -325,7 +325,7 @@ data class CreateCalendarEvent(
     val end: String,
     @SerialName("event_type") val eventType: String,
     val color: String,
-    val peers: List<String>,
+    val peers: List<ContractBytes>,
 )
 
 /**
@@ -355,5 +355,45 @@ data class UpdateCalendarEvent(
     val end: String? = null,
     @SerialName("event_type") val eventType: String? = null,
     val color: String? = null,
-    val peers: List<String>? = null,
+    val peers: List<ContractBytes>? = null,
 )
+
+/**
+ * Fixed-size bytes. An id with its own spelling (`UserId`, `BlobId`) is [Text] —
+ * base58 or hex, exactly as the contract writes it — and a plain `[u8; N]` is
+ * [Raw], an array of numbers. Decoding takes whichever arrives; encoding writes
+ * the form this value holds.
+ */
+@Serializable(with = ContractBytesSerializer::class)
+sealed class ContractBytes {
+    data class Text(val value: String) : ContractBytes()
+
+    data class Raw(val value: List<UByte>) : ContractBytes()
+
+    /** The text form, if that is what this holds. */
+    val text: String? get() = (this as? Text)?.value
+
+    /** The array form, if that is what this holds. */
+    val raw: List<UByte>? get() = (this as? Raw)?.value
+}
+
+internal object ContractBytesSerializer : KSerializer<ContractBytes> {
+    override val descriptor: SerialDescriptor = JsonElement.serializer().descriptor
+
+    override fun serialize(encoder: Encoder, value: ContractBytes) {
+        val element = when (value) {
+            is ContractBytes.Text -> JsonPrimitive(value.value)
+            is ContractBytes.Raw -> JsonArray(value.value.map { JsonPrimitive(it.toInt()) })
+        }
+        (encoder as JsonEncoder).encodeJsonElement(element)
+    }
+
+    override fun deserialize(decoder: Decoder): ContractBytes {
+        val element = (decoder as JsonDecoder).decodeJsonElement()
+        return if (element is JsonPrimitive && element.isString) {
+            ContractBytes.Text(element.content)
+        } else {
+            ContractBytes.Raw(element.jsonArray.map { it.jsonPrimitive.content.toInt().toUByte() })
+        }
+    }
+}

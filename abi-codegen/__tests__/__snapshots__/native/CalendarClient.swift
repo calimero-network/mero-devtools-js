@@ -262,15 +262,15 @@ public struct CalendarEvent: Codable, Sendable, Equatable {
     public var id: String
     public var title: String
     public var description: String
-    public var owner: String
+    public var owner: ContractBytes
     public var start: String
     public var end: String
     public var eventType: String
     public var color: String
-    public var peers: [String]
+    public var peers: [ContractBytes]
     public var `private`: Bool
 
-    public init(id: String, title: String, description: String, owner: String, start: String, end: String, eventType: String, color: String, peers: [String], `private`: Bool) {
+    public init(id: String, title: String, description: String, owner: ContractBytes, start: String, end: String, eventType: String, color: String, peers: [ContractBytes], `private`: Bool) {
         self.id = id
         self.title = title
         self.description = description
@@ -303,17 +303,17 @@ public struct CalendarEvent: Codable, Sendable, Equatable {
 public struct CalendarEventState: Codable, Sendable, Equatable {
     public var title: String
     public var description: String
-    public var owner: String
+    public var owner: ContractBytes
     public var start: String
     public var end: String
     public var eventType: String
     public var color: String
     /// One `peers` index row per invitee.
-    public var peers: [String]
+    public var peers: [ContractBytes]
     public var createdAt: UInt64
     public var updatedAt: UInt64
 
-    public init(title: String, description: String, owner: String, start: String, end: String, eventType: String, color: String, peers: [String], createdAt: UInt64, updatedAt: UInt64) {
+    public init(title: String, description: String, owner: ContractBytes, start: String, end: String, eventType: String, color: String, peers: [ContractBytes], createdAt: UInt64, updatedAt: UInt64) {
         self.title = title
         self.description = description
         self.owner = owner
@@ -360,9 +360,9 @@ public struct CreateCalendarEvent: Codable, Sendable, Equatable {
     public var end: String
     public var eventType: String
     public var color: String
-    public var peers: [String]
+    public var peers: [ContractBytes]
 
-    public init(title: String, description: String, start: String, end: String, eventType: String, color: String, peers: [String]) {
+    public init(title: String, description: String, start: String, end: String, eventType: String, color: String, peers: [ContractBytes]) {
         self.title = title
         self.description = description
         self.start = start
@@ -411,9 +411,9 @@ public struct UpdateCalendarEvent: Codable, Sendable, Equatable {
     public var end: String?
     public var eventType: String?
     public var color: String?
-    public var peers: [String]?
+    public var peers: [ContractBytes]?
 
-    public init(title: String? = nil, description: String? = nil, start: String? = nil, end: String? = nil, eventType: String? = nil, color: String? = nil, peers: [String]? = nil) {
+    public init(title: String? = nil, description: String? = nil, start: String? = nil, end: String? = nil, eventType: String? = nil, color: String? = nil, peers: [ContractBytes]? = nil) {
         self.title = title
         self.description = description
         self.start = start
@@ -431,5 +431,40 @@ public struct UpdateCalendarEvent: Codable, Sendable, Equatable {
         case eventType = "event_type"
         case color
         case peers
+    }
+}
+
+// MARK: - Wire helpers
+
+/// Fixed-size bytes. An id with its own spelling (`UserId`, `BlobId`) is
+/// ``text`` — base58 or hex, exactly as the contract writes it — and a plain
+/// `[u8; N]` is ``raw``, an array of numbers. Decoding takes whichever arrives;
+/// encoding writes the form this value holds.
+public enum ContractBytes: Codable, Sendable, Equatable, Hashable, ExpressibleByStringLiteral {
+    case text(String)
+    case raw([UInt8])
+
+    public init(stringLiteral value: String) { self = .text(value) }
+
+    /// The text form, if that is what this holds.
+    public var text: String? { if case .text(let value) = self { value } else { nil } }
+    /// The array form, if that is what this holds.
+    public var raw: [UInt8]? { if case .raw(let value) = self { value } else { nil } }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        if let value = try? container.decode(String.self) {
+            self = .text(value)
+        } else {
+            self = .raw(try container.decode([UInt8].self))
+        }
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.singleValueContainer()
+        switch self {
+        case .text(let value): try container.encode(value)
+        case .raw(let value): try container.encode(value)
+        }
     }
 }

@@ -206,7 +206,7 @@ public typealias Ratio = Double
 
 public typealias Flag = Bool
 
-public typealias Hash32 = String
+public typealias Hash32 = ContractBytes
 
 public typealias Digest = Hash32
 
@@ -328,6 +328,39 @@ public typealias RoutePath = String
 public typealias OddHeight = UInt64
 
 // MARK: - Wire helpers
+
+/// Fixed-size bytes. An id with its own spelling (`UserId`, `BlobId`) is
+/// ``text`` — base58 or hex, exactly as the contract writes it — and a plain
+/// `[u8; N]` is ``raw``, an array of numbers. Decoding takes whichever arrives;
+/// encoding writes the form this value holds.
+public enum ContractBytes: Codable, Sendable, Equatable, Hashable, ExpressibleByStringLiteral {
+    case text(String)
+    case raw([UInt8])
+
+    public init(stringLiteral value: String) { self = .text(value) }
+
+    /// The text form, if that is what this holds.
+    public var text: String? { if case .text(let value) = self { value } else { nil } }
+    /// The array form, if that is what this holds.
+    public var raw: [UInt8]? { if case .raw(let value) = self { value } else { nil } }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        if let value = try? container.decode(String.self) {
+            self = .text(value)
+        } else {
+            self = .raw(try container.decode([UInt8].self))
+        }
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.singleValueContainer()
+        switch self {
+        case .text(let value): try container.encode(value)
+        case .raw(let value): try container.encode(value)
+        }
+    }
+}
 
 fileprivate struct ContractCodingKey: CodingKey {
     let stringValue: String
