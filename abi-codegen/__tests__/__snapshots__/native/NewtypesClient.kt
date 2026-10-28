@@ -253,7 +253,7 @@ typealias Ratio = Double
 
 typealias Flag = Boolean
 
-typealias Hash32 = List<UByte>
+typealias Hash32 = String
 
 typealias Digest = Hash32
 

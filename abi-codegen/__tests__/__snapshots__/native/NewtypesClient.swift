@@ -206,7 +206,7 @@ public typealias Ratio = Double
 
 public typealias Flag = Bool
 
-public typealias Hash32 = [UInt8]
+public typealias Hash32 = String
 
 public typealias Digest = Hash32
 

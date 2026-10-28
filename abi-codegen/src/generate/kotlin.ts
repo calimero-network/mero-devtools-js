@@ -112,6 +112,7 @@ const KOTLIN: NativeSyntax = {
   // A JSON array of numbers, as the TS client sends bytes. ByteArray would
   // encode signed values, so 0xff would go out as -1.
   bytes: 'List<UByte>',
+  fixedBytes: 'String',
   list: (item) => `List<${item}>`,
   map: (key, value) => `Map<${key}, ${value}>`,
   optional: (type) => (type.endsWith('?') ? type : `${type}?`),
@@ -235,10 +236,13 @@ function typeDefinition(
       ];
     }
     case 'bytes': {
-      const size = 'size' in def ? `Exactly ${def.size} bytes.` : undefined;
+      const size =
+        'size' in def
+          ? `${def.size} bytes, as the contract's own text (base58 or hex).`
+          : undefined;
       return [
         ...docComment(size, ''),
-        `typealias ${name} = ${types.typeRef({ kind: 'bytes' }, name)}`,
+        `typealias ${name} = ${types.typeRef(def, name)}`,
       ];
     }
   }

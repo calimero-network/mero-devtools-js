@@ -118,6 +118,7 @@ const SWIFT: NativeSyntax = {
   // A JSON array of numbers, as the TS client sends bytes. `Data` would
   // encode as base64.
   bytes: '[UInt8]',
+  fixedBytes: 'String',
   list: (item) => `[${item}]`,
   map: (key, value) => `[${key}: ${value}]`,
   optional: (type) => (type.endsWith('?') ? type : `${type}?`),
@@ -234,10 +235,13 @@ function typeDefinition(
       ];
     }
     case 'bytes': {
-      const size = 'size' in def ? `Exactly ${def.size} bytes.` : undefined;
+      const size =
+        'size' in def
+          ? `${def.size} bytes, as the contract's own text (base58 or hex).`
+          : undefined;
       return [
         ...docComment(size, ''),
-        `public typealias ${name} = ${types.typeRef({ kind: 'bytes' }, name)}`,
+        `public typealias ${name} = ${types.typeRef(def, name)}`,
       ];
     }
   }

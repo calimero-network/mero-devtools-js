@@ -395,9 +395,9 @@ public indirect enum Chunk: Codable, Sendable, Equatable {
 }
 
 public struct Chunk_Blob: Codable, Sendable, Equatable {
-    public var hash: [UInt8]
+    public var hash: String
 
-    public init(hash: [UInt8]) {
+    public init(hash: String) {
         self.hash = hash
     }
 }

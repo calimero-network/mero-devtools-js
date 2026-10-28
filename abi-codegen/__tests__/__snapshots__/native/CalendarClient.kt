@@ -277,12 +277,12 @@ data class CalendarEvent(
     val id: String,
     val title: String,
     val description: String,
-    val owner: List<UByte>,
+    val owner: String,
     val start: String,
     val end: String,
     @SerialName("event_type") val eventType: String,
     val color: String,
-    val peers: List<List<UByte>>,
+    val peers: List<String>,
     val private: Boolean,
 )
 
@@ -295,13 +295,13 @@ data class CalendarEvent(
 data class CalendarEventState(
     val title: String,
     val description: String,
-    val owner: List<UByte>,
+    val owner: String,
     val start: String,
     val end: String,
     @SerialName("event_type") val eventType: String,
     val color: String,
     /** One `peers` index row per invitee. */
-    val peers: List<List<UByte>>,
+    val peers: List<String>,
     @SerialName("created_at") val createdAt: ULong,
     @SerialName("updated_at") val updatedAt: ULong,
 )
@@ -325,7 +325,7 @@ data class CreateCalendarEvent(
     val end: String,
     @SerialName("event_type") val eventType: String,
     val color: String,
-    val peers: List<List<UByte>>,
+    val peers: List<String>,
 )
 
 /**
@@ -355,5 +355,5 @@ data class UpdateCalendarEvent(
     val end: String? = null,
     @SerialName("event_type") val eventType: String? = null,
     val color: String? = null,
-    val peers: List<List<UByte>>? = null,
+    val peers: List<String>? = null,
 )

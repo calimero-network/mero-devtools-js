@@ -262,15 +262,15 @@ public struct CalendarEvent: Codable, Sendable, Equatable {
     public var id: String
     public var title: String
     public var description: String
-    public var owner: [UInt8]
+    public var owner: String
     public var start: String
     public var end: String
     public var eventType: String
     public var color: String
-    public var peers: [[UInt8]]
+    public var peers: [String]
     public var `private`: Bool
 
-    public init(id: String, title: String, description: String, owner: [UInt8], start: String, end: String, eventType: String, color: String, peers: [[UInt8]], `private`: Bool) {
+    public init(id: String, title: String, description: String, owner: String, start: String, end: String, eventType: String, color: String, peers: [String], `private`: Bool) {
         self.id = id
         self.title = title
         self.description = description
@@ -303,17 +303,17 @@ public struct CalendarEvent: Codable, Sendable, Equatable {
 public struct CalendarEventState: Codable, Sendable, Equatable {
     public var title: String
     public var description: String
-    public var owner: [UInt8]
+    public var owner: String
     public var start: String
     public var end: String
     public var eventType: String
     public var color: String
     /// One `peers` index row per invitee.
-    public var peers: [[UInt8]]
+    public var peers: [String]
     public var createdAt: UInt64
     public var updatedAt: UInt64
 
-    public init(title: String, description: String, owner: [UInt8], start: String, end: String, eventType: String, color: String, peers: [[UInt8]], createdAt: UInt64, updatedAt: UInt64) {
+    public init(title: String, description: String, owner: String, start: String, end: String, eventType: String, color: String, peers: [String], createdAt: UInt64, updatedAt: UInt64) {
         self.title = title
         self.description = description
         self.owner = owner
@@ -360,9 +360,9 @@ public struct CreateCalendarEvent: Codable, Sendable, Equatable {
     public var end: String
     public var eventType: String
     public var color: String
-    public var peers: [[UInt8]]
+    public var peers: [String]
 
-    public init(title: String, description: String, start: String, end: String, eventType: String, color: String, peers: [[UInt8]]) {
+    public init(title: String, description: String, start: String, end: String, eventType: String, color: String, peers: [String]) {
         self.title = title
         self.description = description
         self.start = start
@@ -411,9 +411,9 @@ public struct UpdateCalendarEvent: Codable, Sendable, Equatable {
     public var end: String?
     public var eventType: String?
     public var color: String?
-    public var peers: [[UInt8]]?
+    public var peers: [String]?
 
-    public init(title: String? = nil, description: String? = nil, start: String? = nil, end: String? = nil, eventType: String? = nil, color: String? = nil, peers: [[UInt8]]? = nil) {
+    public init(title: String? = nil, description: String? = nil, start: String? = nil, end: String? = nil, eventType: String? = nil, color: String? = nil, peers: [String]? = nil) {
         self.title = title
         self.description = description
         self.start = start

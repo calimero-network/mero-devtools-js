@@ -840,7 +840,7 @@ public struct UpdatePayload: Codable, Sendable, Equatable {
     }
 }
 
-public typealias UserId32 = [UInt8]
+public typealias UserId32 = String
 
 public indirect enum WireOutcome: Codable, Sendable, Equatable {
     case done

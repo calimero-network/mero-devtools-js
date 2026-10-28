@@ -398,5 +398,5 @@ internal object ChunkSerializer : KSerializer<Chunk> {
 
 @Serializable
 data class Chunk_Blob(
-    val hash: List<UByte>,
+    val hash: String,
 )

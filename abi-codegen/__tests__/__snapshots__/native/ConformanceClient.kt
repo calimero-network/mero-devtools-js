@@ -896,7 +896,7 @@ data class UpdatePayload(
     val age: UInt,
 )
 
-typealias UserId32 = List<UByte>
+typealias UserId32 = String
 
 @Serializable(with = WireOutcomeSerializer::class)
 sealed class WireOutcome {
