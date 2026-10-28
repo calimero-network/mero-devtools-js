@@ -4,10 +4,19 @@ import fs from 'fs';
 import path from 'path';
 import { loadAbiManifestFromFile } from './parse.js';
 import { generateClient } from './generate/client.js';
+import { generateKotlinClient } from './generate/kotlin.js';
+import { generateSwiftClient } from './generate/swift.js';
 import {
   deriveClientNameFromPath,
   sanitizeClassName,
 } from './generate/emit.js';
+
+const TARGETS = ['ts', 'swift', 'kotlin'];
+const EXTENSIONS: Record<string, string> = {
+  ts: 'ts',
+  swift: 'swift',
+  kotlin: 'kt',
+};
 
 const getArgs = () => {
   const args: { [key: string]: string } = {};
@@ -70,6 +79,12 @@ function showHelp() {
     '  --import-path <path>      Custom import path for mero-react (default: @calimero-network/mero-react)',
   );
   console.log(
+    '  --target <ts|swift|kotlin> Language of the generated client (default: ts)',
+  );
+  console.log(
+    '  --package <name>          Kotlin package of the generated file (kotlin only)',
+  );
+  console.log(
     '  --validate                Validate ABI manifest only (no code generation)',
   );
   console.log('  -h, --help                Show this help message');
@@ -84,6 +99,12 @@ function showHelp() {
     '  calimero-abi-codegen -i abi.json -o src --name-from kv_store.wasm',
   );
   console.log('  calimero-abi-codegen -i abi-conformance.json -o src');
+  console.log(
+    '  calimero-abi-codegen -i abi.json -o Sources/Generated --target swift --client-name ForumClient',
+  );
+  console.log(
+    '  calimero-abi-codegen -i abi.json -o app/src/main/kotlin --target kotlin --package network.calimero.forum',
+  );
 }
 
 function main() {
@@ -121,6 +142,14 @@ function main() {
     // Code generation (default behavior)
     const inputPath = args.input || args.i || 'abi.json';
     const outputPath = args.output || args.o || 'src';
+    const target = args.target || 'ts';
+    if (!TARGETS.includes(target)) {
+      console.error(
+        `❌ Error: unknown --target ${target} (expected ${TARGETS.join(', ')})`,
+      );
+      process.exitCode = 1;
+      return;
+    }
 
     // Name resolution logic with priority order
     let clientName: string;
@@ -153,10 +182,25 @@ function main() {
         fs.mkdirSync(outputDir, { recursive: true });
       }
 
-      // Generate client.ts with derived filename (types are embedded)
-      const importPath = args['import-path'] || '@calimero-network/mero-react';
-      const clientContent = generateClient(manifest, clientName, importPath);
-      const clientPath = path.join(outputDir, `${clientName}.ts`);
+      // Generate the client with derived filename (types are embedded)
+      let clientContent: string;
+      if (target === 'swift') {
+        clientContent = generateSwiftClient(manifest, clientName);
+      } else if (target === 'kotlin') {
+        clientContent = generateKotlinClient(
+          manifest,
+          clientName,
+          args.package,
+        );
+      } else {
+        const importPath =
+          args['import-path'] || '@calimero-network/mero-react';
+        clientContent = generateClient(manifest, clientName, importPath);
+      }
+      const clientPath = path.join(
+        outputDir,
+        `${clientName}.${EXTENSIONS[target]}`,
+      );
       fs.writeFileSync(clientPath, clientContent);
 
       // Print summary
