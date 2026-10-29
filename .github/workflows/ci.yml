@@ -145,17 +145,20 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Resolve latest core release tag
+      # Newest 0.x release, pre-releases included. merod 1.0 drops the v1 node
+      # API this harness and the generated client speak (admin-api, /auth/token),
+      # so the E2E stays on the 0.x line until it is ported.
+      - name: Resolve latest core 0.x release tag
         id: coretag
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          TAG=$(gh release list --repo calimero-network/core --limit 1 --json tagName --jq '.[0].tagName')
+          TAG=$(gh release list --repo calimero-network/core --limit 100 --json tagName --jq '[.[] | select(.tagName | startswith("0."))][0].tagName')
           if [ -z "$TAG" ]; then
-            echo "::error::could not resolve a latest core release tag from calimero-network/core"
+            echo "::error::could not resolve a core 0.x release tag from calimero-network/core"
             exit 1
           fi
-          echo "Latest core release: $TAG"
+          echo "Latest core 0.x release: $TAG"
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
 
       - uses: pnpm/action-setup@v4
