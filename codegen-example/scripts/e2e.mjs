@@ -30,7 +30,7 @@ const ADMIN_PASSWORD = 'dev-password';
 const APP_ASSET = 'kv-store-test-fixture.mpk'; // the one prebuilt, signed app a core release ships
 const CLIENT_NAME = 'KvStoreClient';
 const RELEASES_API =
-  'https://api.github.com/repos/calimero-network/core/releases?per_page=1';
+  'https://api.github.com/repos/calimero-network/core/releases?per_page=100';
 const DOWNLOAD_BASE =
   'https://github.com/calimero-network/core/releases/download';
 const HEALTH_ATTEMPTS = 60;
@@ -58,8 +58,8 @@ async function resolveTag() {
   if (process.env.CORE_RELEASE_TAG?.trim()) {
     return process.env.CORE_RELEASE_TAG.trim();
   }
-  // Includes pre-releases on purpose: core currently publishes only release
-  // candidates, so there is no GitHub "latest" to ask for.
+  // Newest 0.x release, pre-releases included. merod 1.0 drops the v1 node API
+  // this harness speaks (admin-api, /auth/token), so stay on 0.x until ported.
   const res = await fetch(RELEASES_API, {
     headers: { 'User-Agent': 'mero-devtools-js-e2e' },
   });
@@ -68,8 +68,10 @@ async function resolveTag() {
       `could not list core releases (${res.status}). Set CORE_RELEASE_TAG to pin one.`,
     );
   }
-  const tag = (await res.json())[0]?.tag_name;
-  if (!tag) throw new E2eError('calimero-network/core published no releases');
+  const tag = (await res.json()).find((r) =>
+    r.tag_name.startsWith('0.'),
+  )?.tag_name;
+  if (!tag) throw new E2eError('calimero-network/core has no 0.x release');
   return tag;
 }
 
@@ -368,15 +370,21 @@ function eq(actual, expected, what) {
 }
 
 /**
- * The guest's own serialized error, which core renders into the message as a
- * byte-array literal. Absent for a call that failed before reaching the app.
+ * The guest's own serialized error. Older core renders it into the message as a
+ * byte-array literal; 0.12+ renders the decoded JSON after "returned an error: ".
+ * Absent for a call that failed before reaching the app.
  */
 function appError(err) {
-  const bytes = /\[([\d, ]+)\]/.exec(String(err.data));
-  if (!bytes) {
-    throw new Error(`no guest error payload in: ${JSON.stringify(err.data)}`);
+  const message = String(err.data);
+  const bytes = /\[([\d, ]+)\]/.exec(message);
+  if (bytes) {
+    return JSON.parse(Buffer.from(bytes[1].split(',').map(Number)).toString());
   }
-  return JSON.parse(Buffer.from(bytes[1].split(',').map(Number)).toString());
+  const json = /returned an error: (\{.*\})\s*$/s.exec(message);
+  if (json) {
+    return JSON.parse(json[1]);
+  }
+  throw new Error(`no guest error payload in: ${JSON.stringify(err.data)}`);
 }
 
 async function rejection(fn, what) {

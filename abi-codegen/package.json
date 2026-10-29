@@ -29,6 +29,14 @@
     "./generate/emit": {
       "import": "./dist/generate/emit.js",
       "types": "./dist/generate/emit.d.ts"
+    },
+    "./generate/swift": {
+      "import": "./dist/generate/swift.js",
+      "types": "./dist/generate/swift.d.ts"
+    },
+    "./generate/kotlin": {
+      "import": "./dist/generate/kotlin.js",
+      "types": "./dist/generate/kotlin.d.ts"
     }
   },
   "bin": {
