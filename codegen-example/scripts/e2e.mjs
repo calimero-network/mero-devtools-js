@@ -368,15 +368,21 @@ function eq(actual, expected, what) {
 }
 
 /**
- * The guest's own serialized error, which core renders into the message as a
- * byte-array literal. Absent for a call that failed before reaching the app.
+ * The guest's own serialized error. Older core renders it into the message as a
+ * byte-array literal; 0.12+ renders the decoded JSON after "returned an error: ".
+ * Absent for a call that failed before reaching the app.
  */
 function appError(err) {
-  const bytes = /\[([\d, ]+)\]/.exec(String(err.data));
-  if (!bytes) {
-    throw new Error(`no guest error payload in: ${JSON.stringify(err.data)}`);
+  const message = String(err.data);
+  const bytes = /\[([\d, ]+)\]/.exec(message);
+  if (bytes) {
+    return JSON.parse(Buffer.from(bytes[1].split(',').map(Number)).toString());
   }
-  return JSON.parse(Buffer.from(bytes[1].split(',').map(Number)).toString());
+  const json = /returned an error: (\{.*\})\s*$/s.exec(message);
+  if (json) {
+    return JSON.parse(json[1]);
+  }
+  throw new Error(`no guest error payload in: ${JSON.stringify(err.data)}`);
 }
 
 async function rejection(fn, what) {
